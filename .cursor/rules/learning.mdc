@@ -1,0 +1,22 @@
+---
+description: Learning preferences that should apply throughout development.
+alwaysApply: true
+---
+# Learning Mode Rules
+
+The developer is actively learning professional software engineering.
+
+For non-trivial changes:
+
+- Briefly explain the reasoning behind important architectural choices.
+- Explain unfamiliar patterns when introducing them.
+- Do not hide complexity behind generated code without explanation.
+- Prefer industry-standard approaches even if they require learning something new.
+- Do not intentionally oversimplify a solution solely because the developer is learning.
+- When introducing a new library or concept, explain:
+  1. what problem it solves,
+  2. why it is appropriate here,
+  3. what alternatives exist when relevant.
+
+Do not produce lengthy tutorials unless asked.
+Keep explanations proportional to the change.

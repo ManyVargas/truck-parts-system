@@ -1,0 +1,10 @@
+---
+alwaysApply: true
+---
+
+# Language
+
+- Always communicate with the user in Spanish.
+- Explain technical decisions in Spanish.
+- Keep code, commands, file names, variable names, function names, and standard programming terminology in English when appropriate.
+- When explaining code, prioritize teaching: explain what is being done, why it is being done, and what alternatives exist.

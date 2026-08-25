@@ -1,0 +1,54 @@
+---
+description: Apply when designing or modifying project architecture, modules, controllers, services, repositories, middleware, dependencies, folder structure, or interactions between modules.
+alwaysApply: false
+---
+
+# Architecture Rules
+
+Use clear separation of responsibilities.
+
+Preferred flow:
+
+Route
+→ Controller
+→ Service
+→ Repository
+→ Database
+
+Responsibilities:
+
+Routes:
+
+- Define HTTP routes.
+- Attach middleware.
+- Do not contain business logic.
+
+Controllers:
+
+- Handle HTTP request and response concerns.
+- Extract parameters from req.
+- Call application services.
+- Return HTTP responses.
+- Do not contain business rules.
+- Do not access Prisma directly.
+
+Services:
+
+- Contain application and business logic.
+- Coordinate repositories and domain operations.
+- Throw application/domain errors when appropriate.
+- Must not depend on HTTP request/response objects.
+
+Repositories:
+
+- Handle persistence and database queries.
+- Prisma access should normally happen here.
+- Do not contain HTTP logic.
+
+Middleware:
+
+- Handle cross-cutting HTTP concerns such as authentication, authorization, validation, logging, rate limiting, and error handling.
+
+Avoid circular dependencies.
+
+Prefer feature/module-based organization as the project grows.

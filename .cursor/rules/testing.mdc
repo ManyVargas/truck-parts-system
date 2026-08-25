@@ -1,0 +1,18 @@
+---
+description: Apply when adding or modifying business logic, fixing bugs, changing API behavior, creating tests, modifying test files, or validating application behavior.
+alwaysApply: false
+---
+
+# Testing Rules
+
+- New business logic should normally include tests.
+- Bug fixes should include a regression test whenever practical.
+- Focus tests on behavior, not implementation details.
+- Keep unit tests fast and isolated.
+- Use integration tests for important database/API flows.
+- Avoid excessive mocking.
+- Test failure paths in addition to happy paths.
+- Authentication and authorization logic must include negative tests.
+- Validate boundary cases and invalid input.
+- After meaningful code changes, run the relevant tests.
+- Do not modify tests merely to make broken behavior pass unless the requirement has genuinely changed.

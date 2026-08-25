@@ -1,0 +1,20 @@
+---
+description: Apply when working with PostgreSQL, Prisma, database models, schema.prisma, repositories, queries, migrations, transactions, constraints, indexes, relations, or persistence.
+alwaysApply: false
+---
+
+# Database Rules
+
+- PostgreSQL is the primary relational database.
+- Prisma is the ORM unless explicitly changed.
+- Database access should normally occur through repositories.
+- Avoid calling Prisma directly from controllers.
+- Use transactions for operations that must succeed or fail atomically.
+- Always consider database constraints in addition to application validation.
+- Use unique constraints, foreign keys, and appropriate indexes when required.
+- Avoid N+1 query patterns.
+- Do not fetch unnecessary columns or deeply nested relations without justification.
+- Use pagination for endpoints that can return large collections.
+- Avoid destructive migrations unless explicitly requested.
+- Never run prisma migrate reset without explicit approval.
+- Never delete production data as part of troubleshooting.

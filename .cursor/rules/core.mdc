@@ -1,0 +1,21 @@
+---
+description: Core engineering principles that must apply to every task in this project.
+alwaysApply: true
+---
+
+# General Engineering Rules
+
+- Prefer simple, explicit, maintainable solutions over clever solutions.
+- Do not introduce new dependencies unless they are necessary.
+- Before adding a dependency, explain why it is needed.
+- Do not refactor unrelated code while implementing a feature or fixing a bug.
+- Make the smallest reasonable change that satisfies the requirement.
+- Follow existing project conventions unless there is a clear architectural reason not to.
+- Do not duplicate existing functionality.
+- Search the codebase before creating new helpers, utilities, abstractions, or modules.
+- Avoid premature abstraction.
+- Avoid premature optimization.
+- Prefer readable names over short names.
+- Avoid magic numbers and unexplained constants.
+- Keep functions focused on one responsibility.
+- Do not silently change public APIs.

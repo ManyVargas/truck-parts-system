@@ -1,0 +1,28 @@
+---
+description: Apply when working with authentication, authorization, permissions, user input, API endpoints, passwords, tokens, secrets, CORS, rate limiting, file uploads, sensitive data, or security-related configuration.
+alwaysApply: false
+---
+
+# Security Rules
+
+Treat security as a design requirement, not as a final cleanup step.
+
+- Never expose secrets, tokens, password hashes, or sensitive internal information.
+- Never hardcode secrets.
+- Passwords must be hashed using a reputable password hashing algorithm.
+- Never store plaintext passwords.
+- Authentication and authorization are separate concerns.
+- Check authorization at protected operations, not only authentication.
+- Follow least privilege.
+- Validate and sanitize external input where applicable.
+- Prevent mass assignment.
+- Do not expose database errors directly to API clients.
+- Return generic production error messages when appropriate.
+- Avoid leaking stack traces in production.
+- Configure CORS deliberately; do not default to allowing every origin in production.
+- Apply rate limiting to sensitive endpoints when applicable.
+- Use secure HTTP headers.
+- Consider brute-force protection for authentication endpoints.
+- Never log passwords, access tokens, refresh tokens, API keys, or sensitive personal data.
+- Evaluate file uploads carefully: size, MIME type, extension, storage path, and authorization.
+- Avoid dynamically executing user-controlled code.

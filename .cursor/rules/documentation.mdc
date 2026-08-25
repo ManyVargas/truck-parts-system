@@ -1,0 +1,32 @@
+---
+description: Apply when planning or implementing a project feature, checking business requirements or scope, consulting the active release, or making decisions involving architecture, authorization, workflows, infrastructure, prototype behavior, or future scope. This rule ensures Cursor reads only the documentation relevant to the current feature instead of loading the entire /docs directory.
+alwaysApply: false
+---
+# Documentation usage
+
+The `/docs` directory is the product source of truth.
+
+Do NOT read every documentation file for every task.
+
+Before implementing:
+
+1. Read `/docs/DEVELOPMENT_PLAN.md` to identify the active release.
+2. Read `/docs/FEATURES/README.md`.
+3. Read only the feature specification(s) relevant to the current task.
+
+Read additional documents only when needed:
+
+- `ARCHITECTURE_PLAN.md` for architecture decisions.
+- `ROLES_AND_PERMISSIONS.md` for authorization.
+- `USE_CASE_FLOWS.md` for cross-feature workflows.
+- `INFRASTRUCTURE_PLAN.md` for deployment/infrastructure.
+- `PROTOTYPE_PLAN.md` for validated UI/workflow intent.
+- `FUTURE_ROADMAP.md` to verify that something is out of scope.
+
+Never implement functionality from FUTURE_ROADMAP unless explicitly requested.
+
+Do not infer undocumented business rules.
+
+When a feature checklist item is completed, update its feature file.
+
+Do not mark acceptance criteria as complete unless covered by implementation and tests.
