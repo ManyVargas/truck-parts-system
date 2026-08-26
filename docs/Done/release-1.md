@@ -88,7 +88,7 @@ Conectar PostgreSQL local con Prisma, establecer el workflow de migraciones, cli
 | Endpoint | Significado | Éxito | Fallo |
 |---|---|---|---|
 | `GET /api/health/live` | Proceso vivo | `200 { "status": "ok" }` | Proceso caído |
-| `GET /api/health/ready` | PostgreSQL alcanzable (`SELECT 1`) | `200 { "status": "ok", "database": "up" }` | `503 { "status": "error", "database": "down" }` |
+| `GET /api/health/ready` | PostgreSQL alcanzable **y** migraciones aplicadas | `200 { "status": "ok", "database": "up", "migrations": "up_to_date" }` | `503` si BD caída, migraciones pendientes (`pending`) o no verificables (`unavailable`) |
 
 El frontend pasó a consultar `/api/health/live`.
 
@@ -121,6 +121,7 @@ El frontend pasó a consultar `/api/health/live`.
 - `npm run build` / generate — OK (tras liberar el lock del engine si la API estaba corriendo)
 - `GET /api/health/live` — `200 {"status":"ok"}`
 - `GET /api/health/ready` sin BD válida — `503 {"status":"error","database":"down"}`
+- Readiness también verifica migraciones locales vs `_prisma_migrations` (`up_to_date` / `pending` / `unavailable`)
 
 ### Pendiente operativo del owner (local)
 

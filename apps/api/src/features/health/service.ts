@@ -17,8 +17,19 @@ export async function getReadinessStatus(): Promise<ReadinessResponse> {
     };
   }
 
+  const migrations = await healthRepository.checkMigrationsStatus();
+
+  if (migrations !== 'up_to_date') {
+    return {
+      status: 'error',
+      database: 'up',
+      migrations,
+    };
+  }
+
   return {
     status: 'ok',
     database: 'up',
+    migrations: 'up_to_date',
   };
 }

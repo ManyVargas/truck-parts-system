@@ -62,7 +62,7 @@ The Vite dev server proxies `/api/*` to the API.
 | Endpoint | Meaning | Success | Failure |
 |---|---|---|---|
 | `GET /api/health/live` | Process is running | `200 { "status": "ok" }` | Process down |
-| `GET /api/health/ready` | Process can reach PostgreSQL | `200 { "status": "ok", "database": "up" }` | `503 { "status": "error", "database": "down" }` |
+| `GET /api/health/ready` | PostgreSQL reachable and migrations applied | `200 { "status": "ok", "database": "up", "migrations": "up_to_date" }` | `503` if DB is down or migrations are pending/unavailable |
 
 ## Project structure
 
