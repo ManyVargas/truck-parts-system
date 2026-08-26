@@ -1,4 +1,13 @@
-export type HealthStatusResponse = {
+export type LivenessResponse = {
   status: 'ok';
-  service: 'truck-parts-api';
 };
+
+export type ReadinessResponse =
+  | {
+      status: 'ok';
+      database: 'up';
+    }
+  | {
+      status: 'error';
+      database: 'down';
+    };

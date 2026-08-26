@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 
 type HealthStatusResponse = {
   status: 'ok';
-  service: string;
 };
 
 export function App() {
@@ -10,7 +9,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/health')
+    fetch('/api/health/live')
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(`Health check failed (${response.status})`);
@@ -39,7 +38,7 @@ export function App() {
       <p>Release 1 — local development scaffold</p>
       {health && (
         <p>
-          API health: <strong>{health.status}</strong> ({health.service})
+          API health: <strong>{health.status}</strong>
         </p>
       )}
       {error && <p role="alert">API health error: {error}</p>}

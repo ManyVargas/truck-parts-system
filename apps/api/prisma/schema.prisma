@@ -1,0 +1,12 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Milestone 2 baseline: no domain models yet.
+// User/Session models arrive in Milestone 5.

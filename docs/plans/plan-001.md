@@ -1,7 +1,7 @@
 # Plan 001 — Release 1 Milestones: Foundation + Access and Users
 
 **Release:** 1 — Application Foundation and Access (Local Development)  
-**Estado:** Milestone 1 completado — Milestone 2 pendiente  
+**Estado:** Milestone 2 completado — Milestone 3 pendiente  
 **Último milestone:** Milestone 11 — Frontend usuarios + exit gate Release 1
 
 ---
@@ -75,7 +75,7 @@ flowchart TD
 | ID | Milestone | Estado |
 |---|---|---|
 | M1 | Scaffold monorepo FE/BE + convenciones + health stub | completado |
-| M2 | PostgreSQL + Prisma + health readiness | pendiente |
+| M2 | PostgreSQL + Prisma + health readiness | completado |
 | M3 | Errores, logging, validación HTTP | pendiente |
 | M4 | Test harness + CI baseline (smoke R1) | pendiente |
 | M5 | Modelo User/Session + bootstrap CLI admin | pendiente |
@@ -372,4 +372,12 @@ M10 puede iniciarse tras M7; se recomienda esperar M8 para usuarios demo reales.
 
 ## Próximo paso
 
-**Milestone 2:** PostgreSQL, Prisma y conectividad — pendiente de aprobación para iniciar.
+**Milestone 3:** Errores, logging, validación HTTP — pendiente de aprobación para iniciar.
+
+Antes de M3, asegúrate de tener `.env` con un `DATABASE_URL` válido, la base `truck_parts_dev` creada, y haber corrido:
+
+```bash
+npm run db:migrate:deploy
+```
+
+Luego `GET /api/health/ready` debe responder `200` con `"database": "up"`.

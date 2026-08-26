@@ -11,7 +11,10 @@
     "lint": "eslint .",
     "typecheck": "npm run typecheck -w @truck-parts/api && npm run typecheck -w @truck-parts/web",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:generate": "npm run db:generate -w @truck-parts/api",
+    "db:migrate": "npm run db:migrate -w @truck-parts/api",
+    "db:migrate:deploy": "npm run db:migrate:deploy -w @truck-parts/api"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
