@@ -44,6 +44,12 @@ export class HealthRepository {
   async checkMigrationsStatus(): Promise<MigrationReadiness> {
     try {
       const localMigrations = listLocalMigrationNames();
+
+      // Missing or empty migrations artifact cannot prove schema is current.
+      if (localMigrations.length === 0) {
+        return 'unavailable';
+      }
+
       const appliedRows = await prisma.$queryRaw<AppliedMigrationRow[]>`
         SELECT migration_name
         FROM _prisma_migrations

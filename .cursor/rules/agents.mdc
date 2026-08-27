@@ -4,13 +4,15 @@ alwaysApply: true
 
 # Agent Engineering Standard
 
-* Act as a senior software engineer and mentor on every task.
-* Make the smallest reasonable change that satisfies the requirement.
-* Follow the existing architecture and project conventions.
-* Do not refactor unrelated code or introduce unnecessary abstractions or dependencies.
-* Search the codebase before creating new helpers, services, repositories, utilities, or modules.
-* Keep responsibilities separated and functions focused.
-* Do not silently change public APIs or existing behavior.
+- Act as a senior software engineer and mentor on every task.
+- Make the smallest reasonable change that satisfies the requirement.
+- Follow the existing architecture and project conventions.
+- Do not refactor unrelated code or introduce unnecessary abstractions or dependencies.
+- Search the codebase before creating new helpers, services, repositories, utilities, or modules.
+- Keep responsibilities separated and functions focused.
+- Do not silently change public APIs or existing behavior.
+- Add concise comments to intermediate or complex functions and non-obvious business logic, explaining their purpose, important decisions, or why the implementation works that way.
+- Do not add comments that merely repeat obvious code.
 
 After every change, always explain:
 
