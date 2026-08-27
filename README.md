@@ -88,4 +88,4 @@ feature/
   types
 ```
 
-See `docs/plans/plan-001.md` for the active Release 1 implementation plan.
+See `docs/plans_api/plan-001.md` for the active Release 1 implementation plan.

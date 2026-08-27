@@ -1,7 +1,7 @@
 # Release 1 — Registro de lo implementado
 
 **Release:** Application Foundation and Access (Local Development)  
-**Plan de referencia:** [`../plans/plan-001.md`](../plans/plan-001.md)  
+**Plan de referencia:** [`../plans_api/plan-001.md`](../plans_api/plan-001.md)  
 **Estado:** en progreso (Milestones 1–2 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 1, a medida que se completan.  
