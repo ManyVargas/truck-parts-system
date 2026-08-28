@@ -1,7 +1,7 @@
 # Plan 001 — Frontend Prototipo Mock: SoloCamiones
 
 **Alcance:** Prototipo frontend funcional con datos dummy (sin backend)  
-**Estado:** WM1 completado — WM2 pendiente  
+**Estado:** WM2 completado — WM3 pendiente  
 **Último milestone planificado:** WM12 — Rentabilidad, recuperación, escenarios demo y preparación API  
 **Referencia de diseño:** [Prototipo Figma Make](https://www.figma.com/make/HzibQNQ88lqtv3rAup56eJ/Follow-prototype-instructions)
 
@@ -265,7 +265,7 @@ El resto del prototipo (inventario, ventas, OT, etc.) permanece mock hasta los r
 | ID | Milestone | Estado |
 |---|---|---|
 | WM1 | Fundación, diseño y capa mock | completado |
-| WM2 | Login por formulario, shell por rol, guards + policies | pendiente |
+| WM2 | Login por formulario, shell por rol, guards + policies | completado |
 | WM3 | Dashboard operativo | pendiente |
 | WM4 | Clientes | pendiente |
 | WM5 | Inventario listado, búsqueda y detalle | pendiente |
@@ -377,13 +377,13 @@ Todo `shared/ui` base + `shared/layout/AppLayout` vacío.
 `AuthRepository.login(username, password)`, `logout`, `getSession`. Contraseñas texto plano solo en mock local.
 
 ### Criterios de aceptación
-- [ ] Credenciales seed visibles y funcionan al escribirlas manualmente
-- [ ] Credenciales incorrectas → error, sin sesión
-- [ ] Admin: 9 secciones; Vendedor: 4; Mecánico: app separada
-- [ ] Usuario inactivo no entra
-- [ ] Vendedor en `/users` o `/profitability` → redirect + mensaje
-- [ ] Servicios mock rechazan mutaciones sin permiso
-- [ ] Interfaz lista para `POST /api/auth/login` futuro
+- [x] Credenciales seed visibles y funcionan al escribirlas manualmente
+- [x] Credenciales incorrectas → error, sin sesión
+- [x] Admin: 9 secciones; Vendedor: 4; Mecánico: app separada
+- [x] Usuario inactivo no entra
+- [x] Vendedor en `/users` o `/profitability` → redirect + mensaje
+- [x] Servicios mock rechazan mutaciones sin permiso
+- [x] Interfaz lista para `POST /api/auth/login` futuro
 
 ---
 
@@ -745,4 +745,4 @@ Cada escenario reinicia datos y documenta qué credenciales usar para login.
 | Fecha | Cambio |
 |---|---|
 | 2026-08-27 | Creación inicial del plan con 12 milestones, endurecimiento vs Figma, login por formulario con 4 usuarios seed |
-| 2026-08-27 | WM1 completado: fundación, design system, contratos, seed mock, repositorios esqueleto |
+| 2026-08-27 | WM2 completado: login, shell por rol, guards, sesión mock, demo-controls |

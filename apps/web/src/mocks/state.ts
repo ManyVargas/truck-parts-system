@@ -1,5 +1,6 @@
 import type { AppState } from '../api/contracts/entities';
 import { createInitialState } from './data/seed';
+import { clearSession } from './session';
 
 let currentState: AppState = createInitialState();
 
@@ -14,6 +15,7 @@ export function cloneForRead<T>(value: T): T {
 }
 
 export function resetMockState(): AppState {
+  clearSession();
   currentState = createInitialState();
   return cloneForRead(currentState);
 }

@@ -3,11 +3,18 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { disconnectPrisma } from '../../../src/infrastructure/database/index.js';
 import { createTestApp } from '../../helpers/app.js';
-import { deployMigrations, getTestDatabaseUrl } from '../../helpers/database.js';
+import {
+  deployMigrations,
+  getTestDatabaseUrl,
+  isDatabaseReachable,
+} from '../../helpers/database.js';
 
 const testDatabaseUrl = getTestDatabaseUrl();
+const integrationDatabaseReady = testDatabaseUrl
+  ? await isDatabaseReachable(testDatabaseUrl)
+  : false;
 
-describe.skipIf(!testDatabaseUrl)('health routes (integration)', () => {
+describe.skipIf(!integrationDatabaseReady)('health routes (integration)', () => {
   beforeAll(() => {
     deployMigrations(testDatabaseUrl!);
   });

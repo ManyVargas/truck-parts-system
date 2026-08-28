@@ -33,7 +33,7 @@ export function createInitialState(): AppState {
       username: 'carlos',
       password: SEED_PASSWORD,
       role: 'MECHANIC' as const,
-      active: true,
+      active: false,
     },
     {
       id: 'U-PEDRO',
