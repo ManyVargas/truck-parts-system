@@ -1,6 +1,7 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 
 import { LoginPage } from './features/auth/LoginPage';
+import { DashboardPage } from './features/dashboard/DashboardPage';
 import { MechanicLayout } from './features/mechanic/MechanicLayout';
 import { MechanicPlaceholderPage } from './features/mechanic/MechanicPlaceholderPage';
 import { PlaceholderPage } from './features/placeholder/PlaceholderPage';
@@ -14,9 +15,7 @@ import { RouteAccessGuard } from './shared/layout/RouteAccessGuard';
 const desktopChildRoutes = [
   {
     path: '/dashboard',
-    element: (
-      <PlaceholderPage title="Dashboard" milestone="WM3" description="Panel operativo por rol." />
-    ),
+    element: <DashboardPage />,
   },
   {
     path: '/inventory',

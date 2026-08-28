@@ -1,4 +1,5 @@
 import type { Result } from '../../shared/auth/types';
+import type { DashboardSnapshot } from './dashboard';
 import type {
   AppEvent,
   Category,
@@ -63,4 +64,8 @@ export type ServiceRepository = {
 
 export type EventRepository = {
   list(): Promise<Result<AppEvent[]>>;
+};
+
+export type DashboardRepository = {
+  getSnapshot(): Promise<Result<DashboardSnapshot>>;
 };

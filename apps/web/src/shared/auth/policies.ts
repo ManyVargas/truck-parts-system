@@ -2,6 +2,7 @@ import type { Role, User } from '../../api/contracts/entities';
 
 /** Actions validated in mock services; expanded per milestone. */
 export type PolicyAction =
+  | 'dashboard.view'
   | 'inventory.view'
   | 'inventory.register'
   | 'inventory.admin'
@@ -40,6 +41,7 @@ export function can(
 
   if (role === 'SELLER') {
     const sellerAllowed: PolicyAction[] = [
+      'dashboard.view',
       'inventory.view',
       'inventory.register',
       'customers.manage',

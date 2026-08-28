@@ -1,4 +1,5 @@
 export { mockAuthRepository } from './MockAuthRepository';
+export { mockDashboardRepository } from './MockDashboardRepository';
 export { mockCategoryRepository } from './MockCategoryRepository';
 export { mockCustomerRepository } from './MockCustomerRepository';
 export { mockEventRepository } from './MockEventRepository';

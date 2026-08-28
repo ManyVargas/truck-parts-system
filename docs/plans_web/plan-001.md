@@ -1,7 +1,7 @@
 # Plan 001 — Frontend Prototipo Mock: SoloCamiones
 
 **Alcance:** Prototipo frontend funcional con datos dummy (sin backend)  
-**Estado:** WM2 completado — WM3 pendiente  
+**Estado:** WM3 completado — WM4 pendiente  
 **Último milestone planificado:** WM12 — Rentabilidad, recuperación, escenarios demo y preparación API  
 **Referencia de diseño:** [Prototipo Figma Make](https://www.figma.com/make/HzibQNQ88lqtv3rAup56eJ/Follow-prototype-instructions)
 
@@ -266,7 +266,7 @@ El resto del prototipo (inventario, ventas, OT, etc.) permanece mock hasta los r
 |---|---|---|
 | WM1 | Fundación, diseño y capa mock | completado |
 | WM2 | Login por formulario, shell por rol, guards + policies | completado |
-| WM3 | Dashboard operativo | pendiente |
+| WM3 | Dashboard operativo | completado |
 | WM4 | Clientes | pendiente |
 | WM5 | Inventario listado, búsqueda y detalle | pendiente |
 | WM6 | Registro de inventario | pendiente |
@@ -407,9 +407,9 @@ Todo `shared/ui` base + `shared/layout/AppLayout` vacío.
 Agregaciones sobre `items`, `invoices`, `workOrders`, `events`.
 
 ### Criterios de aceptación
-- [ ] KPIs distintos Admin vs Vendedor
-- [ ] Números coinciden con seed tras reinicio
-- [ ] Clic en factura navega a detalle
+- [x] KPIs distintos Admin vs Vendedor
+- [x] Números coinciden con seed tras reinicio
+- [x] Clic en factura navega a detalle
 
 ---
 
@@ -746,3 +746,4 @@ Cada escenario reinicia datos y documenta qué credenciales usar para login.
 |---|---|
 | 2026-08-27 | Creación inicial del plan con 12 milestones, endurecimiento vs Figma, login por formulario con 4 usuarios seed |
 | 2026-08-27 | WM2 completado: login, shell por rol, guards, sesión mock, demo-controls |
+| 2026-08-28 | WM3 completado: dashboard operativo por rol, KPIs, facturas recientes, timeline |
