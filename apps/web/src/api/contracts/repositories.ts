@@ -1,4 +1,5 @@
 import type { Result } from '../../shared/auth/types';
+import type { CustomerListRow, SaveCustomerInput } from './customers';
 import type { DashboardSnapshot } from './dashboard';
 import type {
   AppEvent,
@@ -35,10 +36,10 @@ export type InventoryRepository = {
 };
 
 export type CustomerRepository = {
-  list(): Promise<Result<Customer[]>>;
-  search(query: string): Promise<Result<Customer[]>>;
+  list(): Promise<Result<CustomerListRow[]>>;
+  search(query: string): Promise<Result<CustomerListRow[]>>;
   getById(id: string): Promise<Result<Customer>>;
-  save(customer: Customer): Promise<Result<Customer>>;
+  save(input: SaveCustomerInput): Promise<Result<Customer>>;
 };
 
 export type SalesRepository = {

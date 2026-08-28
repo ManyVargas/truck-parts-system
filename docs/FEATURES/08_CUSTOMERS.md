@@ -53,8 +53,8 @@ At invoice confirmation, copy the applicable customer data into an immutable inv
 ## Implementation checklist
 
 ### Backend
-- [ ] Define customer record and generic-customer strategy.
-- [ ] Implement create/search/edit.
+- [x] Define customer record and generic-customer strategy. *(prototipo mock: C0 bloqueado; persistencia en sesión)*
+- [x] Implement create/search/edit. *(WM4 — `MockCustomerRepository`)*
 - [ ] Implement fiscal identity validation hook used by Sales.
 - [ ] Implement immutable invoice customer snapshot at confirmation.
 - [ ] Prevent completed snapshots from following later customer edits.
@@ -63,13 +63,13 @@ At invoice confirmation, copy the applicable customer data into an immutable inv
 - [ ] Customer search/select/create inside Draft flow.
 - [ ] Default `Cliente contado` behavior.
 - [ ] Fiscal-required field feedback.
-- [ ] Basic customer maintenance.
+- [x] Basic customer maintenance. *(WM4 — `/customers`)*
 
 ### Tests
 - [ ] Generic nonfiscal sale succeeds.
 - [ ] Generic fiscal sale rejected.
 - [ ] Later customer edit leaves completed invoice unchanged.
-- [ ] Mechanic access denied.
+- [x] Mechanic access denied. *(WM4 — `customers.manage` en repositorio)*
 
 ## Canonical validated requirements
 

@@ -1,6 +1,7 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 
 import { LoginPage } from './features/auth/LoginPage';
+import { CustomersPage } from './features/customers/CustomersPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { MechanicLayout } from './features/mechanic/MechanicLayout';
 import { MechanicPlaceholderPage } from './features/mechanic/MechanicPlaceholderPage';
@@ -57,7 +58,7 @@ const desktopChildRoutes = [
   },
   {
     path: '/customers',
-    element: <PlaceholderPage title="Clientes" milestone="WM4" />,
+    element: <CustomersPage />,
   },
   {
     path: '/work-orders',

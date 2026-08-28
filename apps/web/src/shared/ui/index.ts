@@ -4,6 +4,7 @@ export { Card } from './Card';
 export { Chip } from './Chip';
 export { Empty } from './Empty';
 export { Field, Input, Select, Textarea } from './Field';
+export { SearchInput } from './SearchInput';
 export { Info } from './Info';
 export { Modal } from './Modal';
 export { money } from './money';

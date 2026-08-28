@@ -63,6 +63,8 @@ export type Customer = {
   rnc?: string;
   phone?: string;
   email?: string;
+  address?: string;
+  notes?: string;
   isDefault?: boolean;
 };
 
