@@ -1,6 +1,6 @@
-# Truck Parts System
+# SoloCamiones
 
-Local development monorepo for the truck parts inventory and sales application.
+Local development monorepo for the SoloCamiones inventory and sales application.
 
 ## Prerequisites
 

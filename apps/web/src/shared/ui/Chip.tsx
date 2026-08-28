@@ -1,0 +1,27 @@
+import type { HTMLAttributes, ReactNode } from 'react';
+
+type ChipTone = 'neutral' | 'brand' | 'amber' | 'success' | 'danger';
+
+export type ChipProps = HTMLAttributes<HTMLSpanElement> & {
+  children: ReactNode;
+  tone?: ChipTone;
+};
+
+const toneClasses: Record<ChipTone, string> = {
+  neutral: 'bg-navy-50 text-navy-700 border-navy-100',
+  brand: 'bg-brand/10 text-brand-dark border-brand/30',
+  amber: 'bg-amber-50 text-amber-800 border-amber-200',
+  success: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  danger: 'bg-red-50 text-red-800 border-red-200',
+};
+
+export function Chip({ children, tone = 'neutral', className = '', ...props }: ChipProps) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${toneClasses[tone]} ${className}`}
+      {...props}
+    >
+      {children}
+    </span>
+  );
+}

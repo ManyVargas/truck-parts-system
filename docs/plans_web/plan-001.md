@@ -1,7 +1,7 @@
-# Plan 001 — Frontend Prototipo Mock: RepuTruck
+# Plan 001 — Frontend Prototipo Mock: SoloCamiones
 
 **Alcance:** Prototipo frontend funcional con datos dummy (sin backend)  
-**Estado:** WM1 pendiente — ningún milestone web completado aún  
+**Estado:** WM1 completado — WM2 pendiente  
 **Último milestone planificado:** WM12 — Rentabilidad, recuperación, escenarios demo y preparación API  
 **Referencia de diseño:** [Prototipo Figma Make](https://www.figma.com/make/HzibQNQ88lqtv3rAup56eJ/Follow-prototype-instructions)
 
@@ -264,7 +264,7 @@ El resto del prototipo (inventario, ventas, OT, etc.) permanece mock hasta los r
 
 | ID | Milestone | Estado |
 |---|---|---|
-| WM1 | Fundación, diseño y capa mock | pendiente |
+| WM1 | Fundación, diseño y capa mock | completado |
 | WM2 | Login por formulario, shell por rol, guards + policies | pendiente |
 | WM3 | Dashboard operativo | pendiente |
 | WM4 | Clientes | pendiente |
@@ -327,7 +327,7 @@ Ninguna de negocio (placeholder de verificación).
 
 ### Funcionalidades
 - Estructura feature-based en `apps/web`
-- Tailwind v4 + tokens RepuTruck (navy, brand, amber, Inter, JetBrains Mono)
+- Tailwind v4 + tokens SoloCamiones (navy, brand, amber, Inter, JetBrains Mono)
 - Design system base en `shared/ui`
 - Contratos en `api/contracts/`
 - `mocks/data/seed.ts` portado del prototipo (4 usuarios, no 5)
@@ -342,11 +342,11 @@ Todo `shared/ui` base + `shared/layout/AppLayout` vacío.
 `createInitialState()` con seed completo importable.
 
 ### Criterios de aceptación
-- [ ] `npm run dev` muestra UI con tokens RepuTruck
-- [ ] Seed carga sin errores; `npm run typecheck` pasa
-- [ ] Ningún feature importa `seed.ts` directamente
-- [ ] Ningún componente contiene reglas de negocio
-- [ ] Este documento refleja convención mock→API
+- [x] `npm run dev` muestra UI con tokens SoloCamiones
+- [x] Seed carga sin errores; `npm run typecheck` pasa
+- [x] Ningún feature importa `seed.ts` directamente
+- [x] Ningún componente contiene reglas de negocio
+- [x] Este documento refleja convención mock→API
 
 ---
 
@@ -745,4 +745,4 @@ Cada escenario reinicia datos y documenta qué credenciales usar para login.
 | Fecha | Cambio |
 |---|---|
 | 2026-08-27 | Creación inicial del plan con 12 milestones, endurecimiento vs Figma, login por formulario con 4 usuarios seed |
-| 2026-08-27 | ITBIS 18% solo con “Factura con comprobante fiscal”; sin comprobante ITBIS = 0 |
+| 2026-08-27 | WM1 completado: fundación, design system, contratos, seed mock, repositorios esqueleto |
