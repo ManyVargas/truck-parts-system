@@ -1,11 +1,11 @@
 import type { Customer } from '../../api/contracts/entities';
 import type { CustomerRepository } from '../../api/contracts/repositories';
-import { ok } from '../../shared/auth/types';
-import { getMockState } from '../state';
+import { err, ok } from '../../shared/auth/types';
+import { cloneForRead, getMockState } from '../state';
 
 export class MockCustomerRepository implements CustomerRepository {
   async list() {
-    return ok(getMockState().customers);
+    return ok(cloneForRead(getMockState().customers));
   }
 
   async search(query: string) {
@@ -15,19 +15,19 @@ export class MockCustomerRepository implements CustomerRepository {
         customer.name.toLowerCase().includes(normalized) ||
         customer.rnc?.includes(normalized),
     );
-    return ok(customers);
+    return ok(cloneForRead(customers));
   }
 
   async getById(id: string) {
     const customer = getMockState().customers.find((entry) => entry.id === id);
     if (!customer) {
-      return { ok: false as const, error: { code: 'NOT_FOUND' as const, message: 'Cliente no encontrado' } };
+      return err({ code: 'NOT_FOUND', message: 'Cliente no encontrado' });
     }
-    return ok(customer);
+    return ok(cloneForRead(customer));
   }
 
   async save(customer: Customer) {
-    return ok(customer);
+    return ok(cloneForRead(customer));
   }
 }
 

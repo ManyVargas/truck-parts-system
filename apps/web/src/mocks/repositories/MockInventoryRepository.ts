@@ -1,30 +1,30 @@
 import type { InventoryRepository } from '../../api/contracts/repositories';
-import { ok } from '../../shared/auth/types';
-import { getMockState } from '../state';
+import { err, ok } from '../../shared/auth/types';
+import { cloneForRead, getMockState } from '../state';
 
 export class MockInventoryRepository implements InventoryRepository {
   async listItems() {
-    return ok(getMockState().items);
+    return ok(cloneForRead(getMockState().items));
   }
 
   async getItem(id: string) {
     const item = getMockState().items.find((entry) => entry.id === id);
     if (!item) {
-      return { ok: false as const, error: { code: 'NOT_FOUND' as const, message: 'Ítem no encontrado' } };
+      return err({ code: 'NOT_FOUND', message: 'Ítem no encontrado' });
     }
-    return ok(item);
+    return ok(cloneForRead(item));
   }
 
   async listQtyProducts() {
-    return ok(getMockState().qtyProducts);
+    return ok(cloneForRead(getMockState().qtyProducts));
   }
 
   async getQtyProduct(id: string) {
     const product = getMockState().qtyProducts.find((entry) => entry.id === id);
     if (!product) {
-      return { ok: false as const, error: { code: 'NOT_FOUND' as const, message: 'Producto no encontrado' } };
+      return err({ code: 'NOT_FOUND', message: 'Producto no encontrado' });
     }
-    return ok(product);
+    return ok(cloneForRead(product));
   }
 }
 
