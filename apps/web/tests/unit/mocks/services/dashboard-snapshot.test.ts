@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { createInitialState } from '../data/seed';
-import { invoiceBalance, invoiceTotal, lineItbis } from './invoice-money';
-import { invoiceProfitDop } from './gross-profit';
-import { buildDashboardSnapshot } from './dashboard-snapshot';
+import { createInitialState } from '../../../../src/mocks/data/seed';
+import {
+  invoiceBalance,
+  invoiceTotal,
+  lineItbis,
+} from '../../../../src/mocks/services/invoice-money';
+import { invoiceProfitDop } from '../../../../src/mocks/services/gross-profit';
+import { buildDashboardSnapshot } from '../../../../src/mocks/services/dashboard-snapshot';
 
 const DEMO_DAY = '2026-08-25T16:00:00.000Z';
 

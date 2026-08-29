@@ -1,22 +1,11 @@
-import type { Session, User } from '../../api/contracts/entities';
-import type { Result } from '../../shared/auth/types';
+import type { Session } from '../../api/contracts/entities';
 import type { ReactNode } from 'react';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { mockAuthRepository } from '../../mocks/repositories';
+import { AuthContext, type AuthUser } from './auth-context';
 
-export type AuthUser = Omit<User, 'password'>;
-
-type AuthContextValue = {
-  user: AuthUser | null;
-  session: Session | null;
-  isLoading: boolean;
-  login: (username: string, password: string) => Promise<Result<Session>>;
-  logout: () => Promise<void>;
-  refresh: () => Promise<void>;
-};
-
-const AuthContext = createContext<AuthContextValue | null>(null);
+export type { AuthUser } from './auth-context';
 
 async function loadAuthUser(): Promise<{ user: AuthUser | null; session: Session | null }> {
   const [sessionResult, userResult] = await Promise.all([
@@ -81,14 +70,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error('useAuth debe usarse dentro de AuthProvider');
-  }
-
-  return context;
 }

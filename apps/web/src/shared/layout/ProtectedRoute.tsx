@@ -3,7 +3,9 @@ import { Navigate, useLocation } from 'react-router-dom';
 
 import type { Role } from '../../api/contracts/entities';
 import { UnauthorizedPage } from '../../features/auth/UnauthorizedPage';
-import { useAuth } from '../../features/auth/AuthContext';
+import { useAuth } from '../../features/auth/useAuth';
+import { StandaloneNotFoundPage } from '../../features/placeholder/NotFoundPage';
+import { layoutAccessDecision } from './navigation';
 
 export type ProtectedRouteProps = {
   children: ReactNode;
@@ -31,6 +33,11 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
   }
 
   if (roles && !roles.includes(user.role)) {
+    const decision = layoutAccessDecision(location.pathname, user.role, roles);
+    if (decision === 'not_found') {
+      return <StandaloneNotFoundPage />;
+    }
+
     return <UnauthorizedPage attemptedPath={location.pathname} variant="standalone" />;
   }
 

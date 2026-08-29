@@ -3,6 +3,8 @@ import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { LoginPage } from './features/auth/LoginPage';
 import { CustomersPage } from './features/customers/CustomersPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
+import { InventoryDetailPage } from './features/inventory/InventoryDetailPage';
+import { InventoryPage } from './features/inventory/InventoryPage';
 import { MechanicLayout } from './features/mechanic/MechanicLayout';
 import { MechanicPlaceholderPage } from './features/mechanic/MechanicPlaceholderPage';
 import { PlaceholderPage } from './features/placeholder/PlaceholderPage';
@@ -20,23 +22,11 @@ const desktopChildRoutes = [
   },
   {
     path: '/inventory',
-    element: (
-      <PlaceholderPage
-        title="Inventario"
-        milestone="WM5"
-        description="Listado, búsqueda y detalle de piezas."
-      />
-    ),
+    element: <InventoryPage />,
   },
   {
     path: '/inventory/:id',
-    element: (
-      <PlaceholderPage
-        title="Detalle de ítem"
-        milestone="WM5"
-        description="Vista de pieza o producto por cantidad."
-      />
-    ),
+    element: <InventoryDetailPage />,
   },
   {
     path: '/sales',
@@ -112,6 +102,7 @@ export const router = createBrowserRouter([
         path: 'profile',
         element: <MechanicPlaceholderPage title="Perfil" />,
       },
+      { path: '*', element: <NotFoundPage /> },
     ],
   },
   {

@@ -68,16 +68,16 @@ Acquisition cost is entered in DOP when known or estimated; unknown is a real st
 ### Frontend
 - [ ] Registration form driven by category minimums.
 - [ ] Detail/edit screen for ordinary fields.
-- [ ] Clear visual separation of availability, condition, relationship, completeness, and reservation.
-- [ ] Administrator-only protected correction flow.
+- [x] Clear visual separation of availability, condition, relationship, completeness, and reservation.
+- [x] Administrator-only protected correction flow.
 
 ### Tests
 - [ ] Duplicate/reused ID rejection.
 - [ ] Partial registration and later enrichment.
 - [ ] Missing serial/part number allowed when category minimums pass.
 - [ ] Unknown cost remains unknown.
-- [ ] Seller protected-correction denial.
-- [ ] Additive correction history.
+- [x] Seller protected-correction denial.
+- [x] Additive correction history.
 
 ## Canonical validated requirements
 

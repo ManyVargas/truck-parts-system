@@ -2,6 +2,17 @@ import type { Result } from '../../shared/auth/types';
 import type { CustomerListRow, SaveCustomerInput } from './customers';
 import type { DashboardSnapshot } from './dashboard';
 import type {
+  AddToDraftInput,
+  AddToDraftResult,
+  BaselineCorrectionInput,
+  CostCorrectionInput,
+  InventoryDetail,
+  InventoryListFilters,
+  InventoryListRow,
+  ManualWorkOrderInput,
+  NoDesarmarInput,
+} from './inventory';
+import type {
   AppEvent,
   Category,
   Customer,
@@ -33,6 +44,13 @@ export type InventoryRepository = {
   getItem(id: string): Promise<Result<Item>>;
   listQtyProducts(): Promise<Result<QtyProduct[]>>;
   getQtyProduct(id: string): Promise<Result<QtyProduct>>;
+  listCatalog(filters?: InventoryListFilters): Promise<Result<InventoryListRow[]>>;
+  getDetail(id: string): Promise<Result<InventoryDetail>>;
+  addToDraft(input: AddToDraftInput): Promise<Result<AddToDraftResult>>;
+  setNoDesarmar(input: NoDesarmarInput): Promise<Result<Item>>;
+  correctAcquisitionCost(input: CostCorrectionInput): Promise<Result<Item>>;
+  correctReceiptBaseline(input: BaselineCorrectionInput): Promise<Result<Item>>;
+  createManualWorkOrder(input: ManualWorkOrderInput): Promise<Result<WorkOrder>>;
 };
 
 export type CustomerRepository = {

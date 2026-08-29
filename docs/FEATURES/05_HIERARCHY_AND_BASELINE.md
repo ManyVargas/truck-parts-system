@@ -72,18 +72,18 @@ Completeness is derived from unresolved Known Missing Components for the direct 
 
 ### Frontend
 - [ ] Assembly baseline registration/checklist.
-- [ ] Hierarchy/tree detail.
-- [ ] Missing-component and completeness display.
-- [ ] Administrator `No desarmar` controls.
-- [ ] Protected baseline-correction UI with reason and preview.
+- [x] Hierarchy/tree detail.
+- [x] Missing-component and completeness display.
+- [x] Administrator `No desarmar` controls.
+- [x] Protected baseline-correction UI with reason and preview.
 
 ### Tests
 - [ ] Second-parent/self/cycle rejection.
 - [ ] PRESENT/MISSING/NOT_APPLICABLE baseline scenarios.
-- [ ] Direct-parent-only completeness.
+- [x] Direct-parent-only completeness.
 - [ ] Baseline cannot be rerun.
-- [ ] Seller cannot correct baseline.
-- [ ] Protected subtree sale/desarme rejection.
+- [x] Seller cannot correct baseline.
+- [x] Protected subtree sale/desarme rejection.
 - [ ] Concurrent hierarchy-change conflict tests.
 
 ## Canonical validated requirements

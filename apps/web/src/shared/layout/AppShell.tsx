@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom';
 
-import { useAuth } from '../../features/auth/AuthContext';
+import { useAuth } from '../../features/auth/useAuth';
 import { Logo } from '../ui';
 import { DemoControls } from './DemoControls';
 import { RoleNav } from './RoleNav';

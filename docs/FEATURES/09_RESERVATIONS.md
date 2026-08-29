@@ -74,7 +74,7 @@ Confirmation must always reread/revalidate current stock, hierarchy, restriction
 ### Tests
 - [ ] Two-Draft unique item race.
 - [ ] Quantity oversubscription race.
-- [ ] Parent/descendant overlap cases.
+- [x] Parent/descendant overlap cases.
 - [ ] No expiry after simulated time.
 - [ ] Idempotent release/consume behavior.
 

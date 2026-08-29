@@ -1,9 +1,6 @@
-import { useNavigate } from 'react-router-dom';
-
-import { useAuth } from './AuthContext';
-import { defaultPathForRole } from '../../shared/layout/navigation';
 import { PageHeader } from '../../shared/layout/PageHeader';
-import { Button, Card, Info } from '../../shared/ui';
+import { ReturnHomeButton } from '../../shared/layout/ReturnHomeButton';
+import { Card, Info } from '../../shared/ui';
 
 export type UnauthorizedPageProps = {
   attemptedPath?: string;
@@ -12,26 +9,15 @@ export type UnauthorizedPageProps = {
 };
 
 export function UnauthorizedPage({ variant = 'embedded' }: UnauthorizedPageProps) {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-
   const content = (
     <>
       <PageHeader title="Acceso no autorizado" />
       <Card>
         <Info tone="error" title="No tiene permiso para acceder a esta ruta">
-          Su rol no tiene acceso a esta sección. Use el menú lateral para navegar a las áreas
+          Su rol no tiene acceso a esta sección. Vuelva al inicio para continuar en las áreas
           disponibles.
         </Info>
-        {user && (
-          <Button
-            className="mt-4"
-            variant="secondary"
-            onClick={() => navigate(defaultPathForRole(user.role), { replace: true })}
-          >
-            Volver al inicio
-          </Button>
-        )}
+        <ReturnHomeButton />
       </Card>
     </>
   );

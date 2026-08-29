@@ -66,7 +66,7 @@ Reservation and sale must use conditional atomic writes so `onHand - reserved` n
 - [ ] Quantity product registration.
 - [ ] Normal stock receipt/entry flow.
 - [ ] Administrator adjustment flow.
-- [ ] Display on-hand, reserved, and available-to-reserve separately.
+- [x] Display on-hand, reserved, and available-to-reserve separately.
 
 ### Tests
 - [ ] Weighted-average examples.

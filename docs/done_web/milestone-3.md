@@ -59,22 +59,26 @@ Suma de ítems `AVAILABLE` (8) más unidades de cantidad `onHand − reserved` (
 ## 4. Estructura añadida / modificada
 
 ```
-apps/web/src/
-├── api/contracts/dashboard.ts
-├── api/client/dashboard-api.ts
-├── mocks/
-│   ├── data/demo-clock.ts
-│   ├── services/invoice-money.ts
-│   ├── services/gross-profit.ts
-│   ├── services/dashboard-snapshot.ts
-│   ├── services/dashboard-snapshot.test.ts
-│   └── repositories/MockDashboardRepository.ts
-├── shared/layout/KpiCard.tsx
-└── features/dashboard/
-    ├── DashboardPage.tsx
-    ├── useDashboard.ts
-    ├── RecentInvoicesList.tsx
-    └── ActivityTimeline.tsx
+apps/web/
+├── src/
+│   ├── api/contracts/dashboard.ts
+│   ├── api/client/dashboard-api.ts
+│   ├── mocks/
+│   │   ├── data/demo-clock.ts
+│   │   ├── services/invoice-money.ts
+│   │   ├── services/gross-profit.ts
+│   │   ├── services/dashboard-snapshot.ts
+│   │   └── repositories/MockDashboardRepository.ts
+│   ├── shared/layout/KpiCard.tsx
+│   └── features/dashboard/
+│       ├── DashboardPage.tsx
+│       ├── useDashboard.ts
+│       ├── RecentInvoicesList.tsx
+│       └── ActivityTimeline.tsx
+└── tests/
+│   ├── unit/mocks/services/dashboard-snapshot.test.ts
+│   ├── integration/mocks/repositories/dashboard.repository.test.ts
+│   └── component/dashboard/DashboardPage.test.tsx
 ```
 
 **Modificados:** `policies.ts` (`dashboard.view`), `repositories.ts`, `router.tsx`, `vite.config.ts`, `package.json` (Vitest).

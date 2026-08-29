@@ -1,7 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom';
 
 import { UnauthorizedPage } from '../../features/auth/UnauthorizedPage';
-import { useAuth } from '../../features/auth/AuthContext';
+import { useAuth } from '../../features/auth/useAuth';
 import { isKnownDesktopRoute, isRouteAllowedForRole } from './navigation';
 
 /**

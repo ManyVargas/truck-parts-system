@@ -1,27 +1,6 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 
-export type ToastTone = 'info' | 'success' | 'warning' | 'error';
-
-export type Toast = {
-  id: string;
-  message: string;
-  tone: ToastTone;
-};
-
-type ToastContextValue = {
-  toasts: Toast[];
-  pushToast: (message: string, tone?: ToastTone) => void;
-  dismissToast: (id: string) => void;
-};
-
-const ToastContext = createContext<ToastContextValue | null>(null);
+import { ToastContext, type Toast, type ToastTone, useToast } from './toast-context';
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -44,14 +23,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 
   return <ToastContext.Provider value={value}>{children}</ToastContext.Provider>;
-}
-
-export function useToast() {
-  const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error('useToast must be used within ToastProvider');
-  }
-  return context;
 }
 
 const toneClasses: Record<ToastTone, string> = {

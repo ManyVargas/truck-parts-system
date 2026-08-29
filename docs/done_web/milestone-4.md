@@ -52,19 +52,23 @@ El cliente nuevo queda en `AppState` de la sesión mock; WM8 lo verá en el sele
 ## 4. Estructura añadida / modificada
 
 ```
-apps/web/src/
-├── api/contracts/customers.ts
-├── api/client/customers-api.ts
-├── mocks/
-│   ├── services/customers.ts
-│   ├── services/customers.test.ts
-│   └── repositories/MockCustomerRepository.ts
-├── shared/ui/SearchInput.tsx
-└── features/customers/
-    ├── CustomersPage.tsx
-    ├── useCustomers.ts
-    ├── CustomerTable.tsx
-    └── CustomerFormModal.tsx
+apps/web/
+├── src/
+│   ├── api/contracts/customers.ts
+│   ├── api/client/customers-api.ts
+│   ├── mocks/
+│   │   ├── services/customers.ts
+│   │   └── repositories/MockCustomerRepository.ts
+│   ├── shared/ui/SearchInput.tsx
+│   └── features/customers/
+│       ├── CustomersPage.tsx
+│       ├── useCustomers.ts
+│       ├── CustomerTable.tsx
+│       └── CustomerFormModal.tsx
+└── tests/
+│   ├── unit/mocks/services/customers.test.ts
+│   ├── integration/mocks/repositories/customers.repository.test.ts
+│   └── component/customers/
 ```
 
 **Modificados:** `entities.ts` (`address`, `notes`), `repositories.ts` (`SaveCustomerInput`, filas con `invoiceCount`), `contracts/index.ts`, `router.tsx`, `shared/ui/index.ts`.

@@ -44,6 +44,9 @@ export type KnownMissingComponent = {
   parentId: string;
   expectedComponentName: string;
   origin: 'MISSING_AT_RECEIPT' | 'REMOVED_AFTER_BASELINE';
+  /** Present when origin is REMOVED_AFTER_BASELINE — identity is not deleted. */
+  formerItemId?: string;
+  workOrderId?: string;
 };
 
 export type QtyProduct = {

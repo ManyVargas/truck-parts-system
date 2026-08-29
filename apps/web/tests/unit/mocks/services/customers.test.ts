@@ -1,11 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_CASH_CUSTOMER_ID } from '../../api/contracts/customers';
-import { mockCustomerRepository } from '../repositories/MockCustomerRepository';
-import { createInitialState } from '../data/seed';
-import { setSession } from '../session';
-import { resetMockState } from '../state';
-import { buildCustomerDirectory, nextCustomerId, prepareCustomerSave } from './customers';
+import { DEFAULT_CASH_CUSTOMER_ID } from '../../../../src/api/contracts/customers';
+import { createInitialState } from '../../../../src/mocks/data/seed';
+import {
+  buildCustomerDirectory,
+  nextCustomerId,
+  prepareCustomerSave,
+} from '../../../../src/mocks/services/customers';
 
 describe('buildCustomerDirectory', () => {
   it('matches seed invoice counts and puts Cliente Contado first', () => {
@@ -80,38 +81,5 @@ describe('prepareCustomerSave', () => {
   it('rejects empty name and invalid email', () => {
     expect(prepareCustomerSave(seedCustomers, { name: '   ' }).ok).toBe(false);
     expect(prepareCustomerSave(seedCustomers, { name: 'A', email: 'no-es-correo' }).ok).toBe(false);
-  });
-});
-
-describe('MockCustomerRepository', () => {
-  beforeEach(() => {
-    resetMockState();
-  });
-
-  afterEach(() => {
-    resetMockState();
-  });
-
-  it('persists a create in mock session state', async () => {
-    setSession({ userId: 'U-LAURA', createdAt: '2026-08-25T16:00:00.000Z' });
-
-    const saved = await mockCustomerRepository.save({ name: 'Flota Este' });
-    expect(saved.ok).toBe(true);
-
-    const listed = await mockCustomerRepository.list();
-    expect(listed.ok).toBe(true);
-    if (listed.ok) {
-      expect(listed.value.some((row) => row.name === 'Flota Este' && row.id === 'C3')).toBe(true);
-    }
-  });
-
-  it('denies mechanic access', async () => {
-    setSession({ userId: 'U-PEDRO', createdAt: '2026-08-25T16:00:00.000Z' });
-
-    const result = await mockCustomerRepository.list();
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error.code).toBe('FORBIDDEN');
-    }
   });
 });

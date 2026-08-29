@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 
 import { Button, Field, Info, Input } from '../../shared/ui';
-import { useAuth } from './AuthContext';
+import { useAuth } from './useAuth';
 
 export type LoginFormProps = {
   onSuccess?: () => void;

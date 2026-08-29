@@ -10,4 +10,5 @@ export { Modal } from './Modal';
 export { money } from './money';
 export { Mono } from './Mono';
 export { SectionTitle } from './SectionTitle';
-export { ToastProvider, Toaster, useToast } from './Toaster';
+export { ToastProvider, Toaster } from './Toaster';
+export { useToast } from './toast-context';

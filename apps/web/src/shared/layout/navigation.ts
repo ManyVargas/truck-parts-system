@@ -71,6 +71,7 @@ export function navItemsForRole(role: Role): NavItem[] {
 
 /** Registered desktop routes — unknown paths should 404, not unauthorized. */
 const KNOWN_DESKTOP_ROUTE_PATTERNS: RegExp[] = [
+  /^\/$/,
   /^\/dashboard$/,
   /^\/inventory$/,
   /^\/inventory\/[^/]+$/,
@@ -85,8 +86,42 @@ const KNOWN_DESKTOP_ROUTE_PATTERNS: RegExp[] = [
   /^\/recovery$/,
 ];
 
+const KNOWN_MECHANIC_ROUTE_PATTERNS: RegExp[] = [
+  /^\/mechanic$/,
+  /^\/mechanic\/pending$/,
+  /^\/mechanic\/mine$/,
+  /^\/mechanic\/profile$/,
+];
+
 export function isKnownDesktopRoute(pathname: string): boolean {
   return KNOWN_DESKTOP_ROUTE_PATTERNS.some((pattern) => pattern.test(pathname));
+}
+
+export function isKnownMechanicRoute(pathname: string): boolean {
+  return KNOWN_MECHANIC_ROUTE_PATTERNS.some((pattern) => pattern.test(pathname));
+}
+
+export type LayoutAccessDecision = 'allow' | 'forbidden' | 'not_found';
+
+/**
+ * Distinguishes “wrong role for a real screen” from “this URL does not exist”.
+ * The desktop layout's splat otherwise swallows typos like /invenray and 401s a mechanic.
+ */
+export function layoutAccessDecision(
+  pathname: string,
+  userRole: Role,
+  layoutRoles: Role[],
+): LayoutAccessDecision {
+  if (layoutRoles.includes(userRole)) {
+    return 'allow';
+  }
+
+  const layoutIsMechanic = layoutRoles.length === 1 && layoutRoles[0] === 'MECHANIC';
+  const pathExistsInThisLayout = layoutIsMechanic
+    ? isKnownMechanicRoute(pathname)
+    : isKnownDesktopRoute(pathname);
+
+  return pathExistsInThisLayout ? 'forbidden' : 'not_found';
 }
 
 /** Sidebar active state — 404/unknown paths must not highlight a parent segment. */

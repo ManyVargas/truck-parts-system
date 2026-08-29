@@ -7,6 +7,7 @@ import type {
 import type { AppState } from '../../api/contracts/entities';
 import { DEMO_NOW_ISO } from '../data/demo-clock';
 import { invoiceProfitDop } from './gross-profit';
+import { isComplete } from './inventory-helpers';
 import { invoiceBalance, invoiceTotal, utcCalendarDate } from './invoice-money';
 
 const RECENT_INVOICE_LIMIT = 5;
@@ -69,12 +70,8 @@ function profitDopTotal(state: AppState): number {
 }
 
 function incompleteAssemblyCount(state: AppState): number {
-  const assemblyCategoryIds = new Set(
-    state.categories.filter((category) => category.isAssembly).map((category) => category.id),
-  );
-
   return state.items.filter(
-    (item) => assemblyCategoryIds.has(item.categoryId) && item.complete === false,
+    (item) => isComplete(item, state.knownMissing, state.categories) === false,
   ).length;
 }
 

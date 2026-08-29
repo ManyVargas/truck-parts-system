@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../auth/useAuth';
 import { DemoControls } from '../../shared/layout/DemoControls';
 import { UserMenu } from '../../shared/layout/UserMenu';
 

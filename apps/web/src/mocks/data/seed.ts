@@ -7,6 +7,7 @@ const ISO = (value: string) => value;
  * Builds the full in-memory demo dataset.
  * Ported from prototype intent: 4 users, TRK hierarchy, 2 qty products,
  * 3 customers, 5 invoices, 4 work orders, fxAvailable + facSeq.
+ * Hierarchy: one engine in TRK-001; ENG-002/ENG-003 independent in the yard.
  */
 export function createInitialState(): AppState {
   const users = [
@@ -50,7 +51,7 @@ export function createInitialState(): AppState {
       id: 'CAT-TRK',
       name: 'Camión',
       isAssembly: true,
-      expectedComponents: ['Motor'],
+      expectedComponents: ['Motor', 'Transmisión'],
     },
     {
       id: 'CAT-ENG',
@@ -115,6 +116,7 @@ export function createInitialState(): AppState {
       parentId: 'TRK-001',
       complete: true,
       photos: [],
+      attributes: { displacement: '14.8L' },
     },
     {
       id: 'ALT-004',
@@ -153,7 +155,7 @@ export function createInitialState(): AppState {
       partNumber: 'STA-24V-002',
       condition: 'REMANUFACTURED' as const,
       acquisitionCostDop: 12_800,
-      commercialState: 'AVAILABLE' as const,
+      commercialState: 'SOLD' as const,
       physicalRelationship: 'INSTALLED' as const,
       parentId: 'ENG-001',
       complete: true,
@@ -170,8 +172,7 @@ export function createInitialState(): AppState {
       acquisitionCostDop: 210_000,
       location: 'Patio B',
       commercialState: 'AVAILABLE' as const,
-      physicalRelationship: 'INSTALLED' as const,
-      parentId: 'TRK-001',
+      physicalRelationship: 'INDEPENDENT' as const,
       complete: false,
       photos: [],
     },
@@ -183,8 +184,7 @@ export function createInitialState(): AppState {
       condition: 'USED' as const,
       acquisitionCostDop: 16_200,
       commercialState: 'AVAILABLE' as const,
-      physicalRelationship: 'INSTALLED' as const,
-      parentId: 'ENG-002',
+      physicalRelationship: 'INDEPENDENT' as const,
       complete: true,
       photos: [],
     },
@@ -199,10 +199,23 @@ export function createInitialState(): AppState {
       acquisitionCostDop: 275_000,
       location: 'Patio C',
       commercialState: 'AVAILABLE' as const,
-      physicalRelationship: 'INSTALLED' as const,
-      parentId: 'TRK-001',
+      physicalRelationship: 'INDEPENDENT' as const,
       complete: true,
       noDesarmar: true,
+      photos: [],
+    },
+    {
+      id: 'ALT-011',
+      name: 'Alternador DD13',
+      categoryId: 'CAT-ALT',
+      brand: 'Delco',
+      partNumber: 'ALT-DD13-011',
+      condition: 'USED' as const,
+      acquisitionCostDop: 17_400,
+      commercialState: 'AVAILABLE' as const,
+      physicalRelationship: 'INSTALLED' as const,
+      parentId: 'ENG-003',
+      complete: true,
       photos: [],
     },
     {
@@ -227,6 +240,20 @@ export function createInitialState(): AppState {
       parentId: 'ENG-002',
       expectedComponentName: 'Turbo',
       origin: 'MISSING_AT_RECEIPT' as const,
+    },
+    {
+      id: 'KM-002',
+      parentId: 'TRK-001',
+      expectedComponentName: 'Transmisión',
+      origin: 'MISSING_AT_RECEIPT' as const,
+    },
+    {
+      id: 'KM-003',
+      parentId: 'ENG-002',
+      expectedComponentName: 'Alternador',
+      origin: 'REMOVED_AFTER_BASELINE' as const,
+      formerItemId: 'ALT-010',
+      workOrderId: 'OD-DEMO-063',
     },
   ];
 
@@ -494,6 +521,18 @@ export function createInitialState(): AppState {
       description: 'Pago parcial en FAC-000099',
       actorId: 'U-LAURA',
       createdAt: ISO('2026-08-25T11:00:00.000Z'),
+    },
+    {
+      id: 'EV-004',
+      type: 'DISMANTLING_COMPLETED',
+      description: 'ALT-010 retirado de ENG-002 (OD-DEMO-063). Queda independiente; el motor registra el faltante.',
+      actorId: 'U-CARLOS',
+      createdAt: ISO('2026-08-18T12:00:00.000Z'),
+      metadata: {
+        itemId: 'ALT-010',
+        parentId: 'ENG-002',
+        workOrderId: 'OD-DEMO-063',
+      },
     },
   ];
 

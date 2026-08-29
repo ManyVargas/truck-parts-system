@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 
-import { NotFoundPage } from '../../features/placeholder/NotFoundPage';
-import { useAuth } from '../../features/auth/AuthContext';
+import { StandaloneNotFoundPage } from '../../features/placeholder/NotFoundPage';
+import { useAuth } from '../../features/auth/useAuth';
 
 /** Unknown paths: login if guest, 404 if authenticated. */
 export function CatchAllRoute() {
@@ -20,11 +20,5 @@ export function CatchAllRoute() {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-surface px-4 py-10 text-navy">
-      <div className="w-full max-w-lg">
-        <NotFoundPage />
-      </div>
-    </div>
-  );
+  return <StandaloneNotFoundPage />;
 }
