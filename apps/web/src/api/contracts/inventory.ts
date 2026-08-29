@@ -1,9 +1,11 @@
 import type {
   AppEvent,
   CommercialState,
+  Item,
   ItemCondition,
   KnownMissingComponent,
   PhysicalRelationship,
+  QtyProduct,
   WorkOrder,
   WorkOrderType,
 } from './entities';
@@ -169,3 +171,53 @@ export type ManualWorkOrderInput = {
   destinationParentId?: string;
   notes?: string;
 };
+
+export type RegisterItemInput = {
+  id: string;
+  name: string;
+  categoryId: string;
+  brand?: string;
+  model?: string;
+  serial?: string;
+  partNumber?: string;
+  condition: ItemCondition;
+  acquisitionCostDop?: number;
+  costProvenance?: string;
+  location?: string;
+  attributes?: Record<string, string>;
+  notes?: string;
+  photos?: string[];
+};
+
+export type RegisterQtyProductInput = {
+  id: string;
+  name: string;
+  categoryId: string;
+  brand?: string;
+  initialQuantity: number;
+  unitCostDop: number;
+  location?: string;
+};
+
+export type BaselineStatus = 'PRESENT' | 'MISSING' | 'NOT_APPLICABLE';
+
+export type AssemblyBaselineEntry = {
+  expectedComponentName: string;
+  status: BaselineStatus;
+  item?: RegisterItemInput;
+  /** Required when a PRESENT component is itself an assembly. */
+  baseline?: AssemblyBaselineEntry[];
+};
+
+export type RegisterAssemblyInput = {
+  parent: RegisterItemInput;
+  baseline: AssemblyBaselineEntry[];
+};
+
+export type RegisterAssemblyResult = {
+  parent: Item;
+  children: Item[];
+  missingComponents: KnownMissingComponent[];
+};
+
+export type InventoryRegistrationResult = Item | QtyProduct | RegisterAssemblyResult;

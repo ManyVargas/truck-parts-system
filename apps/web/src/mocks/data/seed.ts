@@ -60,6 +60,12 @@ export function createInitialState(): AppState {
       expectedComponents: ['Alternador', 'Turbo', 'Motor de arranque'],
     },
     {
+      id: 'CAT-TRANS',
+      name: 'Transmisión',
+      isAssembly: true,
+      expectedComponents: ['Engranaje', 'Rodamientos', 'Piñon'],
+    },
+    {
       id: 'CAT-ALT',
       name: 'Alternador',
       isAssembly: false,

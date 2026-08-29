@@ -11,6 +11,10 @@ import type {
   InventoryListRow,
   ManualWorkOrderInput,
   NoDesarmarInput,
+  RegisterAssemblyInput,
+  RegisterAssemblyResult,
+  RegisterItemInput,
+  RegisterQtyProductInput,
 } from './inventory';
 import type {
   AppEvent,
@@ -51,6 +55,9 @@ export type InventoryRepository = {
   correctAcquisitionCost(input: CostCorrectionInput): Promise<Result<Item>>;
   correctReceiptBaseline(input: BaselineCorrectionInput): Promise<Result<Item>>;
   createManualWorkOrder(input: ManualWorkOrderInput): Promise<Result<WorkOrder>>;
+  registerItem(input: RegisterItemInput): Promise<Result<Item>>;
+  registerAssembly(input: RegisterAssemblyInput): Promise<Result<RegisterAssemblyResult>>;
+  registerQtyProduct(input: RegisterQtyProductInput): Promise<Result<QtyProduct>>;
 };
 
 export type CustomerRepository = {

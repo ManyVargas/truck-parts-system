@@ -13,6 +13,7 @@ alwaysApply: true
 - Do not silently change public APIs or existing behavior.
 - Add concise comments to intermediate or complex functions and non-obvious business logic, explaining their purpose, important decisions, or why the implementation works that way.
 - Do not add comments that merely repeat obvious code.
+- Apply the necessary rules that are within truck-parts-system\.cursor\rules
 
 After every change, always explain:
 

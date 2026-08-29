@@ -1,7 +1,7 @@
 # Plan 001 — Frontend Prototipo Mock: SoloCamiones
 
 **Alcance:** Prototipo frontend funcional con datos dummy (sin backend)  
-**Estado:** WM5 completado — WM6 pendiente
+**Estado:** WM6 completado — WM7 pendiente
 **Último milestone planificado:** WM12 — Rentabilidad, recuperación, escenarios demo y preparación API  
 **Referencia de diseño:** [Prototipo Figma Make](https://www.figma.com/make/HzibQNQ88lqtv3rAup56eJ/Follow-prototype-instructions)
 
@@ -269,7 +269,7 @@ El resto del prototipo (inventario, ventas, OT, etc.) permanece mock hasta los r
 | WM3  | Dashboard operativo                                    | completado |
 | WM4  | Clientes                                               | completado |
 | WM5  | Inventario listado, búsqueda y detalle                 | completado |
-| WM6  | Registro de inventario                                 | pendiente  |
+| WM6  | Registro de inventario                                 | completado |
 | WM7  | Ventas: listado, detalle, pagos, cancelación, PDF      | pendiente  |
 | WM8  | Punto de venta y borradores (POS)                      | pendiente  |
 | WM9  | Órdenes de trabajo (escritorio)                        | pendiente  |
@@ -522,10 +522,10 @@ Agregaciones sobre `items`, `invoices`, `workOrders`, `events`.
 
 ### Criterios de aceptación
 
-- [ ] Pieza simple en listado
-- [ ] Ensamblaje crea padre + hijos o `MISSING_AT_RECEIPT`
-- [ ] Producto cantidad con modo “Por cantidad”
-- [ ] ID único; checklist completo; errores vía `Result`
+- [x] Pieza simple en listado
+- [x] Ensamblaje crea padre + hijos o `MISSING_AT_RECEIPT`
+- [x] Producto cantidad con modo “Por cantidad”
+- [x] ID único; checklist completo; errores vía `Result`
 
 ---
 
@@ -812,3 +812,4 @@ Cada escenario reinicia datos y documenta qué credenciales usar para login.
 | 2026-08-28 | WM4 completado: CRUD clientes, C0 no editable, búsqueda nombre/RNC                                             |
 | 2026-08-28 | WM3 completado: dashboard operativo por rol, KPIs, facturas recientes, timeline                                |
 | 2026-08-28 | WM5 completado: inventario unificado, búsqueda, detalle, chips, acciones admin y reserva a borrador            |
+| 2026-08-28 | WM6 completado: registro individual, por cantidad y ensamblajes anidados con baseline recursivo y atómico      |

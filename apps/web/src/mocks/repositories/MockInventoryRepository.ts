@@ -1,12 +1,19 @@
 import type { InventoryRepository } from '../../api/contracts/repositories';
 import type { InventoryListFilters } from '../../api/contracts/inventory';
 import { err, ok } from '../../shared/auth/types';
-import { buildInventoryCatalog, buildItemDetail, buildQtyProductDetail } from '../services/inventory-catalog';
+import {
+  buildInventoryCatalog,
+  buildItemDetail,
+  buildQtyProductDetail,
+} from '../services/inventory-catalog';
 import {
   addInventoryToDraft,
   correctAcquisitionCost,
   correctReceiptBaseline,
   createManualWorkOrder,
+  registerAssembly,
+  registerItem,
+  registerQtyProduct,
   setNoDesarmar,
 } from '../services/inventory-commands';
 import { requirePermission } from '../services/require-permission';
@@ -94,7 +101,9 @@ export class MockInventoryRepository implements InventoryRepository {
     return ok(cloneForRead(result.value));
   }
 
-  async correctAcquisitionCost(input: Parameters<InventoryRepository['correctAcquisitionCost']>[0]) {
+  async correctAcquisitionCost(
+    input: Parameters<InventoryRepository['correctAcquisitionCost']>[0],
+  ) {
     const permission = requirePermission('inventory.admin');
     if (!permission.ok) {
       return permission;
@@ -108,7 +117,9 @@ export class MockInventoryRepository implements InventoryRepository {
     return ok(cloneForRead(result.value));
   }
 
-  async correctReceiptBaseline(input: Parameters<InventoryRepository['correctReceiptBaseline']>[0]) {
+  async correctReceiptBaseline(
+    input: Parameters<InventoryRepository['correctReceiptBaseline']>[0],
+  ) {
     const permission = requirePermission('inventory.admin');
     if (!permission.ok) {
       return permission;
@@ -134,6 +145,27 @@ export class MockInventoryRepository implements InventoryRepository {
     }
 
     return ok(cloneForRead(result.value));
+  }
+
+  async registerItem(input: Parameters<InventoryRepository['registerItem']>[0]) {
+    const permission = requirePermission('inventory.register');
+    if (!permission.ok) return permission;
+    const result = registerItem(getMockState(), permission.value, input);
+    return result.ok ? ok(cloneForRead(result.value)) : result;
+  }
+
+  async registerAssembly(input: Parameters<InventoryRepository['registerAssembly']>[0]) {
+    const permission = requirePermission('inventory.register');
+    if (!permission.ok) return permission;
+    const result = registerAssembly(getMockState(), permission.value, input);
+    return result.ok ? ok(cloneForRead(result.value)) : result;
+  }
+
+  async registerQtyProduct(input: Parameters<InventoryRepository['registerQtyProduct']>[0]) {
+    const permission = requirePermission('inventory.register');
+    if (!permission.ok) return permission;
+    const result = registerQtyProduct(getMockState(), permission.value, input);
+    return result.ok ? ok(cloneForRead(result.value)) : result;
   }
 }
 

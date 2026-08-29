@@ -49,6 +49,74 @@ describe('MockInventoryRepository', () => {
     expect(workOrder.ok).toBe(false);
   });
 
+  it('lets sellers register inventory and denies mechanics in the repository', async () => {
+    signInAs('SELLER');
+    const sellerResult = await mockInventoryRepository.registerItem({
+      id: 'ALT-020',
+      name: 'Alternador registrado',
+      categoryId: 'CAT-ALT',
+      condition: 'USED',
+    });
+    expect(sellerResult.ok).toBe(true);
+
+    signInAs('MECHANIC');
+    const mechanicResult = await mockInventoryRepository.registerQtyProduct({
+      id: 'QTY-TEST',
+      name: 'No permitido',
+      categoryId: 'CAT-FIL',
+      initialQuantity: 1,
+      unitCostDop: 1,
+    });
+    const mechanicAssembly = await mockInventoryRepository.registerAssembly({
+      parent: {
+        id: 'ENG-DENIED',
+        name: 'No permitido',
+        categoryId: 'CAT-ENG',
+        condition: 'USED',
+      },
+      baseline: [
+        { expectedComponentName: 'Alternador', status: 'MISSING' },
+        { expectedComponentName: 'Turbo', status: 'MISSING' },
+        { expectedComponentName: 'Motor de arranque', status: 'MISSING' },
+      ],
+    });
+    expect(mechanicResult.ok).toBe(false);
+    expect(mechanicAssembly.ok).toBe(false);
+    expect(getMockState().qtyProducts.some((product) => product.id === 'QTY-TEST')).toBe(false);
+    expect(getMockState().items.some((item) => item.id === 'ENG-DENIED')).toBe(false);
+  });
+
+  it('persists authorized assembly and quantity registrations through the repository', async () => {
+    signInAs('SELLER');
+    const assembly = await mockInventoryRepository.registerAssembly({
+      parent: {
+        id: 'ENG-020',
+        name: 'Motor recibido',
+        categoryId: 'CAT-ENG',
+        condition: 'USED',
+      },
+      baseline: [
+        { expectedComponentName: 'Alternador', status: 'MISSING' },
+        { expectedComponentName: 'Turbo', status: 'MISSING' },
+        { expectedComponentName: 'Motor de arranque', status: 'NOT_APPLICABLE' },
+      ],
+    });
+    const quantity = await mockInventoryRepository.registerQtyProduct({
+      id: 'QTY-FIL-NEW',
+      name: 'Filtro por caja',
+      categoryId: 'CAT-FIL',
+      initialQuantity: 8,
+      unitCostDop: 300,
+    });
+
+    expect(assembly.ok).toBe(true);
+    expect(quantity.ok).toBe(true);
+    expect(getMockState().items.some((item) => item.id === 'ENG-020')).toBe(true);
+    expect(
+      getMockState().qtyProducts.find((product) => product.id === 'QTY-FIL-NEW'),
+    ).toMatchObject({ onHand: 8, reserved: 0 });
+  });
+
   it('prevents applying No desarmar to a unique part', async () => {
     signInAs('ADMINISTRATOR');
 

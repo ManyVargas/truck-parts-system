@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { InventoryPage } from '../../../src/features/inventory/InventoryPage';
-import { resetMockState } from '../../../src/mocks/state';
+import { getMockState, resetMockState } from '../../../src/mocks/state';
 import { renderWithProviders } from '../../support/render';
 import { signInAs } from '../../support/session';
 import '../../support/dom';
@@ -51,5 +51,79 @@ describe('InventoryPage', () => {
     await user.type(screen.getByLabelText('Buscar inventario'), 'NO-EXISTE-999');
 
     expect(await screen.findByText('Sin resultados')).toBeVisible();
+  });
+
+  it('registers a simple item and refreshes the inventory list', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<InventoryPage />, { route: '/inventory' });
+    await screen.findByText('Filtro de aceite HD');
+
+    await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText('ID interno'), 'ALT-020');
+    await user.type(within(dialog).getByLabelText('Nombre'), 'Alternador de mostrador');
+    await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-ALT');
+    await user.click(within(dialog).getByRole('button', { name: 'Registrar' }));
+
+    expect(await screen.findByText('Alternador de mostrador')).toBeVisible();
+    expect(await screen.findByText('ALT-020 registrado correctamente')).toBeVisible();
+  });
+
+  it('registers quantity inventory from the Por cantidad mode', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<InventoryPage />, { route: '/inventory' });
+    await screen.findByText('Filtro de aceite HD');
+
+    await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
+    const dialog = screen.getByRole('dialog');
+    await user.click(within(dialog).getByLabelText('Por cantidad'));
+    await user.type(within(dialog).getByLabelText('ID interno'), 'QTY-FIL-NEW');
+    await user.type(within(dialog).getByLabelText('Nombre'), 'Filtro por caja');
+    await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-FIL');
+    await user.clear(within(dialog).getByLabelText('Existencia inicial'));
+    await user.type(within(dialog).getByLabelText('Existencia inicial'), '8');
+    await user.type(within(dialog).getByLabelText('Costo unitario DOP'), '300');
+    await user.click(within(dialog).getByRole('button', { name: 'Registrar' }));
+
+    expect(await screen.findByText('Filtro por caja')).toBeVisible();
+    expect(screen.getByText('8 disp. / 8 exist.')).toBeVisible();
+  });
+
+  it('captures a truck, a present engine and the engine baseline in one wizard', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<InventoryPage />, { route: '/inventory' });
+    await screen.findByText('Filtro de aceite HD');
+
+    await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText('ID interno'), 'TRK-020');
+    await user.type(within(dialog).getByLabelText('Nombre'), 'Camión con motor recibido');
+    await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-TRK');
+    await user.click(within(dialog).getByRole('button', { name: 'Continuar' }));
+
+    const motorGroup = within(dialog).getByRole('group', { name: 'Motor' });
+    await user.click(within(motorGroup).getByLabelText('Presente'));
+    await user.type(within(motorGroup).getByLabelText('ID del componente'), 'ENG-020');
+    await user.clear(within(motorGroup).getByLabelText('Nombre'));
+    await user.type(within(motorGroup).getByLabelText('Nombre'), 'Motor dentro del camión');
+
+    const alternatorGroup = within(motorGroup).getByRole('group', { name: 'Alternador' });
+    await user.click(within(alternatorGroup).getByLabelText('Presente'));
+    await user.type(within(alternatorGroup).getByLabelText('ID del componente'), 'ALT-020');
+    const starterGroup = within(motorGroup).getByRole('group', { name: 'Motor de arranque' });
+    await user.click(within(starterGroup).getByLabelText('No aplica'));
+    const transmissionGroup = within(dialog).getByRole('group', { name: 'Transmisión' });
+    await user.click(within(transmissionGroup).getByLabelText('No aplica'));
+    await user.click(within(dialog).getByRole('button', { name: 'Registrar ensamblaje' }));
+
+    expect(await screen.findByText('Camión con motor recibido')).toBeVisible();
+    expect(getMockState().items.find((item) => item.id === 'ENG-020')).toMatchObject({
+      parentId: 'TRK-020',
+      complete: false,
+    });
+    expect(getMockState().items.find((item) => item.id === 'ALT-020')?.parentId).toBe('ENG-020');
+    expect(getMockState().knownMissing).toContainEqual(
+      expect.objectContaining({ parentId: 'ENG-020', expectedComponentName: 'Turbo' }),
+    );
   });
 });

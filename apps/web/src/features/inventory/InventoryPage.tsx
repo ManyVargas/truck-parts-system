@@ -1,11 +1,15 @@
-import { Info } from '../../shared/ui';
+import { useState } from 'react';
+import { Button, Info, useToast } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
 import { InventoryFilters } from './InventoryFilters';
 import { InventoryTable } from './InventoryTable';
 import { useInventoryCatalog } from './useInventoryCatalog';
+import { RegisterItemWizard } from './RegisterItemWizard';
 
 export function InventoryPage() {
-  const { filters, patchFilters, result, categories } = useInventoryCatalog();
+  const { filters, patchFilters, result, categories, refresh } = useInventoryCatalog();
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const { pushToast } = useToast();
 
   if (result.status === 'error') {
     return (
@@ -20,6 +24,7 @@ export function InventoryPage() {
       <PageHeader
         title="Inventario"
         description="Piezas individuales y productos por cantidad. Los vendidos se ocultan salvo que active el histórico."
+        actions={<Button onClick={() => setRegisterOpen(true)}>Registrar inventario</Button>}
       />
 
       <InventoryFilters filters={filters} categories={categories} onChange={patchFilters} />
@@ -31,6 +36,17 @@ export function InventoryPage() {
       ) : (
         <InventoryTable rows={result.rows} />
       )}
+
+      <RegisterItemWizard
+        open={registerOpen}
+        categories={categories}
+        onClose={() => setRegisterOpen(false)}
+        onRegistered={(id) => {
+          setRegisterOpen(false);
+          refresh();
+          pushToast(`${id} registrado correctamente`, 'success');
+        }}
+      />
     </>
   );
 }

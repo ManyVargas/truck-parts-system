@@ -1,10 +1,15 @@
 import type {
   AddToDraftInput,
   AddToDraftResult,
+  AssemblyBaselineEntry,
   BaselineCorrectionInput,
   CostCorrectionInput,
   ManualWorkOrderInput,
   NoDesarmarInput,
+  RegisterAssemblyInput,
+  RegisterAssemblyResult,
+  RegisterItemInput,
+  RegisterQtyProductInput,
 } from '../../api/contracts/inventory';
 import type {
   AppEvent,
@@ -12,6 +17,8 @@ import type {
   Invoice,
   InvoiceLine,
   Item,
+  KnownMissingComponent,
+  QtyProduct,
   User,
   WorkOrder,
 } from '../../api/contracts/entities';
@@ -67,6 +74,332 @@ function appendEvent(
   };
   state.events.push(event);
   return event;
+}
+
+function normalizeText(value: string): string {
+  return value.trim();
+}
+
+function inventoryIdExists(state: AppState, id: string): boolean {
+  const normalized = normalizeText(id).toLocaleLowerCase();
+  return (
+    state.items.some((entry) => entry.id.toLocaleLowerCase() === normalized) ||
+    state.qtyProducts.some((entry) => entry.id.toLocaleLowerCase() === normalized)
+  );
+}
+
+function validateFiniteNonNegative(value: number | undefined, label: string): Result<void> {
+  if (value !== undefined && (!Number.isFinite(value) || value < 0)) {
+    return err({ code: 'VALIDATION', message: `${label} debe ser un número válido no negativo` });
+  }
+  return ok(undefined);
+}
+
+function buildRegisteredItem(
+  state: AppState,
+  input: RegisterItemInput,
+  relationship: Item['physicalRelationship'],
+  parentId?: string,
+): Result<Item> {
+  const id = normalizeText(input.id);
+  const name = normalizeText(input.name);
+  if (!id || !name || !normalizeText(input.categoryId)) {
+    return err({ code: 'VALIDATION', message: 'ID, nombre y categoría son obligatorios' });
+  }
+  if (inventoryIdExists(state, id)) {
+    return err({ code: 'CONFLICT', message: `El ID ${id} ya existe` });
+  }
+
+  const category = state.categories.find((entry) => entry.id === input.categoryId);
+  if (!category) {
+    return err({ code: 'VALIDATION', message: 'La categoría seleccionada no existe' });
+  }
+
+  const costValidation = validateFiniteNonNegative(input.acquisitionCostDop, 'El costo');
+  if (!costValidation.ok) {
+    return costValidation;
+  }
+
+  const attributes = Object.fromEntries(
+    Object.entries(input.attributes ?? {})
+      .map(([key, value]) => [key.trim(), value.trim()])
+      .filter(([key, value]) => key && value),
+  );
+  const photos = [...new Set((input.photos ?? []).map((photo) => photo.trim()).filter(Boolean))];
+  const item: Item = {
+    id,
+    name,
+    categoryId: category.id,
+    condition: input.condition,
+    commercialState: 'AVAILABLE',
+    physicalRelationship: relationship,
+    // Assembly completeness is assigned only after its own baseline is validated.
+    complete: false,
+    photos,
+  };
+
+  const optionalFields = {
+    brand: optionalText(input.brand),
+    model: optionalText(input.model),
+    serial: optionalText(input.serial),
+    partNumber: optionalText(input.partNumber),
+    costProvenance: optionalText(input.costProvenance),
+    location: relationship === 'INDEPENDENT' ? optionalText(input.location) : undefined,
+    notes: optionalText(input.notes),
+  };
+  Object.assign(
+    item,
+    Object.fromEntries(Object.entries(optionalFields).filter(([, value]) => value !== undefined)),
+  );
+  if (input.acquisitionCostDop !== undefined) {
+    item.acquisitionCostDop = input.acquisitionCostDop;
+  }
+  if (Object.keys(attributes).length > 0) {
+    item.attributes = attributes;
+  }
+  if (parentId) {
+    item.parentId = parentId;
+  }
+  return ok(item);
+}
+
+export function registerItem(state: AppState, actor: User, input: RegisterItemInput): Result<Item> {
+  const built = buildRegisteredItem(state, input, 'INDEPENDENT');
+  if (!built.ok) {
+    return built;
+  }
+  if (isAssemblyItem(built.value, state.categories)) {
+    return err({
+      code: 'VALIDATION',
+      message: 'Los ensamblajes requieren completar el checklist de recepción',
+    });
+  }
+
+  state.items.push(built.value);
+  appendEvent(state, 'ITEM_REGISTERED', `${built.value.id} registrado en inventario`, actor, {
+    itemId: built.value.id,
+    mode: 'INDIVIDUAL',
+  });
+  return ok(built.value);
+}
+
+export function registerQtyProduct(
+  state: AppState,
+  actor: User,
+  input: RegisterQtyProductInput,
+): Result<QtyProduct> {
+  const id = normalizeText(input.id);
+  const name = normalizeText(input.name);
+  if (!id || !name || !normalizeText(input.categoryId)) {
+    return err({ code: 'VALIDATION', message: 'ID, nombre y categoría son obligatorios' });
+  }
+  if (inventoryIdExists(state, id)) {
+    return err({ code: 'CONFLICT', message: `El ID ${id} ya existe` });
+  }
+  const category = state.categories.find((entry) => entry.id === input.categoryId);
+  if (!category) {
+    return err({ code: 'VALIDATION', message: 'La categoría seleccionada no existe' });
+  }
+  if (category.isAssembly) {
+    return err({ code: 'VALIDATION', message: 'Un ensamblaje no puede registrarse por cantidad' });
+  }
+  if (!Number.isInteger(input.initialQuantity) || input.initialQuantity < 0) {
+    return err({
+      code: 'VALIDATION',
+      message: 'La existencia inicial debe ser un entero no negativo',
+    });
+  }
+  if (input.unitCostDop === undefined) {
+    return err({ code: 'VALIDATION', message: 'El costo unitario es obligatorio' });
+  }
+  const costValidation = validateFiniteNonNegative(input.unitCostDop, 'El costo unitario');
+  if (!costValidation.ok) {
+    return costValidation;
+  }
+
+  const product: QtyProduct = {
+    id,
+    name,
+    categoryId: category.id,
+    onHand: input.initialQuantity,
+    reserved: 0,
+    unitCostDop: input.unitCostDop,
+  };
+  const brand = optionalText(input.brand);
+  const location = optionalText(input.location);
+  if (brand) product.brand = brand;
+  if (location) product.location = location;
+
+  state.qtyProducts.push(product);
+  appendEvent(state, 'QTY_PRODUCT_REGISTERED', `${product.id} registrado por cantidad`, actor, {
+    qtyProductId: product.id,
+    initialQuantity: product.onHand,
+  });
+  return ok(product);
+}
+
+export function registerAssembly(
+  state: AppState,
+  actor: User,
+  input: RegisterAssemblyInput,
+): Result<RegisterAssemblyResult> {
+  type BaselineSnapshot = {
+    itemId: string;
+    categoryId: string;
+    complete: boolean;
+    baseline: {
+      expectedComponentName: string;
+      status: AssemblyBaselineEntry['status'];
+      child?: BaselineSnapshot;
+    }[];
+  };
+
+  const stagedItems: Item[] = [];
+  const missingComponents: KnownMissingComponent[] = [];
+  const pendingIds = new Set<string>();
+
+  const stageNode = (
+    itemInput: RegisterItemInput,
+    baseline: AssemblyBaselineEntry[] | undefined,
+    relationship: Item['physicalRelationship'],
+    parentId?: string,
+    expectedCategoryName?: string,
+  ): Result<{ item: Item; snapshot: BaselineSnapshot }> => {
+    const built = buildRegisteredItem(state, itemInput, relationship, parentId);
+    if (!built.ok) {
+      return built;
+    }
+    const item = built.value;
+    const itemKey = item.id.toLocaleLowerCase();
+    if (pendingIds.has(itemKey)) {
+      return err({ code: 'CONFLICT', message: `El ID ${item.id} está repetido` });
+    }
+
+    const category = state.categories.find((entry) => entry.id === item.categoryId)!;
+    if (expectedCategoryName && category.name !== expectedCategoryName) {
+      return err({
+        code: 'VALIDATION',
+        message: `La categoría de ${item.id} debe ser ${expectedCategoryName}`,
+      });
+    }
+    if (!category.isAssembly) {
+      if (baseline && baseline.length > 0) {
+        return err({
+          code: 'VALIDATION',
+          message: `${item.id} no es un ensamblaje y no admite baseline`,
+        });
+      }
+      pendingIds.add(itemKey);
+      stagedItems.push(item);
+      return ok({
+        item,
+        snapshot: { itemId: item.id, categoryId: item.categoryId, complete: false, baseline: [] },
+      });
+    }
+    if (!baseline) {
+      return err({
+        code: 'VALIDATION',
+        message: `Debe completar el baseline del ensamblaje ${item.id}`,
+      });
+    }
+
+    const expected = category.expectedComponents ?? [];
+    const receivedNames = baseline.map((entry) => normalizeText(entry.expectedComponentName));
+    if (
+      baseline.length !== expected.length ||
+      new Set(receivedNames).size !== receivedNames.length ||
+      expected.some((name) => !receivedNames.includes(name))
+    ) {
+      return err({
+        code: 'VALIDATION',
+        message: `Debe completar una sola respuesta para cada componente esperado de ${item.id}`,
+      });
+    }
+
+    pendingIds.add(itemKey);
+    stagedItems.push(item);
+    const directMissing: KnownMissingComponent[] = [];
+    const snapshotEntries: BaselineSnapshot['baseline'] = [];
+
+    for (const expectedName of expected) {
+      const entry = baseline.find(
+        (candidate) => normalizeText(candidate.expectedComponentName) === expectedName,
+      )!;
+      if (entry.status === 'PRESENT') {
+        if (!entry.item) {
+          return err({
+            code: 'VALIDATION',
+            message: `Complete los datos del componente presente: ${expectedName}`,
+          });
+        }
+        const childResult = stageNode(
+          entry.item,
+          entry.baseline,
+          'INSTALLED',
+          item.id,
+          expectedName,
+        );
+        if (!childResult.ok) {
+          return childResult;
+        }
+        snapshotEntries.push({
+          expectedComponentName: expectedName,
+          status: entry.status,
+          child: childResult.value.snapshot,
+        });
+      } else if (entry.status === 'MISSING') {
+        const missing: KnownMissingComponent = {
+          id: nextNumericId(
+            [
+              ...state.knownMissing.map((candidate) => candidate.id),
+              ...missingComponents.map((candidate) => candidate.id),
+            ],
+            'KM-',
+            3,
+          ),
+          parentId: item.id,
+          expectedComponentName: expectedName,
+          origin: 'MISSING_AT_RECEIPT',
+        };
+        directMissing.push(missing);
+        missingComponents.push(missing);
+        snapshotEntries.push({ expectedComponentName: expectedName, status: entry.status });
+      } else if (entry.status === 'NOT_APPLICABLE') {
+        snapshotEntries.push({ expectedComponentName: expectedName, status: entry.status });
+      } else {
+        return err({ code: 'VALIDATION', message: `Estado inválido para ${expectedName}` });
+      }
+    }
+
+    item.complete = directMissing.length === 0;
+    return ok({
+      item,
+      snapshot: {
+        itemId: item.id,
+        categoryId: item.categoryId,
+        complete: item.complete,
+        baseline: snapshotEntries,
+      },
+    });
+  };
+
+  const rootResult = stageNode(input.parent, input.baseline, 'INDEPENDENT');
+  if (!rootResult.ok) {
+    return rootResult;
+  }
+  const parent = rootResult.value.item;
+  if (!isAssemblyItem(parent, state.categories)) {
+    return err({ code: 'VALIDATION', message: 'La categoría seleccionada no es un ensamblaje' });
+  }
+
+  // Commit only after every nested node and checklist has passed validation.
+  state.items.push(...stagedItems);
+  state.knownMissing.push(...missingComponents);
+  appendEvent(state, 'ASSEMBLY_REGISTERED', `${parent.id} registrado con baseline inicial`, actor, {
+    itemId: parent.id,
+    receiptTree: rootResult.value.snapshot,
+  });
+  return ok({ parent, children: stagedItems.slice(1), missingComponents });
 }
 
 function openDraft(state: AppState): Invoice {

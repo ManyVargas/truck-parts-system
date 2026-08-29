@@ -22,6 +22,7 @@ export function useInventoryCatalog() {
   const [filters, setFilters] = useState<InventoryListFilters>(DEFAULT_FILTERS);
   const [result, setResult] = useState<CatalogQuery>({ status: 'loading' });
   const [categories, setCategories] = useState<Category[]>([]);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     mockCategoryRepository.list().then((response) => {
@@ -51,11 +52,13 @@ export function useInventoryCatalog() {
     return () => {
       cancelled = true;
     };
-  }, [filters]);
+  }, [filters, reloadToken]);
 
   const patchFilters = useCallback((patch: Partial<InventoryListFilters>) => {
     setFilters((current) => ({ ...current, ...patch }));
   }, []);
 
-  return { filters, patchFilters, result, categories };
+  const refresh = useCallback(() => setReloadToken((current) => current + 1), []);
+
+  return { filters, patchFilters, result, categories, refresh };
 }

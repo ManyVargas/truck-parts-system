@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { createInitialState } from '../../../../src/mocks/data/seed';
+import type { RegisterQtyProductInput } from '../../../../src/api/contracts/inventory';
 import {
   buildInventoryCatalog,
   buildItemDetail,
@@ -10,6 +11,9 @@ import {
   addInventoryToDraft,
   correctAcquisitionCost,
   createManualWorkOrder,
+  registerAssembly,
+  registerItem,
+  registerQtyProduct,
 } from '../../../../src/mocks/services/inventory-commands';
 import {
   availableToReserve,
@@ -234,6 +238,312 @@ describe('detail projections', () => {
 });
 
 describe('inventory commands', () => {
+  it('registers an individual item while keeping unknown cost absent', () => {
+    const state = createInitialState();
+    const result = registerItem(state, SELLER, {
+      id: 'ALT-020',
+      name: 'Alternador de prueba',
+      categoryId: 'CAT-ALT',
+      condition: 'USED',
+      attributes: { voltaje: '24V' },
+      photos: ['frente.jpg'],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(state.items.find((item) => item.id === 'ALT-020')).toMatchObject({
+      commercialState: 'AVAILABLE',
+      physicalRelationship: 'INDEPENDENT',
+      attributes: { voltaje: '24V' },
+    });
+    expect(state.items.find((item) => item.id === 'ALT-020')).not.toHaveProperty(
+      'acquisitionCostDop',
+    );
+  });
+
+  it('registers quantity inventory with initial stock and zero reservation', () => {
+    const state = createInitialState();
+    const result = registerQtyProduct(state, SELLER, {
+      id: 'QTY-FIL-NEW',
+      name: 'Filtro nuevo por caja',
+      categoryId: 'CAT-FIL',
+      initialQuantity: 12,
+      unitCostDop: 450,
+      location: 'Estante 8',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(state.qtyProducts.find((product) => product.id === 'QTY-FIL-NEW')).toMatchObject({
+      onHand: 12,
+      reserved: 0,
+      unitCostDop: 450,
+    });
+  });
+
+  it('registers an assembly parent, present children and receipt missing slots atomically', () => {
+    const state = createInitialState();
+    const result = registerAssembly(state, SELLER, {
+      parent: {
+        id: 'ENG-020',
+        name: 'Motor recibido',
+        categoryId: 'CAT-ENG',
+        condition: 'USED',
+        location: 'Patio D',
+      },
+      baseline: [
+        {
+          expectedComponentName: 'Alternador',
+          status: 'PRESENT',
+          item: {
+            id: 'ALT-020',
+            name: 'Alternador instalado',
+            categoryId: 'CAT-ALT',
+            condition: 'USED',
+          },
+        },
+        { expectedComponentName: 'Turbo', status: 'MISSING' },
+        { expectedComponentName: 'Motor de arranque', status: 'NOT_APPLICABLE' },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(state.items.find((item) => item.id === 'ENG-020')?.complete).toBe(false);
+    expect(state.items.find((item) => item.id === 'ALT-020')).toMatchObject({
+      parentId: 'ENG-020',
+      physicalRelationship: 'INSTALLED',
+    });
+    expect(state.knownMissing).toContainEqual(
+      expect.objectContaining({
+        parentId: 'ENG-020',
+        expectedComponentName: 'Turbo',
+        origin: 'MISSING_AT_RECEIPT',
+      }),
+    );
+    expect(
+      state.knownMissing.some(
+        (entry) =>
+          entry.parentId === 'ENG-020' && entry.expectedComponentName === 'Motor de arranque',
+      ),
+    ).toBe(false);
+  });
+
+  it('HIER-001/HIER-011: registers a truck, its present engine and the engine baseline recursively', () => {
+    const state = createInitialState();
+    const result = registerAssembly(state, SELLER, {
+      parent: {
+        id: 'TRK-020',
+        name: 'Camión recibido',
+        categoryId: 'CAT-TRK',
+        condition: 'USED',
+        location: 'Patio D',
+      },
+      baseline: [
+        {
+          expectedComponentName: 'Motor',
+          status: 'PRESENT',
+          item: {
+            id: 'ENG-020',
+            name: 'Motor recibido dentro del camión',
+            categoryId: 'CAT-ENG',
+            condition: 'USED',
+          },
+          baseline: [
+            {
+              expectedComponentName: 'Alternador',
+              status: 'PRESENT',
+              item: {
+                id: 'ALT-020',
+                name: 'Alternador recibido dentro del motor',
+                categoryId: 'CAT-ALT',
+                condition: 'USED',
+              },
+            },
+            { expectedComponentName: 'Turbo', status: 'MISSING' },
+            { expectedComponentName: 'Motor de arranque', status: 'NOT_APPLICABLE' },
+          ],
+        },
+        { expectedComponentName: 'Transmisión', status: 'NOT_APPLICABLE' },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(state.items.find((item) => item.id === 'TRK-020')?.complete).toBe(true);
+    expect(state.items.find((item) => item.id === 'ENG-020')).toMatchObject({
+      parentId: 'TRK-020',
+      complete: false,
+    });
+    expect(state.items.find((item) => item.id === 'ALT-020')).toMatchObject({
+      parentId: 'ENG-020',
+      physicalRelationship: 'INSTALLED',
+    });
+    expect(state.knownMissing).toContainEqual(
+      expect.objectContaining({
+        parentId: 'ENG-020',
+        expectedComponentName: 'Turbo',
+        origin: 'MISSING_AT_RECEIPT',
+      }),
+    );
+    const detail = buildItemDetail(state, 'TRK-020');
+    expect(detail?.tree.children[0]?.children[0]?.id).toBe('ALT-020');
+    expect(detail?.tree.children[0]?.missingSlots.map((slot) => slot.name)).toEqual(['Turbo']);
+    expect(state.events.at(-1)?.metadata?.receiptTree).toMatchObject({
+      itemId: 'TRK-020',
+      complete: true,
+      baseline: [
+        {
+          expectedComponentName: 'Motor',
+          status: 'PRESENT',
+          child: {
+            itemId: 'ENG-020',
+            complete: false,
+            baseline: [
+              { expectedComponentName: 'Alternador', status: 'PRESENT' },
+              { expectedComponentName: 'Turbo', status: 'MISSING' },
+              { expectedComponentName: 'Motor de arranque', status: 'NOT_APPLICABLE' },
+            ],
+          },
+        },
+        { expectedComponentName: 'Transmisión', status: 'NOT_APPLICABLE' },
+      ],
+    });
+  });
+
+  it('rejects a deep child ID matching its parent case-insensitively without partial writes', () => {
+    const state = createInitialState();
+    const itemCount = state.items.length;
+    const missingCount = state.knownMissing.length;
+    const eventCount = state.events.length;
+    const result = registerAssembly(state, SELLER, {
+      parent: {
+        id: 'TRK-020',
+        name: 'Camión recibido',
+        categoryId: 'CAT-TRK',
+        condition: 'USED',
+      },
+      baseline: [
+        {
+          expectedComponentName: 'Motor',
+          status: 'PRESENT',
+          item: {
+            id: 'ENG-020',
+            name: 'Motor recibido',
+            categoryId: 'CAT-ENG',
+            condition: 'USED',
+          },
+          baseline: [
+            {
+              expectedComponentName: 'Alternador',
+              status: 'PRESENT',
+              item: {
+                id: 'trk-020',
+                name: 'ID repetido',
+                categoryId: 'CAT-ALT',
+                condition: 'USED',
+              },
+            },
+            { expectedComponentName: 'Turbo', status: 'MISSING' },
+            { expectedComponentName: 'Motor de arranque', status: 'NOT_APPLICABLE' },
+          ],
+        },
+        { expectedComponentName: 'Transmisión', status: 'NOT_APPLICABLE' },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(state.items).toHaveLength(itemCount);
+    expect(state.knownMissing).toHaveLength(missingCount);
+    expect(state.events).toHaveLength(eventCount);
+  });
+
+  it('rejects a child ID matching quantity inventory case-insensitively without partial writes', () => {
+    const state = createInitialState();
+    const itemCount = state.items.length;
+    const result = registerAssembly(state, SELLER, {
+      parent: {
+        id: 'ENG-020',
+        name: 'Motor recibido',
+        categoryId: 'CAT-ENG',
+        condition: 'USED',
+      },
+      baseline: [
+        {
+          expectedComponentName: 'Alternador',
+          status: 'PRESENT',
+          item: {
+            id: 'qty-oil-15w40',
+            name: 'Conflicto con cantidad',
+            categoryId: 'CAT-ALT',
+            condition: 'USED',
+          },
+        },
+        { expectedComponentName: 'Turbo', status: 'MISSING' },
+        { expectedComponentName: 'Motor de arranque', status: 'NOT_APPLICABLE' },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(state.items).toHaveLength(itemCount);
+    expect(state.items.some((item) => item.id === 'ENG-020')).toBe(false);
+  });
+
+  it('rejects quantity assemblies and missing or non-finite unit costs', () => {
+    const state = createInitialState();
+    const assembly = registerQtyProduct(state, SELLER, {
+      id: 'QTY-ENGINE',
+      name: 'Motor por cantidad',
+      categoryId: 'CAT-ENG',
+      initialQuantity: 1,
+      unitCostDop: 1,
+    });
+    const missingCost = registerQtyProduct(state, SELLER, {
+      id: 'QTY-NO-COST',
+      name: 'Sin costo',
+      categoryId: 'CAT-FIL',
+      initialQuantity: 1,
+    } as RegisterQtyProductInput);
+    const nanCost = registerQtyProduct(state, SELLER, {
+      id: 'QTY-NAN',
+      name: 'Costo inválido',
+      categoryId: 'CAT-FIL',
+      initialQuantity: 1,
+      unitCostDop: Number.NaN,
+    });
+
+    expect(assembly.ok).toBe(false);
+    expect(missingCost.ok).toBe(false);
+    expect(nanCost.ok).toBe(false);
+    expect(
+      state.qtyProducts.some((product) =>
+        ['QTY-ENGINE', 'QTY-NO-COST', 'QTY-NAN'].includes(product.id),
+      ),
+    ).toBe(false);
+  });
+
+  it('rejects duplicate IDs and incomplete assembly checklists without partial writes', () => {
+    const state = createInitialState();
+    const itemCount = state.items.length;
+    const missingCount = state.knownMissing.length;
+    const duplicate = registerItem(state, SELLER, {
+      id: 'FLT-001',
+      name: 'Duplicado',
+      categoryId: 'CAT-FIL',
+      condition: 'USED',
+    });
+    const incomplete = registerAssembly(state, SELLER, {
+      parent: {
+        id: 'ENG-020',
+        name: 'Motor incompleto',
+        categoryId: 'CAT-ENG',
+        condition: 'USED',
+      },
+      baseline: [{ expectedComponentName: 'Turbo', status: 'MISSING' }],
+    });
+
+    expect(duplicate.ok).toBe(false);
+    expect(incomplete.ok).toBe(false);
+    expect(state.items).toHaveLength(itemCount);
+    expect(state.knownMissing).toHaveLength(missingCount);
+  });
+
   it('leaves state unchanged when a protected descendant is rejected without an open draft', () => {
     const state = createInitialState();
     state.invoices = state.invoices.filter((invoice) => invoice.status !== 'DRAFT');
