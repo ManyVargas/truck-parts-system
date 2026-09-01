@@ -315,6 +315,27 @@ export function buildItemDetail(state: AppState, id: string): ItemDetailView | u
     noDesarmar: Boolean(restriction),
     protectedRootId: restriction?.id,
     missingComponents: state.knownMissing.filter((entry) => entry.parentId === item.id),
+    pendingCatalogReviews: state.pendingCatalogReviews
+      .filter((entry) => entry.parentId === item.id)
+      .map((entry) => {
+        const matchingCategory = state.categories.find(
+          (category) => category.name === entry.expectedComponentName,
+        );
+        const matchedChild = entry.matchedChildId
+          ? itemById(state.items, entry.matchedChildId)
+          : undefined;
+        return {
+          id: entry.id,
+          expectedComponentName: entry.expectedComponentName,
+          kind: entry.kind,
+          matchedChildId: entry.matchedChildId,
+          matchedChildName: matchedChild?.name,
+          matchingCategoryId: matchingCategory?.id,
+        };
+      }),
+    catalogCategories: [...state.categories].sort((left, right) =>
+      left.name.localeCompare(right.name, 'es'),
+    ),
     soldInstalledChildren: state.items
       .filter(
         (child) =>

@@ -1,7 +1,8 @@
-import type { User } from '../../api/contracts/entities';
 import type { UserRepository } from '../../api/contracts/repositories';
+import type { SaveUserInput } from '../../api/contracts/users';
 import { err, ok } from '../../shared/auth/types';
 import { requirePermission } from '../services/require-permission';
+import { prepareUserSave, sortManagedUsers, toManagedUser } from '../services/users';
 import { cloneForRead, getMockState } from '../state';
 
 export class MockUserRepository implements UserRepository {
@@ -11,7 +12,9 @@ export class MockUserRepository implements UserRepository {
       return permission;
     }
 
-    return ok(cloneForRead(getMockState().users));
+    return ok(
+      cloneForRead(sortManagedUsers(getMockState().users.map(toManagedUser))),
+    );
   }
 
   async getById(id: string) {
@@ -25,32 +28,30 @@ export class MockUserRepository implements UserRepository {
       return err({ code: 'NOT_FOUND', message: 'Usuario no encontrado' });
     }
 
-    return ok(cloneForRead(user));
+    return ok(cloneForRead(toManagedUser(user)));
   }
 
-  async save(user: User) {
+  async save(input: SaveUserInput) {
     const permission = requirePermission('users.manage');
     if (!permission.ok) {
       return permission;
     }
 
     const state = getMockState();
+    const prepared = prepareUserSave(state.users, input, permission.value.id);
+    if (!prepared.ok) {
+      return prepared;
+    }
+
+    const user = prepared.value;
     const index = state.users.findIndex((entry) => entry.id === user.id);
-    const usernameTaken = state.users.some(
-      (entry) => entry.username === user.username && entry.id !== user.id,
-    );
-
-    if (usernameTaken) {
-      return err({ code: 'CONFLICT', message: 'El nombre de usuario ya existe' });
-    }
-
     if (index >= 0) {
-      state.users[index] = { ...user };
+      state.users[index] = user;
     } else {
-      state.users.push({ ...user });
+      state.users.push(user);
     }
 
-    return ok(cloneForRead(user));
+    return ok(cloneForRead(toManagedUser(user)));
   }
 }
 

@@ -105,6 +105,23 @@ export function InventoryDetailPage() {
                 pushToast('Baseline corregido', 'success');
                 return null;
               }}
+              onResolveCatalogReview={async (input) => {
+                const response = await query.resolveCatalogReview({ itemId: detail.id, ...input });
+                if (!response.ok) {
+                  return response.error.message;
+                }
+                pushToast(
+                  input.decision === 'MISSING'
+                    ? 'Componente marcado como falta'
+                    : input.decision === 'PRESENT'
+                      ? 'Pieza registrada en el ensamblaje'
+                      : input.decision === 'ACKNOWLEDGE'
+                        ? 'Coincidencia reconocida'
+                        : 'Componente confirmado como no aplica',
+                  'success',
+                );
+                return null;
+              }}
               onCreateWorkOrder={async (input) => {
                 const response = await query.createWorkOrder({ pieceId: detail.id, ...input });
                 if (!response.ok) {

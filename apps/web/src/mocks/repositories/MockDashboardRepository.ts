@@ -16,6 +16,7 @@ export class MockDashboardRepository implements DashboardRepository {
     const snapshot = buildDashboardSnapshot(getMockState(), {
       nowIso: DEMO_NOW_ISO,
       includeProfitability: can(permission.value, 'profit.view'),
+      includeAdminAlerts: can(permission.value, 'inventory.admin'),
     });
 
     return ok(snapshot);

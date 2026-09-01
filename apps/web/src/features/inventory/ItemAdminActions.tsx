@@ -1,7 +1,13 @@
 import { useState } from 'react';
 
-import type { ItemDetailView } from '../../api/contracts/inventory';
+import type { Category, ItemCondition } from '../../api/contracts/entities';
+import type {
+  AssemblyBaselineEntry,
+  ItemDetailView,
+  RegisterItemInput,
+} from '../../api/contracts/inventory';
 import { Button, Field, Info, Input, Modal, Select, Textarea } from '../../shared/ui';
+import { BaselineChecklist } from './BaselineChecklist';
 
 type ItemAdminActionsProps = {
   detail: ItemDetailView;
@@ -16,6 +22,12 @@ type ItemAdminActionsProps = {
     reason: string;
     markNotApplicable: string[];
   }) => Promise<string | null>;
+  onResolveCatalogReview: (input: {
+    expectedComponentName: string;
+    decision: 'NOT_APPLICABLE' | 'MISSING' | 'PRESENT' | 'ACKNOWLEDGE';
+    item?: RegisterItemInput;
+    baseline?: AssemblyBaselineEntry[];
+  }) => Promise<string | null>;
   onCreateWorkOrder: (input: {
     type: 'DISMANTLING' | 'INSTALLATION';
     destinationParentId?: string;
@@ -29,12 +41,15 @@ export function ItemAdminActions({
   onSetNoDesarmar,
   onCorrectCost,
   onCorrectBaseline,
+  onResolveCatalogReview,
   onCreateWorkOrder,
 }: ItemAdminActionsProps) {
   const [error, setError] = useState<string | null>(null);
   const [costOpen, setCostOpen] = useState(false);
   const [baselineOpen, setBaselineOpen] = useState(false);
   const [woOpen, setWoOpen] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [presentFor, setPresentFor] = useState<string | null>(null);
 
   const flagOnThisItem = detail.protectedRootId === detail.id;
 
@@ -44,6 +59,132 @@ export function ItemAdminActions({
         <Info tone="error" title="No se pudo completar la acción">
           {error}
         </Info>
+      )}
+      {detail.pendingCatalogReviews.length > 0 && (
+        <div className="rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm text-navy">
+          <p className="font-medium">Validar componentes nuevos del catálogo</p>
+          <p className="mt-1 text-navy-400">
+            Si la pieza ya estaba en el ensamblaje, aparece en el árbol. Si no, confirme NA,
+            regístrela presente o márquela falta.
+          </p>
+          {reviewError && (
+            <div className="mt-2">
+              <Info tone="error" title="No se pudo validar">
+                {reviewError}
+              </Info>
+            </div>
+          )}
+          <ul className="mt-2 space-y-2">
+            {detail.pendingCatalogReviews.map((entry) => (
+              <li
+                key={entry.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-white px-2 py-1.5"
+              >
+                <span>
+                  {entry.expectedComponentName}
+                  {entry.kind === 'ALREADY_PRESENT' && entry.matchedChildId
+                    ? ` · ya en árbol (${entry.matchedChildId})`
+                    : ''}
+                </span>
+                <span className="flex flex-wrap gap-1">
+                  {entry.kind === 'ALREADY_PRESENT' ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={isMutating}
+                      onClick={async () => {
+                        const message = await onResolveCatalogReview({
+                          expectedComponentName: entry.expectedComponentName,
+                          decision: 'ACKNOWLEDGE',
+                        });
+                        setReviewError(message);
+                      }}
+                    >
+                      Entendido
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={isMutating}
+                        onClick={async () => {
+                          const message = await onResolveCatalogReview({
+                            expectedComponentName: entry.expectedComponentName,
+                            decision: 'NOT_APPLICABLE',
+                          });
+                          setReviewError(message);
+                        }}
+                      >
+                        Confirmar NA
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={isMutating || !entry.matchingCategoryId}
+                        title={
+                          entry.matchingCategoryId
+                            ? undefined
+                            : `Cree una categoría llamada ${entry.expectedComponentName}`
+                        }
+                        onClick={() => {
+                          setReviewError(null);
+                          setPresentFor(entry.expectedComponentName);
+                        }}
+                      >
+                        Registrar presente
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={isMutating}
+                        onClick={async () => {
+                          const message = await onResolveCatalogReview({
+                            expectedComponentName: entry.expectedComponentName,
+                            decision: 'MISSING',
+                          });
+                          setReviewError(message);
+                        }}
+                      >
+                        Marcar falta
+                      </Button>
+                    </>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {presentFor && (
+        <PresentChildForm
+          expectedComponentName={presentFor}
+          categoryId={
+            detail.pendingCatalogReviews.find((entry) => entry.expectedComponentName === presentFor)
+              ?.matchingCategoryId ?? ''
+          }
+          categories={detail.catalogCategories}
+          disabled={isMutating}
+          error={reviewError}
+          onCancel={() => {
+            setPresentFor(null);
+            setReviewError(null);
+          }}
+          onSubmit={async (item, baseline) => {
+            const message = await onResolveCatalogReview({
+              expectedComponentName: presentFor,
+              decision: 'PRESENT',
+              item,
+              baseline,
+            });
+            if (message) {
+              setReviewError(message);
+              return;
+            }
+            setPresentFor(null);
+            setReviewError(null);
+          }}
+        />
       )}
       <div className="flex flex-wrap gap-2">
         {detail.isAssembly && (
@@ -425,5 +566,114 @@ function WorkOrderForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+function PresentChildForm({
+  expectedComponentName,
+  categoryId,
+  categories,
+  disabled,
+  error,
+  onCancel,
+  onSubmit,
+}: {
+  expectedComponentName: string;
+  categoryId: string;
+  categories: Category[];
+  disabled: boolean;
+  error: string | null;
+  onCancel: () => void;
+  onSubmit: (item: RegisterItemInput, baseline?: AssemblyBaselineEntry[]) => Promise<void>;
+}) {
+  const [id, setId] = useState('');
+  const [name, setName] = useState(expectedComponentName);
+  const [condition, setCondition] = useState<ItemCondition>('USED');
+  const category = categories.find((entry) => entry.id === categoryId);
+  const [baseline, setBaseline] = useState<AssemblyBaselineEntry[]>(() =>
+    (category?.expectedComponents ?? []).map((expectedName) => ({
+      expectedComponentName: expectedName,
+      status: 'MISSING',
+    })),
+  );
+
+  return (
+    <Modal
+      open
+      title={`Registrar ${expectedComponentName} presente`}
+      onClose={onCancel}
+    >
+      <form
+        className="flex flex-col gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void onSubmit(
+            {
+              id,
+              name,
+              categoryId,
+              condition,
+            },
+            category?.isAssembly ? baseline : undefined,
+          );
+        }}
+      >
+        {error && (
+          <Info tone="error" title="No se pudo registrar">
+            {error}
+          </Info>
+        )}
+        <p className="text-sm text-navy-400">
+          Crea la pieza en inventario y la instala en este ensamblaje. No es una orden de trabajo:
+          corrige la composición de recepción ahora que el catálogo espera esta pieza.
+        </p>
+        <Field label="ID" htmlFor="present-id">
+          <Input
+            id="present-id"
+            required
+            value={id}
+            onChange={(event) => setId(event.target.value)}
+          />
+        </Field>
+        <Field label="Nombre" htmlFor="present-name">
+          <Input
+            id="present-name"
+            required
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+        </Field>
+        <Field label="Condición" htmlFor="present-condition">
+          <Select
+            id="present-condition"
+            value={condition}
+            onChange={(event) => setCondition(event.target.value as ItemCondition)}
+          >
+            <option value="USED">Usado</option>
+            <option value="NEW">Nuevo</option>
+            <option value="REMANUFACTURED">Remanufacturado</option>
+          </Select>
+        </Field>
+        {category?.isAssembly && (
+          <div className="border-t border-navy-100 pt-3">
+            <BaselineChecklist
+              expectedComponents={category.expectedComponents ?? []}
+              categories={categories}
+              entries={baseline}
+              onChange={setBaseline}
+              path={`catalog-review.${expectedComponentName}`}
+            />
+          </div>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={onCancel} disabled={disabled}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={disabled || !categoryId}>
+            Registrar en el árbol
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

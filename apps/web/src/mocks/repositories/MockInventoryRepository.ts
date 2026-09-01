@@ -14,6 +14,7 @@ import {
   registerAssembly,
   registerItem,
   registerQtyProduct,
+  resolveCatalogReview,
   setNoDesarmar,
 } from '../services/inventory-commands';
 import { requirePermission } from '../services/require-permission';
@@ -126,6 +127,20 @@ export class MockInventoryRepository implements InventoryRepository {
     }
 
     const result = correctReceiptBaseline(getMockState(), permission.value, input);
+    if (!result.ok) {
+      return result;
+    }
+
+    return ok(cloneForRead(result.value));
+  }
+
+  async resolveCatalogReview(input: Parameters<InventoryRepository['resolveCatalogReview']>[0]) {
+    const permission = requirePermission('inventory.admin');
+    if (!permission.ok) {
+      return permission;
+    }
+
+    const result = resolveCatalogReview(getMockState(), permission.value, input);
     if (!result.ok) {
       return result;
     }

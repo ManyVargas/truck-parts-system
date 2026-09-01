@@ -1,5 +1,7 @@
 export * from './entities';
 export * from './dashboard';
+export * from './catalogs';
+export * from './users';
 export * from './customers';
 export * from './inventory';
 export * from './sales';

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { mockCategoryRepository } from '../../../../src/mocks/repositories/MockCategoryRepository';
 import { mockInventoryRepository } from '../../../../src/mocks/repositories/MockInventoryRepository';
 import { getMockState, resetMockState } from '../../../../src/mocks/state';
 import { signInAs } from '../../../support/session';
@@ -213,5 +214,39 @@ describe('MockInventoryRepository', () => {
     const second = await mockInventoryRepository.getDetail('FLT-001');
 
     expect(second.ok && second.value.name).toBe('Filtro de aceite HD');
+  });
+
+  it('lets an administrator resolve a catalog review and denies the seller', async () => {
+    signInAs('ADMINISTRATOR');
+    await mockCategoryRepository.save({
+      id: 'CAT-ENG',
+      name: 'Motor',
+      isAssembly: true,
+      expectedComponents: ['Alternador', 'Turbo', 'Motor de arranque', 'Bomba de aceite'],
+    });
+
+    const confirmed = await mockInventoryRepository.resolveCatalogReview({
+      itemId: 'ENG-001',
+      expectedComponentName: 'Bomba de aceite',
+      decision: 'NOT_APPLICABLE',
+    });
+    expect(confirmed.ok).toBe(true);
+    expect(
+      getMockState().pendingCatalogReviews.some((entry) => entry.parentId === 'ENG-001'),
+    ).toBe(false);
+
+    signInAs('SELLER');
+    const denied = await mockInventoryRepository.resolveCatalogReview({
+      itemId: 'ENG-003',
+      expectedComponentName: 'Bomba de aceite',
+      decision: 'MISSING',
+    });
+    expect(denied.ok).toBe(false);
+    if (!denied.ok) {
+      expect(denied.error.code).toBe('FORBIDDEN');
+    }
+    expect(
+      getMockState().pendingCatalogReviews.some((entry) => entry.parentId === 'ENG-003'),
+    ).toBe(true);
   });
 });

@@ -81,6 +81,24 @@ export function StatusPanel({ detail }: { detail: ItemDetailView }) {
           </ul>
         </div>
       )}
+      {detail.pendingCatalogReviews.length > 0 && (
+        <div className="mt-4 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm text-navy">
+          <p className="font-medium">Componentes añadidos al catálogo</p>
+          <ul className="mt-2 list-disc pl-4">
+            {detail.pendingCatalogReviews.map((entry) => (
+              <li key={entry.id}>
+                {entry.kind === 'ALREADY_PRESENT'
+                  ? `${entry.expectedComponentName} ya está en el árbol${
+                      entry.matchedChildId
+                        ? ` (${entry.matchedChildName ?? entry.matchedChildId})`
+                        : ''
+                    }`
+                  : `${entry.expectedComponentName} (NA provisional hasta validar)`}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {detail.missingComponents.length > 0 && (
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           <p className="font-medium">Faltantes</p>

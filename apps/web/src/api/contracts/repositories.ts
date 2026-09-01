@@ -1,12 +1,15 @@
 import type { Result } from '../../shared/auth/types';
+import type { SaveCategoryInput, SaveServiceInput } from './catalogs';
 import type { CustomerListRow, SaveCustomerInput } from './customers';
 import type { UpdateOwnProfileInput, UpdateOwnProfileResult } from './profile';
+import type { ManagedUser, SaveUserInput } from './users';
 import type { DashboardSnapshot } from './dashboard';
 import type {
   AddToDraftInput,
   AddToDraftResult,
   BaselineCorrectionInput,
   CostCorrectionInput,
+  ResolveCatalogReviewInput,
   InventoryDetail,
   InventoryListFilters,
   InventoryListRow,
@@ -64,9 +67,9 @@ export type AuthRepository = {
 };
 
 export type UserRepository = {
-  list(): Promise<Result<User[]>>;
-  getById(id: string): Promise<Result<User>>;
-  save(user: User): Promise<Result<User>>;
+  list(): Promise<Result<ManagedUser[]>>;
+  getById(id: string): Promise<Result<ManagedUser>>;
+  save(input: SaveUserInput): Promise<Result<ManagedUser>>;
 };
 
 export type InventoryRepository = {
@@ -80,6 +83,7 @@ export type InventoryRepository = {
   setNoDesarmar(input: NoDesarmarInput): Promise<Result<Item>>;
   correctAcquisitionCost(input: CostCorrectionInput): Promise<Result<Item>>;
   correctReceiptBaseline(input: BaselineCorrectionInput): Promise<Result<Item>>;
+  resolveCatalogReview(input: ResolveCatalogReviewInput): Promise<Result<Item>>;
   createManualWorkOrder(input: ManualWorkOrderInput): Promise<Result<WorkOrder>>;
   registerItem(input: RegisterItemInput): Promise<Result<Item>>;
   registerAssembly(input: RegisterAssemblyInput): Promise<Result<RegisterAssemblyResult>>;
@@ -126,12 +130,12 @@ export type WorkOrderRepository = {
 
 export type CategoryRepository = {
   list(): Promise<Result<Category[]>>;
-  save(category: Category): Promise<Result<Category>>;
+  save(input: SaveCategoryInput): Promise<Result<Category>>;
 };
 
 export type ServiceRepository = {
   list(): Promise<Result<Service[]>>;
-  save(service: Service): Promise<Result<Service>>;
+  save(input: SaveServiceInput): Promise<Result<Service>>;
 };
 
 export type EventRepository = {

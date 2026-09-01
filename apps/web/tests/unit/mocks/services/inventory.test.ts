@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { createInitialState } from '../../../../src/mocks/data/seed';
+import { backfillPendingExpectedComponents } from '../../../../src/mocks/services/catalogs-reviews';
 import type { RegisterQtyProductInput } from '../../../../src/api/contracts/inventory';
 import {
   buildInventoryCatalog,
@@ -14,6 +15,7 @@ import {
   registerAssembly,
   registerItem,
   registerQtyProduct,
+  resolveCatalogReview,
 } from '../../../../src/mocks/services/inventory-commands';
 import {
   availableToReserve,
@@ -727,5 +729,135 @@ describe('inventory commands', () => {
     expect(result.ok).toBe(false);
     expect(item.acquisitionCostDop).toBe(beforeCost);
     expect(state.events).toHaveLength(eventCount);
+  });
+
+  it('keeps an assembly complete when the administrator confirms catalog NA', () => {
+    const state = createInitialState();
+    const admin = state.users[0]!;
+    const engine = state.categories.find((category) => category.id === 'CAT-ENG')!;
+    backfillPendingExpectedComponents(state, admin, engine, ['Bomba de aceite']);
+
+    const result = resolveCatalogReview(state, admin, {
+      itemId: 'ENG-001',
+      expectedComponentName: 'Bomba de aceite',
+      decision: 'NOT_APPLICABLE',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(state.pendingCatalogReviews.some((entry) => entry.parentId === 'ENG-001')).toBe(false);
+    expect(isComplete(state.items.find((item) => item.id === 'ENG-001')!, state.knownMissing, state.categories)).toBe(
+      true,
+    );
+    expect(
+      state.knownMissing.some(
+        (entry) => entry.parentId === 'ENG-001' && entry.expectedComponentName === 'Bomba de aceite',
+      ),
+    ).toBe(false);
+  });
+
+  it('marks the assembly incomplete when the administrator records a catalog gap as missing', () => {
+    const state = createInitialState();
+    const admin = state.users[0]!;
+    const engine = state.categories.find((category) => category.id === 'CAT-ENG')!;
+    backfillPendingExpectedComponents(state, admin, engine, ['Bomba de aceite']);
+
+    const result = resolveCatalogReview(state, admin, {
+      itemId: 'ENG-001',
+      expectedComponentName: 'Bomba de aceite',
+      decision: 'MISSING',
+    });
+
+    expect(result.ok).toBe(true);
+    const item = state.items.find((entry) => entry.id === 'ENG-001')!;
+    expect(item.complete).toBe(false);
+    expect(
+      state.knownMissing.some(
+        (entry) =>
+          entry.parentId === 'ENG-001' &&
+          entry.expectedComponentName === 'Bomba de aceite' &&
+          entry.origin === 'MISSING_AT_RECEIPT',
+      ),
+    ).toBe(true);
+  });
+
+  it('registers a present catalog slot as an installed child on the assembly tree', () => {
+    const state = createInitialState();
+    const admin = state.users[0]!;
+    const engine = state.categories.find((category) => category.id === 'CAT-ENG')!;
+    backfillPendingExpectedComponents(state, admin, engine, ['Filtros']);
+
+    const result = resolveCatalogReview(state, admin, {
+      itemId: 'ENG-001',
+      expectedComponentName: 'Filtros',
+      decision: 'PRESENT',
+      item: {
+        id: 'FLT-ENG-001',
+        name: 'Filtro del DD15',
+        categoryId: 'CAT-FIL',
+        condition: 'USED',
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    const child = state.items.find((entry) => entry.id === 'FLT-ENG-001');
+    expect(child).toMatchObject({
+      parentId: 'ENG-001',
+      physicalRelationship: 'INSTALLED',
+      categoryId: 'CAT-FIL',
+    });
+    const detail = buildItemDetail(state, 'ENG-001');
+    expect(detail?.tree.children.some((node) => node.id === 'ENG-001') || detail?.id).toBeTruthy();
+    const engineNode =
+      detail?.tree.id === 'ENG-001'
+        ? detail.tree
+        : detail?.tree.children.find((node) => node.id === 'ENG-001');
+    expect(engineNode?.children.some((node) => node.id === 'FLT-ENG-001')).toBe(true);
+    expect(state.items.find((entry) => entry.id === 'ENG-001')?.complete).toBe(true);
+  });
+
+  it('registers a present catalog slot that is itself an assembly with its nested baseline', () => {
+    const state = createInitialState();
+    const admin = state.users[0]!;
+    const truckCategory = state.categories.find((category) => category.id === 'CAT-TRK')!;
+    state.categories.push({
+      id: 'CAT-AUX-ENG',
+      name: 'Motor auxiliar',
+      isAssembly: true,
+      expectedComponents: ['Alternador'],
+    });
+    backfillPendingExpectedComponents(state, admin, truckCategory, ['Motor auxiliar']);
+
+    const result = resolveCatalogReview(state, admin, {
+      itemId: 'TRK-001',
+      expectedComponentName: 'Motor auxiliar',
+      decision: 'PRESENT',
+      item: {
+        id: 'ENG-AUX-001',
+        name: 'Motor auxiliar recibido',
+        categoryId: 'CAT-AUX-ENG',
+        condition: 'USED',
+      },
+      baseline: [{ expectedComponentName: 'Alternador', status: 'MISSING' }],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(state.items.find((entry) => entry.id === 'ENG-AUX-001')).toMatchObject({
+      parentId: 'TRK-001',
+      physicalRelationship: 'INSTALLED',
+      complete: false,
+    });
+    expect(state.knownMissing).toContainEqual(
+      expect.objectContaining({
+        parentId: 'ENG-AUX-001',
+        expectedComponentName: 'Alternador',
+        origin: 'MISSING_AT_RECEIPT',
+      }),
+    );
+    expect(
+      state.pendingCatalogReviews.some(
+        (entry) =>
+          entry.parentId === 'TRK-001' && entry.expectedComponentName === 'Motor auxiliar',
+      ),
+    ).toBe(false);
   });
 });

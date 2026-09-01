@@ -11,6 +11,8 @@ import { MechanicLayout } from './features/mechanic/MechanicLayout';
 import { MechanicMinePage } from './features/mechanic/MechanicMinePage';
 import { MechanicOrderView } from './features/mechanic/MechanicOrderView';
 import { MechanicPendingPage } from './features/mechanic/MechanicPendingPage';
+import { CatalogsPage } from './features/catalogs/CatalogsPage';
+import { UsersPage } from './features/users/UsersPage';
 import { PlaceholderPage } from './features/placeholder/PlaceholderPage';
 import { NotFoundPage } from './features/placeholder/NotFoundPage';
 import { PosPage } from './features/sales/PosPage';
@@ -62,11 +64,11 @@ const desktopChildRoutes = [
   },
   {
     path: '/catalogs',
-    element: <PlaceholderPage title="Catálogos" milestone="WM11" />,
+    element: <CatalogsPage />,
   },
   {
     path: '/users',
-    element: <PlaceholderPage title="Usuarios" milestone="WM11" />,
+    element: <UsersPage />,
   },
   {
     path: '/profitability',

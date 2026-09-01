@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import type { DashboardSnapshot } from '../../api/contracts/dashboard';
 import type { AppError } from '../../shared/auth/types';
@@ -14,10 +15,12 @@ type DashboardQuery =
  * Features never import seed or aggregation services.
  */
 export function useDashboard(): DashboardQuery {
+  const { pathname } = useLocation();
   const [query, setQuery] = useState<DashboardQuery>({ status: 'loading' });
 
   useEffect(() => {
     let cancelled = false;
+    setQuery({ status: 'loading' });
 
     mockDashboardRepository.getSnapshot().then((result) => {
       if (cancelled) {
@@ -35,7 +38,7 @@ export function useDashboard(): DashboardQuery {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [pathname]);
 
   return query;
 }

@@ -1,7 +1,7 @@
 # Plan 001 — Frontend Prototipo Mock: SoloCamiones
 
 **Alcance:** Prototipo frontend funcional con datos dummy (sin backend)  
-**Estado:** WM10 completado — WM11 pendiente
+**Estado:** WM11 completado — WM12 pendiente
 **Último milestone planificado:** WM12 — Rentabilidad, recuperación, escenarios demo y preparación API  
 **Referencia de diseño:** [Prototipo Figma Make](https://www.figma.com/make/HzibQNQ88lqtv3rAup56eJ/Follow-prototype-instructions)
 
@@ -274,7 +274,7 @@ El resto del prototipo (inventario, ventas, OT, etc.) permanece mock hasta los r
 | WM8  | Punto de venta y borradores (POS)                      | completado |
 | WM9  | Órdenes de trabajo (escritorio)                        | completado  |
 | WM10 | Experiencia Mecánico (móvil)                           | completado  |
-| WM11 | Catálogos y usuarios (admin)                           | pendiente  |
+| WM11 | Catálogos y usuarios (admin)                           | completado  |
 | WM12 | Rentabilidad, recuperación, escenarios demo, prep API  | pendiente  |
 
 ### Diagrama de dependencias
@@ -711,11 +711,11 @@ Agregaciones sobre `items`, `invoices`, `workOrders`, `events`.
 
 ### Criterios de aceptación
 
-- [ ] Nueva categoría en registro inventario
-- [ ] Servicio inactivo oculto en POS
-- [ ] Usuario creado puede login con su contraseña
-- [ ] Usuario desactivado no puede login
-- [ ] Listo para swap a API M11
+- [x] Nueva categoría en registro inventario
+- [x] Servicio inactivo oculto en POS
+- [x] Usuario creado puede login con su contraseña
+- [x] Usuario desactivado no puede login
+- [x] Listo para swap a API M11
 
 ---
 
@@ -817,3 +817,4 @@ Cada escenario reinicia datos y documenta qué credenciales usar para login.
 | 2026-09-01 | WM8 integrado sobre WM7: POS, confirmación atómica `FAC-`, snapshot de cliente e ITBIS fiscal. Criterios WM7 re-verificados (24 pruebas de ciclo post-venta siguen verdes). |
 | 2026-09-01 | WM9 completado: listado/detalle de OT de escritorio, creación manual, reasignación y cancelación admin. Completar desarme sigue en WM10. |
 | 2026-09-01 | WM10 completado: app móvil del mecánico, claim atómico, evidencia BEFORE/AFTER y completar desarme/instalación sin datos comerciales. |
+| 2026-09-01 | WM11 completado: catálogos admin (categorías/servicios) y gestión de usuarios en memoria; login de cuentas nuevas y POS sin servicios inactivos. |

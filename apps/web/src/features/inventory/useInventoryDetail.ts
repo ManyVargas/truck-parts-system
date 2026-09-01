@@ -8,6 +8,7 @@ import type {
   InventoryDetail,
   ManualWorkOrderInput,
   NoDesarmarInput,
+  ResolveCatalogReviewInput,
 } from '../../api/contracts/inventory';
 import type { AppError, Result } from '../../shared/auth/types';
 import { mockInventoryRepository } from '../../mocks/repositories';
@@ -106,6 +107,20 @@ export function useInventoryDetail(id: string | undefined) {
     [reload],
   );
 
+  const resolveCatalogReview = useCallback(
+    async (input: ResolveCatalogReviewInput): Promise<Result<void>> => {
+      setIsMutating(true);
+      const response = await mockInventoryRepository.resolveCatalogReview(input);
+      setIsMutating(false);
+      if (!response.ok) {
+        return response;
+      }
+      reload();
+      return { ok: true, value: undefined };
+    },
+    [reload],
+  );
+
   const createWorkOrder = useCallback(
     async (input: ManualWorkOrderInput): Promise<Result<void>> => {
       setIsMutating(true);
@@ -127,6 +142,7 @@ export function useInventoryDetail(id: string | undefined) {
     setNoDesarmar,
     correctCost,
     correctBaseline,
+    resolveCatalogReview,
     createWorkOrder,
   };
 }

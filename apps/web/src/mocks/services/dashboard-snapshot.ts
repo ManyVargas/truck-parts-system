@@ -1,5 +1,6 @@
 import type {
   ActivityRow,
+  CatalogReviewAlert,
   DashboardKpis,
   DashboardSnapshot,
   RecentInvoiceRow,
@@ -16,6 +17,7 @@ const ACTIVITY_LIMIT = 8;
 export type BuildDashboardSnapshotOptions = {
   nowIso?: string;
   includeProfitability: boolean;
+  includeAdminAlerts?: boolean;
 };
 
 function availableInventoryCount(state: AppState): number {
@@ -75,6 +77,36 @@ function incompleteAssemblyCount(state: AppState): number {
   ).length;
 }
 
+function catalogReviewAlerts(state: AppState): CatalogReviewAlert[] {
+  return [...state.pendingCatalogReviews]
+    .map((review) => {
+      const item = state.items.find((entry) => entry.id === review.parentId);
+      const category = item
+        ? state.categories.find((entry) => entry.id === item.categoryId)
+        : undefined;
+      const matchedChild = review.matchedChildId
+        ? state.items.find((entry) => entry.id === review.matchedChildId)
+        : undefined;
+
+      return {
+        itemId: review.parentId,
+        itemName: item?.name ?? review.parentId,
+        expectedComponentName: review.expectedComponentName,
+        categoryName: category?.name ?? '',
+        kind: review.kind,
+        matchedChildId: review.matchedChildId,
+        matchedChildName: matchedChild?.name,
+      };
+    })
+    .sort((left, right) => {
+      const byItem = left.itemId.localeCompare(right.itemId);
+      if (byItem !== 0) {
+        return byItem;
+      }
+      return left.expectedComponentName.localeCompare(right.expectedComponentName, 'es');
+    });
+}
+
 function toRecentInvoice(state: AppState, invoiceId: string): RecentInvoiceRow | null {
   const invoice = state.invoices.find((entry) => entry.id === invoiceId);
   if (!invoice || invoice.status !== 'COMPLETED') {
@@ -125,6 +157,12 @@ export function buildDashboardSnapshot(
     kpis.pendingFx = state.invoices.filter((invoice) => invoice.profitabilityPendingFx).length;
   }
 
+  if (options.includeAdminAlerts) {
+    kpis.pendingCatalogValidations = state.pendingCatalogReviews.filter(
+      (entry) => entry.kind === 'PENDING_NA',
+    ).length;
+  }
+
   const recentInvoices = [...state.invoices]
     .filter((invoice) => invoice.status === 'COMPLETED')
     .sort((left, right) => (right.confirmedAt ?? '').localeCompare(left.confirmedAt ?? ''))
@@ -142,5 +180,11 @@ export function buildDashboardSnapshot(
       createdAt: event.createdAt,
     }));
 
-  return { kpis, recentInvoices, activity, demoNowIso: nowIso };
+  return {
+    kpis,
+    recentInvoices,
+    activity,
+    pendingCatalogReviews: options.includeAdminAlerts ? catalogReviewAlerts(state) : undefined,
+    demoNowIso: nowIso,
+  };
 }

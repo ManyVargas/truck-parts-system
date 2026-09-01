@@ -10,6 +10,7 @@ import type {
   RegisterAssemblyResult,
   RegisterItemInput,
   RegisterQtyProductInput,
+  ResolveCatalogReviewInput,
 } from '../../api/contracts/inventory';
 import type {
   AppEvent,
@@ -28,6 +29,7 @@ import {
   availableToReserve,
   collectSubtree,
   isAssemblyItem,
+  isComplete,
   itemById,
   overlappingReservation,
   protectedAncestor,
@@ -705,6 +707,143 @@ export function correctReceiptBaseline(
     removed,
     beforeComplete,
     afterComplete,
+  });
+
+  return ok(item);
+}
+
+/**
+ * Administrator resolves a catalog-grown slot:
+ * - NOT_APPLICABLE / ACKNOWLEDGE: no Known Missing Component
+ * - MISSING: creates MISSING_AT_RECEIPT and Incomplete
+ * - PRESENT: registers a real installed child on this parent (receipt composition, not a Work Order)
+ */
+export function resolveCatalogReview(
+  state: AppState,
+  actor: User,
+  input: ResolveCatalogReviewInput,
+): Result<Item> {
+  const expectedComponentName = optionalText(input.expectedComponentName);
+  if (!expectedComponentName) {
+    return err({ code: 'VALIDATION', message: 'Indique el componente pendiente de validar' });
+  }
+
+  const allowed = new Set(['NOT_APPLICABLE', 'MISSING', 'PRESENT', 'ACKNOWLEDGE']);
+  if (!allowed.has(input.decision)) {
+    return err({
+      code: 'VALIDATION',
+      message: 'La decisión debe ser confirmar NA, marcar falta, registrar presente o reconocer coincidencia',
+    });
+  }
+
+  const item = itemById(state.items, input.itemId);
+  if (!item) {
+    return err({ code: 'NOT_FOUND', message: 'Ítem no encontrado' });
+  }
+
+  const reviewIndex = state.pendingCatalogReviews.findIndex(
+    (entry) =>
+      entry.parentId === item.id && entry.expectedComponentName === expectedComponentName,
+  );
+  if (reviewIndex < 0) {
+    return err({
+      code: 'VALIDATION',
+      message: `No hay una revisión pendiente de ${expectedComponentName} en ${item.id}`,
+    });
+  }
+
+  const review = state.pendingCatalogReviews[reviewIndex]!;
+  if (review.kind === 'ALREADY_PRESENT' && input.decision !== 'ACKNOWLEDGE') {
+    return err({
+      code: 'VALIDATION',
+      message: `${expectedComponentName} ya está en el árbol; confirme que lo reconoció`,
+    });
+  }
+  if (review.kind === 'PENDING_NA' && input.decision === 'ACKNOWLEDGE') {
+    return err({
+      code: 'VALIDATION',
+      message: 'Este componente aún no está en el ensamblaje; confirme NA, márquelo falta o regístrelo presente',
+    });
+  }
+
+  let childId: string | undefined;
+  if (input.decision === 'PRESENT') {
+    if (!input.item) {
+      return err({
+        code: 'VALIDATION',
+        message: `Complete los datos de la pieza presente: ${expectedComponentName}`,
+      });
+    }
+    const childCategory = state.categories.find((entry) => entry.id === input.item?.categoryId);
+    if (!childCategory || childCategory.name !== expectedComponentName) {
+      return err({
+        code: 'VALIDATION',
+        message: `La categoría de ${expectedComponentName} debe llamarse ${expectedComponentName}`,
+      });
+    }
+    if (childCategory.isAssembly) {
+      if (!input.baseline) {
+        return err({
+          code: 'VALIDATION',
+          message: `Complete el baseline del ensamblaje ${expectedComponentName}`,
+        });
+      }
+      const registered = registerAssembly(state, actor, {
+        parent: input.item,
+        baseline: input.baseline,
+      });
+      if (!registered.ok) {
+        return registered;
+      }
+      registered.value.parent.physicalRelationship = 'INSTALLED';
+      registered.value.parent.parentId = item.id;
+      registered.value.parent.location = undefined;
+      childId = registered.value.parent.id;
+    } else {
+      const built = buildRegisteredItem(state, input.item, 'INSTALLED', item.id);
+      if (!built.ok) {
+        return built;
+      }
+      state.items.push(built.value);
+      childId = built.value.id;
+    }
+  }
+
+  const beforeComplete = isComplete(item, state.knownMissing, state.categories);
+  state.pendingCatalogReviews.splice(reviewIndex, 1);
+
+  if (input.decision === 'MISSING') {
+    const missing: KnownMissingComponent = {
+      id: nextNumericId(
+        state.knownMissing.map((candidate) => candidate.id),
+        'KM-',
+        3,
+      ),
+      parentId: item.id,
+      expectedComponentName,
+      origin: 'MISSING_AT_RECEIPT',
+    };
+    state.knownMissing.push(missing);
+  }
+
+  syncDirectParentCompleteness(item, state.knownMissing, state.categories);
+
+  const description =
+    input.decision === 'MISSING'
+      ? `${expectedComponentName} marcado como falta en ${item.id}`
+      : input.decision === 'PRESENT'
+        ? `${childId} registrado como ${expectedComponentName} en ${item.id}`
+        : input.decision === 'ACKNOWLEDGE'
+          ? `${expectedComponentName} ya presente en ${item.id} reconocido`
+          : `${expectedComponentName} confirmado como no aplica en ${item.id}`;
+
+  appendEvent(state, 'CATALOG_REVIEW_RESOLVED', description, actor, {
+    itemId: item.id,
+    expectedComponentName,
+    decision: input.decision,
+    childId: childId ?? review.matchedChildId ?? null,
+    beforeComplete,
+    afterComplete: item.complete,
   });
 
   return ok(item);

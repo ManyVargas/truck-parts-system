@@ -6,10 +6,10 @@ import { getSession } from '../session';
 import { getMockState } from '../state';
 
 /**
- * Validates the current mock session against policies before a mutation.
- * Route guards are UX-only; services must call this (or equivalent) server-side in production.
+ * Session lookup shared by single-action and any-of checks.
+ * Catalog reads are allowed for sellers (inventory.view) and admins (catalogs.manage).
  */
-export function requirePermission(action: PolicyAction): Result<User> {
+function resolveSessionUser(): Result<User> {
   const session = getSession();
 
   if (!session) {
@@ -26,9 +26,35 @@ export function requirePermission(action: PolicyAction): Result<User> {
     return err({ code: 'FORBIDDEN', message: 'Esta cuenta está desactivada' });
   }
 
-  if (!can(user, action)) {
+  return ok(user);
+}
+
+/**
+ * Validates the current mock session against policies before a mutation.
+ * Route guards are UX-only; services must call this (or equivalent) server-side in production.
+ */
+export function requirePermission(action: PolicyAction): Result<User> {
+  const sessionUser = resolveSessionUser();
+  if (!sessionUser.ok) {
+    return sessionUser;
+  }
+
+  if (!can(sessionUser.value, action)) {
     return err({ code: 'FORBIDDEN', message: 'No tiene permiso para realizar esta acción' });
   }
 
-  return ok(user);
+  return sessionUser;
+}
+
+export function requireAnyPermission(actions: PolicyAction[]): Result<User> {
+  const sessionUser = resolveSessionUser();
+  if (!sessionUser.ok) {
+    return sessionUser;
+  }
+
+  if (!actions.some((action) => can(sessionUser.value, action))) {
+    return err({ code: 'FORBIDDEN', message: 'No tiene permiso para realizar esta acción' });
+  }
+
+  return sessionUser;
 }

@@ -573,6 +573,7 @@ export function createInitialState(): AppState {
     users,
     items,
     knownMissing,
+    pendingCatalogReviews: [],
     qtyProducts,
     customers,
     categories,

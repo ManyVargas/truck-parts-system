@@ -47,6 +47,8 @@ describe('authorization policies', () => {
     expect(can(seller, 'sales.manage')).toBe(true);
     expect(can(seller, 'profile.update')).toBe(true);
     expect(can(seller, 'inventory.admin')).toBe(false);
+    expect(can(seller, 'catalogs.manage')).toBe(false);
+    expect(can(seller, 'users.manage')).toBe(false);
     expect(can(seller, 'profit.view')).toBe(false);
     expect(can(seller, 'workOrders.manage')).toBe(false);
   });

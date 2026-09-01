@@ -1,5 +1,6 @@
 import type {
   AppEvent,
+  Category,
   CommercialState,
   Item,
   ItemCondition,
@@ -107,6 +108,17 @@ export type ItemDetailView = {
   noDesarmar: boolean;
   protectedRootId?: string;
   missingComponents: KnownMissingComponent[];
+  /** Provisional NA slots from a later catalog expansion; admin confirms NA or marks missing. */
+  pendingCatalogReviews: {
+    id: string;
+    expectedComponentName: string;
+    kind: 'PENDING_NA' | 'ALREADY_PRESENT';
+    matchedChildId?: string;
+    matchedChildName?: string;
+    matchingCategoryId?: string;
+  }[];
+  /** Category definitions needed to register nested assembly reviews atomically. */
+  catalogCategories: Category[];
   soldInstalledChildren: { id: string; name: string; workOrderId?: string }[];
   formerInstallation?: { parentId: string; parentName: string; workOrderId?: string };
   ancestors: { id: string; name: string }[];
@@ -163,6 +175,16 @@ export type BaselineCorrectionInput = {
   itemId: string;
   reason: string;
   markNotApplicable: string[];
+};
+
+export type ResolveCatalogReviewInput = {
+  itemId: string;
+  expectedComponentName: string;
+  decision: 'NOT_APPLICABLE' | 'MISSING' | 'PRESENT' | 'ACKNOWLEDGE';
+  /** Required when decision is PRESENT — new child identity installed on the parent. */
+  item?: RegisterItemInput;
+  /** Required when the PRESENT child is itself an assembly. */
+  baseline?: AssemblyBaselineEntry[];
 };
 
 export type ManualWorkOrderInput = {

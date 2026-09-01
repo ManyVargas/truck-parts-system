@@ -13,6 +13,8 @@ export type DashboardKpis = {
   profitDop?: number;
   /** Administrator-only — omitted from Seller projections. */
   pendingFx?: number;
+  /** Administrator-only — catalog slots waiting for confirm NA, present, or missing. */
+  pendingCatalogValidations?: number;
 };
 
 export type RecentInvoiceRow = {
@@ -34,10 +36,22 @@ export type ActivityRow = {
   createdAt: string;
 };
 
+export type CatalogReviewAlert = {
+  itemId: string;
+  itemName: string;
+  expectedComponentName: string;
+  categoryName: string;
+  kind: 'PENDING_NA' | 'ALREADY_PRESENT';
+  matchedChildId?: string;
+  matchedChildName?: string;
+};
+
 export type DashboardSnapshot = {
   kpis: DashboardKpis;
   recentInvoices: RecentInvoiceRow[];
   activity: ActivityRow[];
+  /** Administrator-only queue after a catalog expected-component is added. */
+  pendingCatalogReviews?: CatalogReviewAlert[];
   /** ISO timestamp used as “today” for demo aggregations. */
   demoNowIso: string;
 };

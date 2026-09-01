@@ -70,4 +70,17 @@ describe('PosPage', () => {
 
     expect(await screen.findByRole('option', { name: /Flota Este/ })).toBeVisible();
   });
+
+  it('does not offer inactive seed services when adding a line', async () => {
+    const user = userEvent.setup();
+    renderPos();
+    await screen.findByText('Alternador 24V');
+
+    await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
+    await user.selectOptions(screen.getByLabelText('Tipo de línea'), 'SERVICE');
+
+    expect(screen.getByRole('option', { name: 'Instalación mecánica' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Desarme especializado' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Diagnóstico electrónico' })).not.toBeInTheDocument();
+  });
 });

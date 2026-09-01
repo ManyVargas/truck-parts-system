@@ -49,6 +49,19 @@ export type KnownMissingComponent = {
   workOrderId?: string;
 };
 
+/**
+ * Catalog-grown expected slot on an already-registered unsold assembly.
+ * PENDING_NA is provisional NOT_APPLICABLE (no Known Missing Component).
+ * ALREADY_PRESENT means a current child already matches that expected category.
+ */
+export type PendingCatalogReview = {
+  id: string;
+  parentId: string;
+  expectedComponentName: string;
+  kind: 'PENDING_NA' | 'ALREADY_PRESENT';
+  matchedChildId?: string;
+};
+
 export type QtyProduct = {
   id: string;
   name: string;
@@ -192,6 +205,7 @@ export type AppState = {
   users: User[];
   items: Item[];
   knownMissing: KnownMissingComponent[];
+  pendingCatalogReviews: PendingCatalogReview[];
   qtyProducts: QtyProduct[];
   customers: Customer[];
   categories: Category[];
