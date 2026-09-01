@@ -1,7 +1,7 @@
 # Plan 001 — Frontend Prototipo Mock: SoloCamiones
 
 **Alcance:** Prototipo frontend funcional con datos dummy (sin backend)  
-**Estado:** WM6 completado — WM7 pendiente
+**Estado:** WM7 completado — WM8 pendiente
 **Último milestone planificado:** WM12 — Rentabilidad, recuperación, escenarios demo y preparación API  
 **Referencia de diseño:** [Prototipo Figma Make](https://www.figma.com/make/HzibQNQ88lqtv3rAup56eJ/Follow-prototype-instructions)
 
@@ -270,7 +270,7 @@ El resto del prototipo (inventario, ventas, OT, etc.) permanece mock hasta los r
 | WM4  | Clientes                                               | completado |
 | WM5  | Inventario listado, búsqueda y detalle                 | completado |
 | WM6  | Registro de inventario                                 | completado |
-| WM7  | Ventas: listado, detalle, pagos, cancelación, PDF      | pendiente  |
+| WM7  | Ventas: listado, detalle, pagos, cancelación, PDF      | completado |
 | WM8  | Punto de venta y borradores (POS)                      | pendiente  |
 | WM9  | Órdenes de trabajo (escritorio)                        | pendiente  |
 | WM10 | Experiencia Mecánico (móvil)                           | pendiente  |
@@ -558,14 +558,14 @@ Agregaciones sobre `items`, `invoices`, `workOrders`, `events`.
 
 ### Criterios de aceptación
 
-- [ ] FAC-000098 sin pagar; FAC-000099 parcial
-- [ ] Pago actualiza saldo y chip
-- [ ] Cancelación aditiva; PDF muestra ITBIS 0 o desglose según flag fiscal
-- [ ] Factura no fiscal: columna ITBIS en 0 / “—”; total = suma de precios finales
-- [ ] Factura fiscal: ITBIS 18% solo en líneas gravadas (servicio/delivery siguen exentos)
-- [ ] Vendedor sin cancelación ni corrección moneda
-- [ ] Pago > saldo o ≤ 0 rechazado
-- [ ] Reembolso > pagado rechazado; cancelación sin motivo rechazada
+- [x] FAC-000098 sin pagar; FAC-000099 parcial
+- [x] Pago actualiza saldo y chip
+- [x] Cancelación aditiva; PDF muestra ITBIS 0 o desglose según flag fiscal
+- [x] Factura no fiscal: columna ITBIS en 0 / “—”; total = suma de precios finales
+- [x] Factura fiscal: ITBIS 18% solo en líneas gravadas (servicio/delivery siguen exentos)
+- [x] Vendedor sin cancelación ni corrección moneda
+- [x] Pago > saldo o ≤ 0 rechazado
+- [x] Reembolso > pagado rechazado; cancelación sin motivo rechazada
 
 ---
 
@@ -813,3 +813,4 @@ Cada escenario reinicia datos y documenta qué credenciales usar para login.
 | 2026-08-28 | WM3 completado: dashboard operativo por rol, KPIs, facturas recientes, timeline                                |
 | 2026-08-28 | WM5 completado: inventario unificado, búsqueda, detalle, chips, acciones admin y reserva a borrador            |
 | 2026-08-28 | WM6 completado: registro individual, por cantidad y ensamblajes anidados con baseline recursivo y atómico      |
+| 2026-08-31 | WM7 completado: listado de ventas, detalle, pagos, cancelación con ramas OT, PDF interno e ITBIS por flag fiscal |

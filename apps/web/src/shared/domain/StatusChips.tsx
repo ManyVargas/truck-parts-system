@@ -102,3 +102,31 @@ export function NoDesarmarChip({
     </Chip>
   );
 }
+
+export function InvoiceStatusChip({
+  status,
+}: {
+  status: 'DRAFT' | 'COMPLETED' | 'CANCELLED';
+}) {
+  if (status === 'DRAFT') {
+    return <Chip tone="amber">Borrador</Chip>;
+  }
+  if (status === 'CANCELLED') {
+    return <Chip tone="danger">Cancelada</Chip>;
+  }
+  return <Chip tone="success">Completada</Chip>;
+}
+
+export function PaymentChip({
+  state,
+}: {
+  state: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
+}) {
+  if (state === 'PAID') {
+    return <Chip tone="success">Pagada</Chip>;
+  }
+  if (state === 'PARTIALLY_PAID') {
+    return <Chip tone="amber">Parcial</Chip>;
+  }
+  return <Chip tone="danger">Sin pagar</Chip>;
+}

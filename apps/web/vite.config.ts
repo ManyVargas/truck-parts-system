@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'node',
       include: ['tests/**/*.test.{ts,tsx}'],
+      pool: 'forks',
     },
     server: {
       host: '0.0.0.0',

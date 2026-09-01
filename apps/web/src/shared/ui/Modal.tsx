@@ -6,9 +6,15 @@ export type ModalProps = {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  size?: 'md' | 'lg';
 };
 
-export function Modal({ open, title, children, onClose }: ModalProps) {
+const sizeClasses = {
+  md: 'max-w-lg',
+  lg: 'max-w-3xl',
+};
+
+export function Modal({ open, title, children, onClose, size = 'md' }: ModalProps) {
   if (!open) {
     return null;
   }
@@ -20,7 +26,7 @@ export function Modal({ open, title, children, onClose }: ModalProps) {
       aria-modal="true"
       aria-labelledby="modal-title"
     >
-      <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
+      <div className={`w-full ${sizeClasses[size]} max-h-[90vh] overflow-y-auto rounded-xl bg-white shadow-xl`}>
         <div className="flex items-center justify-between border-b border-navy-100 px-5 py-4">
           <h2 id="modal-title" className="text-lg font-semibold text-navy">
             {title}

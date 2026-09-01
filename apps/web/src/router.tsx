@@ -4,11 +4,13 @@ import { LoginPage } from './features/auth/LoginPage';
 import { CustomersPage } from './features/customers/CustomersPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { InventoryDetailPage } from './features/inventory/InventoryDetailPage';
+import { InvoiceDetailPage } from './features/sales/InvoiceDetailPage';
 import { InventoryPage } from './features/inventory/InventoryPage';
 import { MechanicLayout } from './features/mechanic/MechanicLayout';
 import { MechanicPlaceholderPage } from './features/mechanic/MechanicPlaceholderPage';
 import { PlaceholderPage } from './features/placeholder/PlaceholderPage';
 import { NotFoundPage } from './features/placeholder/NotFoundPage';
+import { SalesPage } from './features/sales/SalesPage';
 import { AppShell } from './shared/layout/AppShell';
 import { CatchAllRoute } from './shared/layout/CatchAllRoute';
 import { GuestRoute } from './shared/layout/GuestRoute';
@@ -30,13 +32,7 @@ const desktopChildRoutes = [
   },
   {
     path: '/sales',
-    element: (
-      <PlaceholderPage
-        title="Ventas y Facturas"
-        milestone="WM7"
-        description="Listado, detalle, pagos y cancelación."
-      />
-    ),
+    element: <SalesPage />,
   },
   {
     path: '/sales/draft/:id',
@@ -44,7 +40,7 @@ const desktopChildRoutes = [
   },
   {
     path: '/sales/:id',
-    element: <PlaceholderPage title="Detalle de factura" milestone="WM7" />,
+    element: <InvoiceDetailPage />,
   },
   {
     path: '/customers',

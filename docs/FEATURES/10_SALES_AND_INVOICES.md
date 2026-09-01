@@ -73,7 +73,7 @@ Invoice PDF rendering is secondary to sale validity. Preserve all invoice facts 
 ## Implementation checklist
 
 ### Release 2 — Billing Core
-- [ ] Invoice aggregate and Draft/Completed/Cancelled state model.
+- [x] Invoice aggregate and Draft/Completed/Cancelled state model.
 - [ ] DOP/USD single-currency rule.
 - [ ] Shared transactional `FAC-` sequence.
 - [ ] Customer snapshot integration.
@@ -81,8 +81,8 @@ Invoice PDF rendering is secondary to sale validity. Preserve all invoice facts 
 - [ ] Mechanical service catalog selection + negotiated price.
 - [ ] Delivery paid/free/omitted line.
 - [ ] External resale line if its cost dependency is enabled.
-- [ ] Tax-inclusive 18% calculation and per-line rounding.
-- [ ] Printable/regenerable internal PDF with blank NCF field.
+- [x] Tax-inclusive 18% calculation and per-line rounding.
+- [x] Printable/regenerable internal PDF with blank NCF field.
 - [ ] Explicitly reject unavailable inventory-backed line actions until their feature release.
 
 ### Release 5 — Inventory-backed sales
@@ -98,7 +98,7 @@ Invoice PDF rendering is secondary to sale validity. Preserve all invoice facts 
 - [ ] Race handling versus hierarchy/Work-Order changes.
 
 ### Tests
-- [ ] Decimal-safe invoice calculations.
+- [x] Decimal-safe invoice calculations.
 - [ ] FAC uniqueness/non-reuse under concurrency/retry.
 - [ ] Mixed-currency rejection.
 - [ ] PDF failure/regeneration without sale rerun.

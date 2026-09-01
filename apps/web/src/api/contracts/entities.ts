@@ -110,6 +110,7 @@ export type InvoiceLine = {
 };
 
 export type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'CHECK';
+export type PaymentKind = 'PAYMENT' | 'REFUND';
 
 export type Payment = {
   id: string;
@@ -117,6 +118,11 @@ export type Payment = {
   amount: number;
   method: PaymentMethod;
   createdAt: string;
+  /** Omitted on seed receipts — treated as PAYMENT. */
+  kind?: PaymentKind;
+  actorId?: string;
+  reference?: string;
+  idempotencyKey?: string;
 };
 
 export type Invoice = {

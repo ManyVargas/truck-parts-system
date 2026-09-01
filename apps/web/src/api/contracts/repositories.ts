@@ -17,10 +17,17 @@ import type {
   RegisterQtyProductInput,
 } from './inventory';
 import type {
+  AddPaymentInput,
+  CancelInvoiceInput,
+  CorrectCurrencyInput,
+  InvoiceDetailView,
+  SalesListRow,
+  SalesListTab,
+} from './sales';
+import type {
   AppEvent,
   Category,
   Customer,
-  Invoice,
   Item,
   MechanicWorkOrderView,
   QtyProduct,
@@ -68,8 +75,11 @@ export type CustomerRepository = {
 };
 
 export type SalesRepository = {
-  listInvoices(): Promise<Result<Invoice[]>>;
-  getInvoice(id: string): Promise<Result<Invoice>>;
+  listInvoices(tab?: SalesListTab): Promise<Result<SalesListRow[]>>;
+  getInvoice(id: string): Promise<Result<InvoiceDetailView>>;
+  addPayment(input: AddPaymentInput): Promise<Result<InvoiceDetailView>>;
+  cancelInvoice(input: CancelInvoiceInput): Promise<Result<InvoiceDetailView>>;
+  correctCurrency(input: CorrectCurrencyInput): Promise<Result<InvoiceDetailView>>;
 };
 
 export type WorkOrderRepository = {
