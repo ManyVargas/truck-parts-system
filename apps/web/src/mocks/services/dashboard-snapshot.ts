@@ -86,7 +86,7 @@ function toRecentInvoice(state: AppState, invoiceId: string): RecentInvoiceRow |
   return {
     id: invoice.id,
     number: invoice.number ?? invoice.id,
-    customerName: customer?.name ?? invoice.customerId,
+    customerName: invoice.customerSnapshot?.name ?? customer?.name ?? invoice.customerId,
     status: invoice.status,
     paymentState: invoice.paymentState,
     currency: invoice.currency,

@@ -74,36 +74,36 @@ Invoice PDF rendering is secondary to sale validity. Preserve all invoice facts 
 
 ### Release 2 — Billing Core
 - [x] Invoice aggregate and Draft/Completed/Cancelled state model.
-- [ ] DOP/USD single-currency rule.
-- [ ] Shared transactional `FAC-` sequence.
-- [ ] Customer snapshot integration.
-- [ ] Generic merchandise line.
-- [ ] Mechanical service catalog selection + negotiated price.
-- [ ] Delivery paid/free/omitted line.
-- [ ] External resale line if its cost dependency is enabled.
+- [x] DOP/USD single-currency rule. *(prototipo mock — WM8)*
+- [x] Shared transactional `FAC-` sequence. *(prototipo mock — `facSeq`; un hilo)*
+- [x] Customer snapshot integration. *(prototipo mock — WM8)*
+- [x] Generic merchandise line. *(prototipo mock — WM8)*
+- [x] Mechanical service catalog selection + negotiated price. *(prototipo mock — WM8)*
+- [x] Delivery paid/free/omitted line. *(prototipo mock — WM8)*
+- [x] External resale line if its cost dependency is enabled. *(prototipo mock — WM8)*
 - [x] Tax-inclusive 18% calculation and per-line rounding.
 - [x] Printable/regenerable internal PDF with blank NCF field.
-- [ ] Explicitly reject unavailable inventory-backed line actions until their feature release.
+- [ ] Explicitly reject unavailable inventory-backed line actions until their feature release. *(superseded in the mock: WM8 already sells inventory-backed lines)*
 
 ### Release 5 — Inventory-backed sales
-- [ ] Individual inventory line.
-- [ ] Quantity product line.
-- [ ] Reservation ownership/revalidation.
-- [ ] Atomic independent-item Sold transition.
-- [ ] Atomic quantity consumption.
+- [x] Individual inventory line. *(prototipo mock — WM8)*
+- [x] Quantity product line. *(prototipo mock — WM8)*
+- [x] Reservation ownership/revalidation. *(prototipo mock — WM8)*
+- [x] Atomic independent-item Sold transition. *(prototipo mock — WM8)*
+- [x] Atomic quantity consumption. *(prototipo mock — WM8)*
 
 ### Release 7 — Hierarchy-linked sales
-- [ ] Installed-piece sale + Dismantling create-or-reuse.
-- [ ] Complete-assembly subtree validation/snapshot.
+- [x] Installed-piece sale + Dismantling create-or-reuse. *(prototipo mock — WM8; completar desarme es WM10)*
+- [x] Complete-assembly subtree validation/snapshot. *(prototipo mock — bloqueo por OT activa; marca Sold)*
 - [ ] Race handling versus hierarchy/Work-Order changes.
 
 ### Tests
 - [x] Decimal-safe invoice calculations.
-- [ ] FAC uniqueness/non-reuse under concurrency/retry.
-- [ ] Mixed-currency rejection.
+- [x] FAC uniqueness/non-reuse under concurrency/retry. *(prototipo mock — idempotencia de `confirmInvoice`; un hilo)*
+- [x] Mixed-currency rejection. *(una moneda por factura; el draft no mezcla líneas)*
 - [ ] PDF failure/regeneration without sale rerun.
-- [ ] Forced transaction failure leaves no partial sale/inventory/WO state.
-- [ ] Duplicate confirmation is idempotent or safely conflicts.
+- [x] Forced transaction failure leaves no partial sale/inventory/WO state. *(prototipo mock — validar todo antes de mutar)*
+- [x] Duplicate confirmation is idempotent or safely conflicts.
 
 ## Canonical validated requirements
 

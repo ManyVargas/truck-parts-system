@@ -87,4 +87,27 @@ describe('MockSalesRepository', () => {
       expect(result.error.code).toBe('FORBIDDEN');
     }
   });
+
+  it('confirms the seed draft and exposes FAC-000100 in the completed list', async () => {
+    signInAs('SELLER');
+    const confirmed = await mockSalesRepository.confirmInvoice('INV-DRAFT-01');
+    const listed = await mockSalesRepository.listInvoices('COMPLETED');
+    const detail = await mockSalesRepository.getInvoice('INV-DRAFT-01');
+
+    expect(confirmed.ok && confirmed.value.number).toBe('FAC-000100');
+    expect(listed.ok && listed.value.some((row) => row.number === 'FAC-000100')).toBe(true);
+    expect(detail.ok && detail.value.status).toBe('COMPLETED');
+    expect(detail.ok && detail.value.actions.canPay).toBe(true);
+  });
+
+  it('opens a second draft without reusing the seed draft', async () => {
+    signInAs('SELLER');
+    const created = await mockSalesRepository.createDraft();
+
+    expect(created.ok).toBe(true);
+    if (created.ok) {
+      expect(created.value.draftId).toBe('INV-DRAFT-02');
+    }
+    expect(getMockState().invoices.filter((entry) => entry.status === 'DRAFT')).toHaveLength(2);
+  });
 });

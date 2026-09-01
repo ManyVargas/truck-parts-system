@@ -364,3 +364,15 @@ export function correctCurrency(
 
   return ok(invoice);
 }
+
+/** POS draft mutations — kept beside post-sale commands so features import one sales-commands surface. */
+export {
+  addDraftLine,
+  confirmInvoice,
+  createDraft,
+  discardDraft,
+  removeDraftLine,
+  setDraftLinePrice,
+  setDraftMeta,
+} from './sales-pos-commands';
+

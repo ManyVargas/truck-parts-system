@@ -1,0 +1,211 @@
+import { useEffect, useState, type FormEvent } from 'react';
+
+import type { LineType } from '../../api/contracts/entities';
+import type { PosDraftView } from '../../api/contracts/sales';
+import { Button, Field, Input, Modal, Select } from '../../shared/ui';
+
+const LINE_TYPES: { value: LineType; label: string }[] = [
+  { value: 'ITEM', label: 'Artículo de inventario' },
+  { value: 'QTY', label: 'Producto por cantidad' },
+  { value: 'GENERIC', label: 'Mercancía genérica' },
+  { value: 'EXTERNAL', label: 'Reventa externa' },
+  { value: 'SERVICE', label: 'Servicio mecánico' },
+  { value: 'DELIVERY', label: 'Entrega' },
+];
+
+type AddLineModalProps = {
+  open: boolean;
+  draft: PosDraftView;
+  isSaving: boolean;
+  error: string | null;
+  onClose: () => void;
+  onSubmit: (input: {
+    type: LineType;
+    itemId?: string;
+    qtyProductId?: string;
+    serviceId?: string;
+    description?: string;
+    quantity?: number;
+    unitPrice?: number;
+    acquisitionCostDop?: number;
+  }) => Promise<void>;
+};
+
+export function AddLineModal({
+  open,
+  draft,
+  isSaving,
+  error,
+  onClose,
+  onSubmit,
+}: AddLineModalProps) {
+  const [type, setType] = useState<LineType>('GENERIC');
+  const [itemId, setItemId] = useState(draft.items[0]?.id ?? '');
+  const [qtyProductId, setQtyProductId] = useState(draft.qtyProducts[0]?.id ?? '');
+  const [serviceId, setServiceId] = useState(draft.services[0]?.id ?? '');
+  const [description, setDescription] = useState('');
+  const [quantity, setQuantity] = useState('1');
+  const [unitPrice, setUnitPrice] = useState('0');
+  const [cost, setCost] = useState('');
+
+  useEffect(() => {
+    if (!draft.items.some((item) => item.id === itemId)) {
+      setItemId(draft.items[0]?.id ?? '');
+    }
+  }, [draft.items, itemId]);
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    await onSubmit({
+      type,
+      itemId: type === 'ITEM' ? itemId : undefined,
+      qtyProductId: type === 'QTY' ? qtyProductId : undefined,
+      serviceId: type === 'SERVICE' ? serviceId : undefined,
+      description: type === 'GENERIC' || type === 'EXTERNAL' || type === 'DELIVERY' ? description : undefined,
+      quantity: type === 'QTY' || type === 'GENERIC' || type === 'EXTERNAL' ? Number(quantity) : undefined,
+      unitPrice: type === 'ITEM' ? undefined : Number(unitPrice),
+      acquisitionCostDop: type === 'EXTERNAL' && cost !== '' ? Number(cost) : undefined,
+    });
+  }
+
+  return (
+    <Modal open={open} title="Agregar línea" onClose={onClose} size="lg">
+      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        {error && (
+          <p className="text-sm text-red-600" role="alert">
+            {error}
+          </p>
+        )}
+        <Field htmlFor="line-type" label="Tipo de línea">
+          <Select
+            id="line-type"
+            value={type}
+            onChange={(event) => setType(event.target.value as LineType)}
+          >
+            {LINE_TYPES.map((entry) => (
+              <option key={entry.value} value={entry.value}>
+                {entry.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        {type === 'ITEM' && (
+          <Field htmlFor="line-item" label="Ítem">
+            <Select id="line-item" value={itemId} onChange={(event) => setItemId(event.target.value)}>
+              {draft.items.length === 0 && <option value="">No hay ítems elegibles</option>}
+              {draft.items.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.id} · {item.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
+
+        {type === 'QTY' && (
+          <>
+            <Field htmlFor="line-qty" label="Producto">
+              <Select
+                id="line-qty"
+                value={qtyProductId}
+                onChange={(event) => setQtyProductId(event.target.value)}
+              >
+                {draft.qtyProducts.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name} ({product.available} disp.)
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field htmlFor="line-qty-amount" label="Cantidad">
+              <Input
+                id="line-qty-amount"
+                type="number"
+                min={1}
+                step={1}
+                value={quantity}
+                onChange={(event) => setQuantity(event.target.value)}
+              />
+            </Field>
+          </>
+        )}
+
+        {type === 'SERVICE' && (
+          <Field htmlFor="line-service" label="Servicio">
+            <Select
+              id="line-service"
+              value={serviceId}
+              onChange={(event) => setServiceId(event.target.value)}
+            >
+              {draft.services.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
+
+        {(type === 'GENERIC' || type === 'EXTERNAL' || type === 'DELIVERY') && (
+          <Field htmlFor="line-description" label="Descripción">
+            <Input
+              id="line-description"
+              value={description}
+              required={type !== 'DELIVERY'}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </Field>
+        )}
+
+        {(type === 'GENERIC' || type === 'EXTERNAL') && (
+          <Field htmlFor="line-quantity" label="Cantidad">
+            <Input
+              id="line-quantity"
+              type="number"
+              min={1}
+              step={1}
+              value={quantity}
+              onChange={(event) => setQuantity(event.target.value)}
+            />
+          </Field>
+        )}
+
+        {type === 'EXTERNAL' && (
+          <Field htmlFor="line-cost" label="Costo de adquisición DOP (opcional)">
+            <Input
+              id="line-cost"
+              type="number"
+              min={0}
+              step="0.01"
+              value={cost}
+              onChange={(event) => setCost(event.target.value)}
+            />
+          </Field>
+        )}
+
+        {type !== 'ITEM' && (
+          <Field htmlFor="line-price" label={type === 'DELIVERY' ? 'Importe (0 = cortesía)' : 'Precio'}>
+            <Input
+              id="line-price"
+              type="number"
+              min={0}
+              step="0.01"
+              value={unitPrice}
+              onChange={(event) => setUnitPrice(event.target.value)}
+            />
+          </Field>
+        )}
+
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isSaving}>
+            {isSaving ? 'Agregando…' : 'Agregar'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}

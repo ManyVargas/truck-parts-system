@@ -9,6 +9,7 @@ import type {
   WorkOrderStatus,
   WorkOrderType,
 } from './entities';
+import type { HierarchyNode } from './inventory';
 
 export type SalesListTab = 'ALL' | 'DRAFT' | 'COMPLETED' | 'CANCELLED';
 
@@ -127,4 +128,87 @@ export type CorrectCurrencyInput = {
   invoiceId: string;
   currency: Currency;
   reason: string;
+};
+
+export type PosDraftTotals = {
+  lineCount: number;
+  gross: number;
+  itbis: number;
+  taxableBase: number;
+};
+
+export type PosLineView = {
+  id: string;
+  type: LineType;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  taxable: boolean;
+  pricePending: boolean;
+  gross: number;
+  itbis: number;
+  base: number;
+  itemId?: string;
+  qtyProductId?: string;
+  serviceId?: string;
+  acquisitionCostDop?: number;
+  installed?: boolean;
+  parentName?: string;
+  isAssembly?: boolean;
+  tree?: HierarchyNode;
+  activeWorkMessage?: string;
+};
+
+export type PosDraftView = {
+  id: string;
+  status: InvoiceStatus;
+  number?: string;
+  customerId: string;
+  customerName: string;
+  customerRnc?: string;
+  customerIsDefault: boolean;
+  currency: Currency;
+  fiscal: boolean;
+  lines: PosLineView[];
+  totals: PosDraftTotals;
+  customers: Array<{ id: string; name: string; rnc?: string; isDefault?: boolean }>;
+  services: Array<{ id: string; name: string }>;
+  qtyProducts: Array<{ id: string; name: string; available: number }>;
+  items: Array<{ id: string; name: string; reservedByDraftId?: string }>;
+  blockers: string[];
+  createdWorkOrderIds: string[];
+};
+
+export type CreateDraftResult = {
+  draftId: string;
+};
+
+export type AddDraftLineInput = {
+  draftId: string;
+  type: LineType;
+  itemId?: string;
+  qtyProductId?: string;
+  serviceId?: string;
+  description?: string;
+  quantity?: number;
+  unitPrice?: number;
+  acquisitionCostDop?: number;
+};
+
+export type RemoveDraftLineInput = {
+  draftId: string;
+  lineId: string;
+};
+
+export type SetDraftLinePriceInput = {
+  draftId: string;
+  lineId: string;
+  unitPrice: number;
+};
+
+export type SetDraftMetaInput = {
+  draftId: string;
+  customerId?: string;
+  currency?: Currency;
+  fiscal?: boolean;
 };

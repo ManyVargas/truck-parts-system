@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import type { SalesListTab } from '../../api/contracts/sales';
-import { Info } from '../../shared/ui';
+import { Button, Info } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
 import { TabBar } from '../../shared/layout/TabBar';
 import { SalesTable } from './SalesTable';
@@ -17,6 +18,7 @@ const TABS: { id: SalesListTab; label: string }[] = [
 export function SalesPage() {
   const [tab, setTab] = useState<SalesListTab>('ALL');
   const { result } = useSalesList(tab);
+  const navigate = useNavigate();
 
   if (result.status === 'error') {
     return (
@@ -30,7 +32,10 @@ export function SalesPage() {
     <>
       <PageHeader
         title="Ventas y Facturas"
-        description="Consulta de documentos, pagos y cancelación. El editor de borradores se completa en el punto de venta."
+        description="Consulta de documentos, pagos y cancelación. Abra un borrador para confirmar una venta."
+        actions={
+          <Button onClick={() => navigate('/sales/draft/new')}>Nuevo borrador</Button>
+        }
       />
 
       <TabBar tabs={TABS} value={tab} onChange={setTab} />

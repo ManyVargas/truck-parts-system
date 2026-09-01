@@ -55,20 +55,20 @@ At invoice confirmation, copy the applicable customer data into an immutable inv
 ### Backend
 - [x] Define customer record and generic-customer strategy. *(prototipo mock: C0 bloqueado; persistencia en sesión)*
 - [x] Implement create/search/edit. *(WM4 — `MockCustomerRepository`)*
-- [ ] Implement fiscal identity validation hook used by Sales.
-- [ ] Implement immutable invoice customer snapshot at confirmation.
-- [ ] Prevent completed snapshots from following later customer edits.
+- [x] Implement fiscal identity validation hook used by Sales. *(prototipo mock — WM8 `setDraftMeta` / `confirmInvoice`)*
+- [x] Implement immutable invoice customer snapshot at confirmation. *(prototipo mock — WM8)*
+- [x] Prevent completed snapshots from following later customer edits. *(prototipo mock — WM8)*
 
 ### Frontend
-- [ ] Customer search/select/create inside Draft flow.
-- [ ] Default `Cliente contado` behavior.
-- [ ] Fiscal-required field feedback.
+- [x] Customer search/select/create inside Draft flow. *(WM8: selector en POS; alta sigue en `/customers`)*
+- [x] Default `Cliente contado` behavior. *(WM8 `createDraft` usa C0; fiscal lo rechaza)*
+- [x] Fiscal-required field feedback. *(checkbox bloqueado + rechazo en servicio)*
 - [x] Basic customer maintenance. *(WM4 — `/customers`)*
 
 ### Tests
-- [ ] Generic nonfiscal sale succeeds.
-- [ ] Generic fiscal sale rejected.
-- [ ] Later customer edit leaves completed invoice unchanged.
+- [x] Generic nonfiscal sale succeeds. *(prototipo mock — C0 + `fiscal: false`)*
+- [x] Generic fiscal sale rejected. *(prototipo mock — WM8)*
+- [x] Later customer edit leaves completed invoice unchanged. *(prototipo mock — WM8 snapshot)*
 - [x] Mechanic access denied. *(WM4 — `customers.manage` en repositorio)*
 
 ## Canonical validated requirements

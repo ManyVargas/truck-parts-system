@@ -42,4 +42,10 @@ describe('SalesPage', () => {
     expect(await screen.findByText(/Borrador INV-DRAFT-01/)).toBeVisible();
     expect(screen.queryByText('FAC-000098')).not.toBeInTheDocument();
   });
+
+  it('offers a new-draft action that stays available after listing', async () => {
+    renderWithProviders(<SalesPage />, { route: '/sales', auth: createAuthValue('SELLER') });
+    await screen.findByText('FAC-000098');
+    expect(screen.getByRole('button', { name: 'Nuevo borrador' })).toBeVisible();
+  });
 });

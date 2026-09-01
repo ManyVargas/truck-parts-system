@@ -351,6 +351,7 @@ export function createInitialState(): AppState {
       number: 'FAC-000096',
       status: 'COMPLETED' as const,
       customerId: 'C2',
+      customerSnapshot: { name: 'Logística Norte SA', rnc: '101-98765-4' },
       currency: 'USD' as const,
       fiscal: true,
       lines: [
@@ -375,6 +376,7 @@ export function createInitialState(): AppState {
       number: 'FAC-000098',
       status: 'COMPLETED' as const,
       customerId: 'C1',
+      customerSnapshot: { name: 'Transportes del Caribe SRL', rnc: '131-45678-9' },
       currency: 'DOP' as const,
       fiscal: true,
       lines: [
@@ -398,6 +400,7 @@ export function createInitialState(): AppState {
       number: 'FAC-000099',
       status: 'COMPLETED' as const,
       customerId: 'C1',
+      customerSnapshot: { name: 'Transportes del Caribe SRL', rnc: '131-45678-9' },
       currency: 'DOP' as const,
       fiscal: false,
       lines: [
@@ -429,6 +432,7 @@ export function createInitialState(): AppState {
       number: 'FAC-000097',
       status: 'COMPLETED' as const,
       customerId: 'C0',
+      customerSnapshot: { name: 'Cliente Contado' },
       currency: 'DOP' as const,
       fiscal: false,
       lines: [

@@ -10,6 +10,7 @@ import { MechanicLayout } from './features/mechanic/MechanicLayout';
 import { MechanicPlaceholderPage } from './features/mechanic/MechanicPlaceholderPage';
 import { PlaceholderPage } from './features/placeholder/PlaceholderPage';
 import { NotFoundPage } from './features/placeholder/NotFoundPage';
+import { PosPage } from './features/sales/PosPage';
 import { SalesPage } from './features/sales/SalesPage';
 import { AppShell } from './shared/layout/AppShell';
 import { CatchAllRoute } from './shared/layout/CatchAllRoute';
@@ -36,7 +37,7 @@ const desktopChildRoutes = [
   },
   {
     path: '/sales/draft/:id',
-    element: <PlaceholderPage title="Punto de venta" milestone="WM8" />,
+    element: <PosPage />,
   },
   {
     path: '/sales/:id',

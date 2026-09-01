@@ -1,7 +1,7 @@
 # Plan 001 — Frontend Prototipo Mock: SoloCamiones
 
 **Alcance:** Prototipo frontend funcional con datos dummy (sin backend)  
-**Estado:** WM7 completado — WM8 pendiente
+**Estado:** WM8 completado — WM9 pendiente
 **Último milestone planificado:** WM12 — Rentabilidad, recuperación, escenarios demo y preparación API  
 **Referencia de diseño:** [Prototipo Figma Make](https://www.figma.com/make/HzibQNQ88lqtv3rAup56eJ/Follow-prototype-instructions)
 
@@ -271,7 +271,7 @@ El resto del prototipo (inventario, ventas, OT, etc.) permanece mock hasta los r
 | WM5  | Inventario listado, búsqueda y detalle                 | completado |
 | WM6  | Registro de inventario                                 | completado |
 | WM7  | Ventas: listado, detalle, pagos, cancelación, PDF      | completado |
-| WM8  | Punto de venta y borradores (POS)                      | pendiente  |
+| WM8  | Punto de venta y borradores (POS)                      | completado |
 | WM9  | Órdenes de trabajo (escritorio)                        | pendiente  |
 | WM10 | Experiencia Mecánico (móvil)                           | pendiente  |
 | WM11 | Catálogos y usuarios (admin)                           | pendiente  |
@@ -455,7 +455,7 @@ Agregaciones sobre `items`, `invoices`, `workOrders`, `events`.
 
 - [x] CRUD persiste en sesión mock
 - [x] C0 no editable
-- [ ] Cliente nuevo aparece en selector POS (WM8)
+- [x] Cliente nuevo aparece en selector POS (WM8)
 
 ---
 
@@ -597,16 +597,16 @@ Agregaciones sobre `items`, `invoices`, `workOrders`, `events`.
 
 ### Criterios de aceptación
 
-- [ ] Flujo borrador → confirmar → detalle `FAC-`
-- [ ] Pieza instalada → OT Desarme Pendiente
-- [ ] Ensamblaje bloqueado si OT activa en subárbol
-- [ ] `No desarmar` impide línea suelta
-- [ ] Precio pendiente bloquea confirmación
-- [ ] Fiscal + Cliente Contado bloqueado en servicio
-- [ ] Línea reservada por otro borrador rechazada
-- [ ] `confirmInvoice` idempotente (doble clic)
-- [ ] Sin comprobante fiscal: panel de totales muestra ITBIS RD$0.00
-- [ ] Con comprobante fiscal: ITBIS calculado en líneas gravadas; desglose base + ITBIS visible
+- [x] Flujo borrador → confirmar → detalle `FAC-`
+- [x] Pieza instalada → OT Desarme Pendiente
+- [x] Ensamblaje bloqueado si OT activa en subárbol
+- [x] `No desarmar` impide línea suelta
+- [x] Precio pendiente bloquea confirmación
+- [x] Fiscal + Cliente Contado bloqueado en servicio
+- [x] Línea reservada por otro borrador rechazada
+- [x] `confirmInvoice` idempotente (doble clic)
+- [x] Sin comprobante fiscal: panel de totales muestra ITBIS RD$0.00
+- [x] Con comprobante fiscal: ITBIS calculado en líneas gravadas; desglose base + ITBIS visible
 
 ---
 
@@ -814,3 +814,4 @@ Cada escenario reinicia datos y documenta qué credenciales usar para login.
 | 2026-08-28 | WM5 completado: inventario unificado, búsqueda, detalle, chips, acciones admin y reserva a borrador            |
 | 2026-08-28 | WM6 completado: registro individual, por cantidad y ensamblajes anidados con baseline recursivo y atómico      |
 | 2026-08-31 | WM7 completado: listado de ventas, detalle, pagos, cancelación con ramas OT, PDF interno e ITBIS por flag fiscal |
+| 2026-09-01 | WM8 integrado sobre WM7: POS, confirmación atómica `FAC-`, snapshot de cliente e ITBIS fiscal. Criterios WM7 re-verificados (24 pruebas de ciclo post-venta siguen verdes). |

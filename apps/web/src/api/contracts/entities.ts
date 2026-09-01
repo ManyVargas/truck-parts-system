@@ -107,6 +107,8 @@ export type InvoiceLine = {
   unitPrice: number;
   taxable: boolean;
   pricePending?: boolean;
+  /** DOP cost copied at line creation so later inventory edits do not rewrite the sale. */
+  acquisitionCostDop?: number;
 };
 
 export type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'CHECK';
@@ -141,6 +143,11 @@ export type Invoice = {
   cancelReason?: string;
   profitabilityUsd?: number | null;
   profitabilityPendingFx?: boolean;
+  /** Frozen at confirmation so later customer edits cannot rewrite issued documents (CUST-003). */
+  customerSnapshot?: {
+    name: string;
+    rnc?: string;
+  };
 };
 
 export type WorkOrderType = 'DISMANTLING' | 'INSTALLATION';

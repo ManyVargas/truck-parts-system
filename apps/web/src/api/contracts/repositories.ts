@@ -17,12 +17,18 @@ import type {
   RegisterQtyProductInput,
 } from './inventory';
 import type {
+  AddDraftLineInput,
   AddPaymentInput,
   CancelInvoiceInput,
   CorrectCurrencyInput,
+  CreateDraftResult,
   InvoiceDetailView,
+  PosDraftView,
+  RemoveDraftLineInput,
   SalesListRow,
   SalesListTab,
+  SetDraftLinePriceInput,
+  SetDraftMetaInput,
 } from './sales';
 import type {
   AppEvent,
@@ -80,6 +86,14 @@ export type SalesRepository = {
   addPayment(input: AddPaymentInput): Promise<Result<InvoiceDetailView>>;
   cancelInvoice(input: CancelInvoiceInput): Promise<Result<InvoiceDetailView>>;
   correctCurrency(input: CorrectCurrencyInput): Promise<Result<InvoiceDetailView>>;
+  createDraft(): Promise<Result<CreateDraftResult>>;
+  getDraft(id: string): Promise<Result<PosDraftView>>;
+  addLine(input: AddDraftLineInput): Promise<Result<PosDraftView>>;
+  removeLine(input: RemoveDraftLineInput): Promise<Result<PosDraftView>>;
+  setLinePrice(input: SetDraftLinePriceInput): Promise<Result<PosDraftView>>;
+  setDraftMeta(input: SetDraftMetaInput): Promise<Result<PosDraftView>>;
+  confirmInvoice(draftId: string): Promise<Result<PosDraftView>>;
+  discardDraft(draftId: string): Promise<Result<void>>;
 };
 
 export type WorkOrderRepository = {

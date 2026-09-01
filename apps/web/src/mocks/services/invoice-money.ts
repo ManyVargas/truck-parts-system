@@ -59,6 +59,23 @@ export function lineBase(line: InvoiceLine, fiscal: boolean): number {
   return roundMoney(gross / (1 + ITBIS_INCLUDED_RATE));
 }
 
+export function invoiceItbis(invoice: Invoice): number {
+  return roundMoney(
+    invoice.lines.reduce((sum, line) => sum + lineItbis(line, invoice.fiscal), 0),
+  );
+}
+
+/** Taxable-line bases only; non-fiscal invoices have no taxable base. */
+export function invoiceTaxableBase(invoice: Invoice): number {
+  if (!invoice.fiscal) {
+    return 0;
+  }
+
+  return roundMoney(
+    invoice.lines.reduce((sum, line) => sum + (line.taxable ? lineBase(line, true) : 0), 0),
+  );
+}
+
 /**
  * Derives Unpaid / Partially Paid / Paid from the receipt ledger.
  * Seed FAC-000096 is marked PAID without rows; that marker is kept until a ledger exists.

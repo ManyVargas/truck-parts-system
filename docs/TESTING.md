@@ -2,18 +2,18 @@
 
 ## Resultado de la verificación
 
-Última ejecución: **28 de agosto de 2026**, mediante `npm test` desde la raíz del repositorio.
+Última ejecución: **1 de septiembre de 2026**, mediante `npm test` desde la raíz del repositorio.
 
 | Aplicación            | Tipo        | Archivos | Pruebas declaradas | Resultado obtenido |
 | --------------------- | ----------- | -------: | -----------------: | ------------------ |
-| Frontend              | Unitarias   |        7 |                 74 | 74 aprobadas       |
-| Frontend              | Integración |        5 |                 25 | 25 aprobadas       |
-| Frontend              | Componentes |        8 |                 29 | 29 aprobadas       |
-| **Subtotal frontend** |             |   **20** |            **128** | **128 aprobadas**  |
+| Frontend              | Unitarias   |        9 |                 98 | 98 aprobadas       |
+| Frontend              | Integración |        6 |                 32 | 32 aprobadas       |
+| Frontend              | Componentes |       11 |                 40 | 40 aprobadas       |
+| **Subtotal frontend** |             |   **26** |            **170** | **170 aprobadas**  |
 | Backend               | Unitarias   |        2 |                 11 | 11 aprobadas       |
 | Backend               | Integración |        1 |                  2 | 2 aprobadas        |
 | **Subtotal backend**  |             |    **3** |             **13** | **13 aprobadas**   |
-| **Total**             |             |   **23** |            **141** | **141 aprobadas**  |
+| **Total**             |             |   **29** |            **183** | **183 aprobadas**  |
 
 > Las dos integraciones del backend usan `describe.skipIf(!integrationDatabaseReady)`. En esta ejecución PostgreSQL estuvo disponible y ambas fueron aprobadas; en un entorno sin base de pruebas se reportan como omitidas.
 
@@ -21,7 +21,7 @@
 
 ### Pruebas unitarias
 
-Validan funciones, reglas y proyecciones aisladas, sin renderizar React ni depender de estado compartido. Hay **74 pruebas en 7 archivos**.
+Validan funciones, reglas y proyecciones aisladas, sin renderizar React ni depender de estado compartido. Hay **98 pruebas en 9 archivos**.
 
 | Archivo                                          | Cantidad | Pruebas realizadas                                                                                                                                                                                                                                                | Resultado esperado                                                                                                                                                                                                                                                                         |
 | ------------------------------------------------ | -------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -32,6 +32,8 @@ Validan funciones, reglas y proyecciones aisladas, sin renderizar React ni depen
 | `unit/mocks/services/customers.test.ts`          |        6 | Orden y conteo del directorio; búsqueda por nombre/RNC; id secuencial al crear; edición ordinaria; protección de Cliente Contado; validación de nombre/correo.                                                                                                    | Cliente Contado aparece primero y los conteos son C0=1, C2=1 y C1=3; teléfono no participa en búsqueda; se crea C3 con datos normalizados; la edición conserva identidad/facturas; Cliente Contado, nombre vacío y correo inválido son rechazados.                                         |
 | `unit/mocks/services/dashboard-snapshot.test.ts` |        6 | Factura no fiscal; ITBIS incluido; factura pagada; agregados del Administrador; proyección del Vendedor; utilidad con costo desconocido.                                                                                                                          | ITBIS no fiscal es 0; una factura fiscal de 19,500 extrae 2,974.58 sin cambiar el bruto; `PAID` tiene balance 0; el seed produce utilidad DOP 8,900 y una FX pendiente; el Vendedor no ve rentabilidad; no se inventa utilidad cuando falta costo.                                         |
 | `unit/mocks/services/inventory.test.ts`          |       43 | Ubicación, completitud, jerarquía, catálogo, detalle, reservas, comandos y correcciones de inventario (desglosadas debajo).                                                                                                                                       | Cada proyección o comando respeta herencia física, disponibilidad, autorización de venta, atomicidad, auditoría y validaciones de jerarquía/costo.                                                                                                                                         |
+| `unit/mocks/services/sales.test.ts`              |       13 | Seed FAC-000098/099; ITBIS fiscal; rentabilidad oculta al Vendedor; pago parcial; rechazo de sobrepago y montos ≤ 0; idempotencia de pago; cancelación con OT pendiente; decisión STOP/CONTINUE; reembolso aditivo; cancelación sin motivo; desarme completado; corrección de moneda; corrección con pagos. | FAC-000098 queda sin pagar y FAC-000099 parcial; ITBIS 18% solo en gravadas; el Vendedor no cancela ni corrige moneda; el pago no supera el saldo; la cancelación restaura inventario según rama de OT; la moneda no convierte importes. |
+| `unit/mocks/services/sales-pos.test.ts`          |       11 | Confirmación seed `FAC-000100` + OT; idempotencia de `confirmInvoice`; ITBIS 0 / incluido; fiscal + Cliente Contado; `No desarmar`; reserva cruzada; precio pendiente; ensamblaje con OT en ENG-002; OT activa en ENG-001; snapshot de cliente; descarte de borrador. | El seed confirma sin estado parcial; un segundo confirm no consume `FAC-000101`; C0 no admite fiscal; ALT-011 no entra suelto; ENG-001/002 se bloquean con trabajo físico; el detalle conserva el cliente de confirmación. |
 
 #### Detalle de las 43 pruebas unitarias de inventario
 
@@ -44,7 +46,7 @@ Validan funciones, reglas y proyecciones aisladas, sin renderizar React ni depen
 
 ### Pruebas de integración
 
-Validan repositorios mock, sesión, permisos y mutaciones del estado compartido en memoria. Hay **25 pruebas en 5 archivos**.
+Validan repositorios mock, sesión, permisos y mutaciones del estado compartido en memoria. Hay **32 pruebas en 6 archivos**.
 
 | Archivo                                                       | Cantidad | Pruebas realizadas                                                                                                                                                                                                                                           | Resultado esperado                                                                                                                                                                                                                                                       |
 | ------------------------------------------------------------- | -------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -52,11 +54,12 @@ Validan repositorios mock, sesión, permisos y mutaciones del estado compartido 
 | `integration/mocks/repositories/customers.repository.test.ts` |        5 | Crear; editar; editar id desconocido; acceso de Mecánico; copias defensivas.                                                                                                                                                                                 | Creación/edición persisten sin cambiar la identidad; id desconocido devuelve `NOT_FOUND`; Mecánico es rechazado; mutar lecturas no cambia el estado.                                                                                                                     |
 | `integration/mocks/repositories/dashboard.repository.test.ts` |        2 | Rentabilidad por rol; acceso de Mecánico/invitado.                                                                                                                                                                                                           | Solo Administrador recibe rentabilidad; Mecánico y usuario sin sesión son rechazados.                                                                                                                                                                                    |
 | `integration/mocks/repositories/inventory.repository.test.ts` |       10 | Acceso de Mecánico; permisos del Vendedor; altas individual, por cantidad y ensamblaje; `No desarmar` en pieza única; corrección de baseline posterior a remoción; historial de costo; baseline sin borrar otros faltantes; orden manual; copias defensivas. | Mecánico no ve catálogo ni registra; Vendedor registra por los tres caminos pero no administra; las altas persisten; correcciones conservan remociones/faltantes e historial; la orden queda pendiente sin alterar jerarquía; las lecturas no exponen el estado mutable. |
+| `integration/mocks/repositories/sales.repository.test.ts`     |        7 | Listado seed; pago persistido; Vendedor sin cancelar/corregir; cancelación admin; Mecánico denegado; confirmación POS `FAC-000100`; segundo borrador `INV-DRAFT-02`.                                                                                         | El Vendedor lista y paga; cancelación y moneda son `FORBIDDEN`; el admin cancela conservando `FAC-000097`; confirmar el seed lo deja cobrable en el listado Completada; `createDraft` no reutiliza `INV-DRAFT-01`.                                                       |
 | `integration/mocks/demo-controls.test.ts`                     |        3 | Catálogo de escenarios; reinicio de demo; escenario desconocido.                                                                                                                                                                                             | Se conservan 12 escenarios únicos; reiniciar restaura seed y limpia sesión; un id desconocido se rechaza sin alterar el estado.                                                                                                                                          |
 
 ### Pruebas de componentes
 
-Renderizan React en jsdom con Testing Library y validan comportamiento visible. Hay **29 pruebas en 8 archivos**.
+Renderizan React en jsdom con Testing Library y validan comportamiento visible. Hay **40 pruebas en 11 archivos**.
 
 | Archivo                                            | Cantidad | Pruebas realizadas                                                                                                                                    | Resultado esperado                                                                                                                                                                                               |
 | -------------------------------------------------- | -------: | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -68,6 +71,9 @@ Renderizan React en jsdom con Testing Library y validan comportamiento visible. 
 | `component/inventory/InventoryPage.test.tsx`       |        6 | Carga de inventario; búsqueda/historial; búsqueda sin coincidencias; registro individual; modo por cantidad; wizard recursivo Camión → Motor → pieza. | Aparecen inventarios individual y por cantidad; las altas refrescan el listado; cantidad refleja existencia disponible; el wizard conserva relaciones anidadas y faltantes del padre directo.                    |
 | `component/inventory/InventoryDetailPage.test.tsx` |        4 | ENG-002 como Administrador; pieza como Vendedor; producto por cantidad; id desconocido.                                                               | Administrador ve jerarquía/faltantes/acciones; Vendedor puede agregar a borrador pero no administrar; stock muestra 48 de existencia y 46 disponibles; id desconocido muestra error.                             |
 | `component/layout/AccessGuards.test.tsx`           |        5 | Invitado en ruta protegida; Vendedor en login; Mecánico en ruta conocida; ruta desconocida; Vendedor en sección administrativa.                       | Invitado va al login; autenticado va a su inicio; rutas conocidas sin permiso muestran acceso no autorizado; rutas inexistentes muestran página no encontrada; gestión de usuarios permanece oculta al Vendedor. |
+| `component/sales/SalesPage.test.tsx`               |        3 | Seed sin pagar/parcial; pestaña Borrador; botón Nuevo borrador.                                                                                       | FAC-000098/099 visibles con chips correctos; Borrador muestra `INV-DRAFT-01` y oculta facturas numeradas; la acción de nuevo borrador está disponible.                                                           |
+| `component/sales/InvoiceDetailPage.test.tsx`       |        4 | Pago de Vendedor; ITBIS fiscal; PDF no fiscal; cancelación admin.                                                                                     | El chip pasa a Parcial; el Vendedor no ve cancelar/moneda/rentabilidad; el PDF muestra NCF en blanco e ITBIS `—` / `RD$0.00`; el admin cancela con motivo.                                                       |
+| `component/sales/PosPage.test.tsx`                 |        4 | Seed no fiscal; toggle fiscal; confirmar venta; cliente nuevo en selector.                                                                            | ITBIS `RD$0.00` sin comprobante; al activar fiscal el ITBIS deja de ser cero; aparece `FAC-000100` y `OD-DEMO-064`; un cliente creado en `/customers` sale en el selector.                                       |
 
 ## Backend
 
@@ -88,7 +94,7 @@ Ejercitan rutas HTTP reales con Supertest y PostgreSQL de pruebas migrado. Hay *
 | ----------------------------------- | -------: | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `integration/health/routes.test.ts` |        2 | `GET /api/health/live`; `GET /api/health/ready` con BD accesible y migraciones aplicadas. | `/live` responde 200 con `{ status: 'ok' }`; `/ready` responde 200 con estado `ok`, base `up` y migraciones `up_to_date`. |
 
-En la última verificación estas dos pruebas quedaron **omitidas**, no fallidas. Para ejecutarlas se debe configurar la URL esperada por `apps/api/tests/helpers/database.ts`, asegurar que PostgreSQL responda y ejecutar `npm run test:integration -w @truck-parts/api`.
+En esta verificación estas dos pruebas **se ejecutaron y aprobaron**. Si PostgreSQL no responde, `describe.skipIf(!integrationDatabaseReady)` las omite. Para forzarlas: configurar la URL de `apps/api/tests/helpers/database.ts` y ejecutar `npm run test:integration -w @truck-parts/api`.
 
 ## Comandos
 
@@ -114,5 +120,5 @@ npm run typecheck:test -w @truck-parts/web
 - No hay pruebas E2E de navegador; las pruebas React actuales son de componentes en jsdom.
 - La integración del frontend usa repositorios mock y memoria; no sustituye pruebas transaccionales contra PostgreSQL.
 - Las rutas reales del backend solo tienen cobertura de salud (`live` y `ready`).
-- Ventas completas, pagos, cancelaciones, órdenes de trabajo ejecutables, carga real de fotos y recuperación administrativa todavía no tienen suites propias.
+- Ventas (listado, detalle, pagos, cancelación, PDF) y POS (borrador, ITBIS fiscal, confirmación `FAC-`) tienen suites unitarias, de repositorio y de componente. Siguen fuera: órdenes de trabajo ejecutables (WM9–WM10), carga real de fotos y recuperación administrativa (WM12).
 - Cada cambio de negocio debe agregar una prueba en el nivel más bajo que demuestre la regla y una integración cuando intervengan autorización o estado compartido.

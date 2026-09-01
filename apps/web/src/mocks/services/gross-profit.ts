@@ -6,6 +6,14 @@ import { invoiceTotal, roundMoney } from './invoice-money';
  * Unknown cost must not be treated as zero (COST-003).
  */
 export function lineCostDop(line: InvoiceLine, state: AppState): number | null {
+  if (line.type === 'SERVICE' || line.type === 'DELIVERY') {
+    return 0;
+  }
+
+  if (line.acquisitionCostDop != null) {
+    return roundMoney(line.acquisitionCostDop * line.quantity);
+  }
+
   if (line.itemId) {
     const item = state.items.find((entry) => entry.id === line.itemId);
     if (item?.acquisitionCostDop == null) {

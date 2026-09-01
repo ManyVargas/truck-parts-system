@@ -18,8 +18,12 @@ import {
   lineItbis,
 } from './invoice-money';
 
-function customerName(state: AppState, customerId: string): string {
-  return state.customers.find((entry) => entry.id === customerId)?.name ?? customerId;
+function customerName(state: AppState, invoice: Invoice): string {
+  return (
+    invoice.customerSnapshot?.name ??
+    state.customers.find((entry) => entry.id === invoice.customerId)?.name ??
+    invoice.customerId
+  );
 }
 
 function draftHref(invoice: Invoice): string {
@@ -40,7 +44,7 @@ export function toSalesListRow(state: AppState, invoice: Invoice): SalesListRow 
     status: invoice.status,
     paymentState: invoice.paymentState,
     customerId: invoice.customerId,
-    customerName: customerName(state, invoice.customerId),
+    customerName: customerName(state, invoice),
     currency: invoice.currency,
     fiscal: invoice.fiscal,
     total: invoiceTotal(invoice),
@@ -138,8 +142,8 @@ export function buildInvoiceDetail(state: AppState, invoice: Invoice, actor: Use
     status: invoice.status,
     paymentState: invoice.paymentState,
     customerId: invoice.customerId,
-    customerName: customer?.name ?? invoice.customerId,
-    customerRnc: customer?.rnc,
+    customerName: invoice.customerSnapshot?.name ?? customer?.name ?? invoice.customerId,
+    customerRnc: invoice.customerSnapshot?.rnc ?? customer?.rnc,
     currency: invoice.currency,
     fiscal: invoice.fiscal,
     lines: invoice.lines.map((line) => toLineView(line, invoice.fiscal)),
