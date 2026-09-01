@@ -2,6 +2,7 @@ import { Navigate, createBrowserRouter } from 'react-router-dom';
 
 import { LoginPage } from './features/auth/LoginPage';
 import { CustomersPage } from './features/customers/CustomersPage';
+import { ProfilePage } from './features/profile/ProfilePage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { InventoryDetailPage } from './features/inventory/InventoryDetailPage';
 import { InvoiceDetailPage } from './features/sales/InvoiceDetailPage';
@@ -67,6 +68,10 @@ const desktopChildRoutes = [
     path: '/recovery',
     element: <PlaceholderPage title="Administración y Recuperación" milestone="WM12" />,
   },
+  {
+    path: '/profile',
+    element: <ProfilePage />,
+  },
 ];
 
 export const router = createBrowserRouter([
@@ -97,7 +102,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'profile',
-        element: <MechanicPlaceholderPage title="Perfil" />,
+        element: <ProfilePage />,
       },
       { path: '*', element: <NotFoundPage /> },
     ],

@@ -116,6 +116,7 @@ Deactivation must invalidate future access while preserving historical foreign-k
 - [ ] Session-expired / inactive-account handling.
 - [ ] Administrator user-management screen (`name`, `username`, optional `phone`/`email`, role, active state).
 - [ ] Role-aware navigation without treating hidden controls as security.
+- [x] Self-service profile edit (own name, optional phone/email, password) for every active role. Username, role, and active stay administrator-managed. Uses `profile.update`, not `users.manage`. Covered by unit, integration, and component tests.
 
 ### Tests
 - [ ] Valid/invalid/inactive login tests.

@@ -1,5 +1,6 @@
 import type { Result } from '../../shared/auth/types';
 import type { Session } from '../contracts/entities';
+import type { UpdateOwnProfileInput, UpdateOwnProfileResult } from '../contracts/profile';
 
 /**
  * Future HTTP auth client — maps to POST /api/auth/login (API M10).
@@ -22,5 +23,12 @@ export async function loginWithHttp(
 }
 
 export async function logoutWithHttp(): Promise<Result<void>> {
+  throw new Error('HttpAuthRepository no implementado — use VITE_USE_MOCK_API=true (WM12)');
+}
+
+export async function updateOwnProfileWithHttp(
+  input: UpdateOwnProfileInput,
+): Promise<Result<UpdateOwnProfileResult>> {
+  void input;
   throw new Error('HttpAuthRepository no implementado — use VITE_USE_MOCK_API=true (WM12)');
 }

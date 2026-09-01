@@ -31,6 +31,7 @@ describe('role navigation', () => {
   it('recognizes registered route patterns and rejects typos', () => {
     expect(isKnownDesktopRoute('/inventory/ENG-001')).toBe(true);
     expect(isKnownDesktopRoute('/sales/draft/INV-DRAFT-01')).toBe(true);
+    expect(isKnownDesktopRoute('/profile')).toBe(true);
     expect(isKnownDesktopRoute('/invenray')).toBe(false);
     expect(isKnownMechanicRoute('/mechanic/pending')).toBe(true);
     expect(isKnownMechanicRoute('/mechanic/nope')).toBe(false);

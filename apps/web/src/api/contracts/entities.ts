@@ -60,15 +60,23 @@ export type QtyProduct = {
   location?: string;
 };
 
+export type CustomerContact = {
+  id: string;
+  name?: string;
+  phone?: string;
+  email?: string;
+  title?: string;
+  isPrimary?: boolean;
+};
+
 export type Customer = {
   id: string;
   name: string;
   rnc?: string;
-  phone?: string;
-  email?: string;
   address?: string;
   notes?: string;
   isDefault?: boolean;
+  contacts: CustomerContact[];
 };
 
 export type Category = {

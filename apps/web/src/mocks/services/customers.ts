@@ -1,9 +1,10 @@
 import {
   DEFAULT_CASH_CUSTOMER_ID,
   type CustomerListRow,
+  type SaveCustomerContactInput,
   type SaveCustomerInput,
 } from '../../api/contracts/customers';
-import type { AppState, Customer } from '../../api/contracts/entities';
+import type { AppState, Customer, CustomerContact } from '../../api/contracts/entities';
 import { err, ok, type Result } from '../../shared/auth/types';
 
 const CUSTOMER_ID_PATTERN = /^C(\d+)$/;
@@ -70,6 +71,84 @@ function isProtectedCashCustomer(customer: Customer | undefined, id: string | un
   return id === DEFAULT_CASH_CUSTOMER_ID || customer?.isDefault === true;
 }
 
+function allocateContactId(customerId: string, used: Set<string>): string {
+  let index = 1;
+  let candidate = `${customerId}-CT${index}`;
+
+  while (used.has(candidate)) {
+    index += 1;
+    candidate = `${customerId}-CT${index}`;
+  }
+
+  used.add(candidate);
+  return candidate;
+}
+
+function normalizeContact(input: SaveCustomerContactInput): Result<SaveCustomerContactInput> {
+  const name = optionalText(input.name);
+  const phone = optionalText(input.phone);
+  const email = optionalText(input.email);
+  if (!phone && !email) {
+    return err({
+      code: 'VALIDATION',
+      message: 'Cada contacto debe tener teléfono o correo',
+    });
+  }
+
+  if (email && !EMAIL_PATTERN.test(email)) {
+    return err({ code: 'VALIDATION', message: 'El correo no es válido' });
+  }
+
+  return ok({
+    id: optionalText(input.id),
+    name,
+    phone,
+    email,
+    title: optionalText(input.title),
+    isPrimary: input.isPrimary === true ? true : undefined,
+  });
+}
+
+function prepareContacts(
+  customerId: string,
+  input: SaveCustomerContactInput[],
+): Result<CustomerContact[]> {
+  const primaryCount = input.filter((contact) => contact.isPrimary === true).length;
+  if (primaryCount > 1) {
+    return err({
+      code: 'VALIDATION',
+      message: 'Solo un contacto puede ser principal',
+    });
+  }
+
+  const normalized: SaveCustomerContactInput[] = [];
+  for (const contact of input) {
+    const result = normalizeContact(contact);
+    if (!result.ok) {
+      return result;
+    }
+    normalized.push(result.value);
+  }
+
+  const usedIds = new Set<string>();
+  for (const contact of normalized) {
+    if (contact.id) {
+      usedIds.add(contact.id);
+    }
+  }
+
+  return ok(
+    normalized.map((contact) => ({
+      id: contact.id ?? allocateContactId(customerId, usedIds),
+      name: contact.name,
+      phone: contact.phone,
+      email: contact.email,
+      title: contact.title,
+      isPrimary: contact.isPrimary,
+    })),
+  );
+}
+
 /**
  * Validates create/edit and returns the record to upsert.
  * Caller persists; this function does not mutate state.
@@ -81,11 +160,6 @@ export function prepareCustomerSave(
   const name = input.name.trim();
   if (!name) {
     return err({ code: 'VALIDATION', message: 'El nombre es obligatorio' });
-  }
-
-  const email = optionalText(input.email);
-  if (email && !EMAIL_PATTERN.test(email)) {
-    return err({ code: 'VALIDATION', message: 'El correo no es válido' });
   }
 
   const existing = input.id ? customers.find((entry) => entry.id === input.id) : undefined;
@@ -101,14 +175,20 @@ export function prepareCustomerSave(
     });
   }
 
+  const customerId = existing?.id ?? nextCustomerId(customers);
+  const contactInput = input.contacts ?? existing?.contacts ?? [];
+  const contacts = prepareContacts(customerId, contactInput);
+  if (!contacts.ok) {
+    return contacts;
+  }
+
   const customer: Customer = {
-    id: existing?.id ?? nextCustomerId(customers),
+    id: customerId,
     name,
     rnc: optionalText(input.rnc),
-    phone: optionalText(input.phone),
-    email,
     address: optionalText(input.address),
     notes: optionalText(input.notes),
+    contacts: contacts.value,
   };
 
   return ok(customer);

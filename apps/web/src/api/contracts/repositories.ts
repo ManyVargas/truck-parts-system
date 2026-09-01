@@ -1,5 +1,6 @@
 import type { Result } from '../../shared/auth/types';
 import type { CustomerListRow, SaveCustomerInput } from './customers';
+import type { UpdateOwnProfileInput, UpdateOwnProfileResult } from './profile';
 import type { DashboardSnapshot } from './dashboard';
 import type {
   AddToDraftInput,
@@ -48,6 +49,7 @@ export type AuthRepository = {
   logout(): Promise<Result<void>>;
   getSession(): Promise<Result<Session | null>>;
   getCurrentUser(): Promise<Result<User | null>>;
+  updateOwnProfile(input: UpdateOwnProfileInput): Promise<Result<UpdateOwnProfileResult>>;
 };
 
 export type UserRepository = {

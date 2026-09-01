@@ -30,6 +30,7 @@ describe('authorization policies', () => {
       'workOrders.complete',
       'catalogs.manage',
       'users.manage',
+      'profile.update',
       'profit.view',
       'recovery.manage',
     ];
@@ -44,6 +45,7 @@ describe('authorization policies', () => {
     expect(can(seller, 'inventory.view')).toBe(true);
     expect(can(seller, 'customers.manage')).toBe(true);
     expect(can(seller, 'sales.manage')).toBe(true);
+    expect(can(seller, 'profile.update')).toBe(true);
     expect(can(seller, 'inventory.admin')).toBe(false);
     expect(can(seller, 'profit.view')).toBe(false);
     expect(can(seller, 'workOrders.manage')).toBe(false);
@@ -54,6 +56,7 @@ describe('authorization policies', () => {
 
     expect(can(mechanic, 'workOrders.take')).toBe(true);
     expect(can(mechanic, 'workOrders.complete')).toBe(true);
+    expect(can(mechanic, 'profile.update')).toBe(true);
     expect(can(mechanic, 'inventory.view')).toBe(false);
     expect(can(mechanic, 'customers.manage')).toBe(false);
   });
@@ -61,6 +64,8 @@ describe('authorization policies', () => {
   it('denies guests and inactive users regardless of role', () => {
     expect(can(null, 'dashboard.view')).toBe(false);
     expect(can(user('ADMINISTRATOR', false), 'users.manage')).toBe(false);
+    expect(can(user('SELLER', false), 'profile.update')).toBe(false);
+    expect(can(user('MECHANIC', false), 'profile.update')).toBe(false);
   });
 
   it('provides the approved Spanish role labels', () => {

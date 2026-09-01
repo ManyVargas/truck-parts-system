@@ -1,7 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import type { Customer } from '../../api/contracts/entities';
-import type { SaveCustomerInput } from '../../api/contracts/customers';
+import type { SaveCustomerContactInput, SaveCustomerInput } from '../../api/contracts/customers';
 import { Button, Field, Info, Input, Modal, Textarea } from '../../shared/ui';
 
 export type CustomerFormModalProps = {
@@ -13,37 +13,41 @@ export type CustomerFormModalProps = {
   onSubmit: (input: SaveCustomerInput) => void;
 };
 
+type ContactDraft = {
+  key: string;
+  id?: string;
+  name: string;
+  phone: string;
+  email: string;
+  title: string;
+  isPrimary: boolean;
+};
+
 type FormFields = {
   name: string;
   rnc: string;
-  phone: string;
-  email: string;
   address: string;
   notes: string;
+  contacts: ContactDraft[];
 };
 
 const EMPTY_FIELDS: FormFields = {
   name: '',
   rnc: '',
-  phone: '',
-  email: '',
   address: '',
   notes: '',
+  contacts: [],
 };
 
-function fieldsFromCustomer(customer: Customer | null): FormFields {
-  if (!customer) {
-    return EMPTY_FIELDS;
-  }
-
-  return {
-    name: customer.name,
-    rnc: customer.rnc ?? '',
-    phone: customer.phone ?? '',
-    email: customer.email ?? '',
-    address: customer.address ?? '',
-    notes: customer.notes ?? '',
-  };
+function toSaveContacts(drafts: ContactDraft[]): SaveCustomerContactInput[] {
+  return drafts.map((contact) => ({
+    id: contact.id,
+    name: contact.name,
+    phone: contact.phone,
+    email: contact.email,
+    title: contact.title,
+    isPrimary: contact.isPrimary || undefined,
+  }));
 }
 
 export function CustomerFormModal({
@@ -55,13 +59,79 @@ export function CustomerFormModal({
   onSubmit,
 }: CustomerFormModalProps) {
   const [fields, setFields] = useState<FormFields>(EMPTY_FIELDS);
+  const nextKeyRef = useRef(0);
   const isEdit = customer != null;
 
   useEffect(() => {
-    if (open) {
-      setFields(fieldsFromCustomer(customer));
+    if (!open) {
+      return;
     }
+
+    nextKeyRef.current = 0;
+    if (!customer) {
+      setFields(EMPTY_FIELDS);
+      return;
+    }
+
+    setFields({
+      name: customer.name,
+      rnc: customer.rnc ?? '',
+      address: customer.address ?? '',
+      notes: customer.notes ?? '',
+      contacts: customer.contacts.map((contact) => {
+        nextKeyRef.current += 1;
+        return {
+          key: contact.id || `contact-draft-${nextKeyRef.current}`,
+          id: contact.id,
+          name: contact.name ?? '',
+          phone: contact.phone ?? '',
+          email: contact.email ?? '',
+          title: contact.title ?? '',
+          isPrimary: contact.isPrimary === true,
+        };
+      }),
+    });
   }, [open, customer]);
+
+  function addContact() {
+    nextKeyRef.current += 1;
+    setFields((current) => ({
+      ...current,
+      contacts: [
+        ...current.contacts,
+        {
+          key: `contact-draft-${nextKeyRef.current}`,
+          name: '',
+          phone: '',
+          email: '',
+          title: '',
+          isPrimary: current.contacts.length === 0,
+        },
+      ],
+    }));
+  }
+
+  function updateContact(key: string, patch: Partial<ContactDraft>) {
+    setFields((current) => ({
+      ...current,
+      contacts: current.contacts.map((contact) => {
+        if (contact.key !== key) {
+          if (patch.isPrimary === true) {
+            return { ...contact, isPrimary: false };
+          }
+          return contact;
+        }
+        return { ...contact, ...patch };
+      }),
+    }));
+  }
+
+  function removeContact(key: string) {
+    setFields((current) => ({
+      ...current,
+      contacts: current.contacts.filter((contact) => contact.key !== key),
+    }));
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,10 +139,9 @@ export function CustomerFormModal({
       id: customer?.id,
       name: fields.name,
       rnc: fields.rnc,
-      phone: fields.phone,
-      email: fields.email,
       address: fields.address,
       notes: fields.notes,
+      contacts: toSaveContacts(fields.contacts),
     });
   }
 
@@ -95,23 +164,6 @@ export function CustomerFormModal({
             onChange={(event) => setFields((current) => ({ ...current, rnc: event.target.value }))}
           />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Teléfono" htmlFor="customer-phone">
-            <Input
-              id="customer-phone"
-              value={fields.phone}
-              onChange={(event) => setFields((current) => ({ ...current, phone: event.target.value }))}
-            />
-          </Field>
-          <Field label="Correo" htmlFor="customer-email">
-            <Input
-              id="customer-email"
-              type="email"
-              value={fields.email}
-              onChange={(event) => setFields((current) => ({ ...current, email: event.target.value }))}
-            />
-          </Field>
-        </div>
         <Field label="Dirección" htmlFor="customer-address">
           <Input
             id="customer-address"
@@ -127,6 +179,82 @@ export function CustomerFormModal({
             onChange={(event) => setFields((current) => ({ ...current, notes: event.target.value }))}
           />
         </Field>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-medium text-navy">Contactos</p>
+            <Button type="button" variant="secondary" size="sm" onClick={addContact}>
+              Agregar contacto
+            </Button>
+          </div>
+
+          {fields.contacts.map((contact, index) => (
+            <div
+              key={contact.key}
+              className="space-y-3 rounded-lg border border-navy-100 bg-navy-50/40 p-3"
+            >
+              <Field
+                label="Nombre del contacto"
+                htmlFor={`contact-${index}-name`}
+                hint="Opcional si el contacto es la misma persona"
+              >
+                <Input
+                  id={`contact-${index}-name`}
+                  value={contact.name}
+                  onChange={(event) => updateContact(contact.key, { name: event.target.value })}
+                />
+              </Field>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Teléfono" htmlFor={`contact-${index}-phone`}>
+                  <Input
+                    id={`contact-${index}-phone`}
+                    value={contact.phone}
+                    onChange={(event) => updateContact(contact.key, { phone: event.target.value })}
+                  />
+                </Field>
+                <Field label="Correo" htmlFor={`contact-${index}-email`}>
+                  <Input
+                    id={`contact-${index}-email`}
+                    type="email"
+                    value={contact.email}
+                    onChange={(event) => updateContact(contact.key, { email: event.target.value })}
+                  />
+                </Field>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+                <Field label="Cargo" htmlFor={`contact-${index}-title`}>
+                  <Input
+                    id={`contact-${index}-title`}
+                    value={contact.title}
+                    onChange={(event) => updateContact(contact.key, { title: event.target.value })}
+                  />
+                </Field>
+                <label
+                  htmlFor={`contact-${index}-primary`}
+                  className="flex h-10 items-center gap-2 text-sm text-navy"
+                >
+                  <input
+                    id={`contact-${index}-primary`}
+                    type="checkbox"
+                    checked={contact.isPrimary}
+                    onChange={(event) =>
+                      updateContact(contact.key, { isPrimary: event.target.checked })
+                    }
+                  />
+                  Principal
+                </label>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => removeContact(contact.key)}
+                >
+                  Quitar
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
 
         {error && (
           <Info tone="error" title="No se pudo guardar">

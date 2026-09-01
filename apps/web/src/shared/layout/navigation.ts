@@ -84,6 +84,7 @@ const KNOWN_DESKTOP_ROUTE_PATTERNS: RegExp[] = [
   /^\/users$/,
   /^\/profitability$/,
   /^\/recovery$/,
+  /^\/profile$/,
 ];
 
 const KNOWN_MECHANIC_ROUTE_PATTERNS: RegExp[] = [

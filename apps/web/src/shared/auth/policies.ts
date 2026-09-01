@@ -15,6 +15,7 @@ export type PolicyAction =
   | 'workOrders.complete'
   | 'catalogs.manage'
   | 'users.manage'
+  | 'profile.update'
   | 'profit.view'
   | 'recovery.manage';
 
@@ -46,6 +47,7 @@ export function can(
       'inventory.register',
       'customers.manage',
       'sales.manage',
+      'profile.update',
     ];
     return sellerAllowed.includes(action);
   }
@@ -54,6 +56,7 @@ export function can(
     const mechanicAllowed: PolicyAction[] = [
       'workOrders.take',
       'workOrders.complete',
+      'profile.update',
     ];
     return mechanicAllowed.includes(action);
   }

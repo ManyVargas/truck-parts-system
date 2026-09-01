@@ -291,19 +291,41 @@ export function createInitialState(): AppState {
       id: 'C0',
       name: 'Cliente Contado',
       isDefault: true,
+      contacts: [],
     },
     {
       id: 'C1',
       name: 'Transportes del Caribe SRL',
       rnc: '131-45678-9',
-      phone: '809-555-0200',
-      email: 'compras@tdc.example',
+      contacts: [
+        {
+          id: 'C1-CT1',
+          name: 'María Reyes',
+          phone: '809-555-0200',
+          email: 'compras@tdc.example',
+          title: 'Compras',
+          isPrimary: true,
+        },
+        {
+          id: 'C1-CT2',
+          name: 'Carlos Peña',
+          phone: '809-555-0201',
+          email: 'operaciones@tdc.example',
+          title: 'Operaciones',
+        },
+      ],
     },
     {
       id: 'C2',
       name: 'Logística Norte SA',
       rnc: '101-98765-4',
-      phone: '809-555-0300',
+      contacts: [
+        {
+          id: 'C2-CT1',
+          name: 'Ana Núñez',
+          phone: '809-555-0300',
+        },
+      ],
     },
   ];
 

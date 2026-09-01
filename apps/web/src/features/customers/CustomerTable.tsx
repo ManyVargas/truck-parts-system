@@ -1,5 +1,10 @@
 import { DEFAULT_CASH_CUSTOMER_ID, type CustomerListRow } from '../../api/contracts/customers';
+import type { CustomerContact } from '../../api/contracts/entities';
 import { Button, Chip, Empty, Mono } from '../../shared/ui';
+
+function primaryContact(contacts: CustomerContact[]): CustomerContact | undefined {
+  return contacts.find((contact) => contact.isPrimary) ?? contacts[0];
+}
 
 export type CustomerTableProps = {
   rows: CustomerListRow[];
@@ -33,6 +38,7 @@ export function CustomerTable({ rows, onEdit }: CustomerTableProps) {
         <tbody className="divide-y divide-navy-100">
           {rows.map((row) => {
             const isDefault = row.id === DEFAULT_CASH_CUSTOMER_ID || row.isDefault === true;
+            const primary = primaryContact(row.contacts);
 
             return (
               <tr key={row.id} className="text-navy">
@@ -44,7 +50,14 @@ export function CustomerTable({ rows, onEdit }: CustomerTableProps) {
                   <Mono className="mt-0.5 text-xs text-navy-400">{row.id}</Mono>
                 </td>
                 <td className="px-4 py-3 text-navy-400">{row.rnc ?? '—'}</td>
-                <td className="px-4 py-3 text-navy-400">{row.phone ?? '—'}</td>
+                <td className="px-4 py-3 text-navy-400">
+                  {primary?.phone ?? '—'}
+                  {row.contacts.length > 1 && (
+                    <span className="mt-0.5 block text-xs text-navy-300">
+                      {row.contacts.length} contactos
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 font-mono">{row.invoiceCount}</td>
                 <td className="px-4 py-3 text-right">
                   <Button

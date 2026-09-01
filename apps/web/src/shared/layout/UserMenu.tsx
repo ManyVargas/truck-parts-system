@@ -27,6 +27,12 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  function handleOpenProfile() {
+    const path = user.role === 'MECHANIC' ? '/mechanic/profile' : '/profile';
+    setOpen(false);
+    navigate(path);
+  }
+
   async function handleLogout() {
     setIsLoggingOut(true);
     await onLogout();
@@ -43,6 +49,7 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="menu"
+        aria-label={user.name}
       >
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand/10 text-sm font-semibold text-brand-dark">
           {user.name.charAt(0)}
@@ -68,6 +75,16 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
               variant="ghost"
               size="sm"
               className="w-full justify-start"
+              role="menuitem"
+              onClick={handleOpenProfile}
+            >
+              Mi perfil
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start"
+              role="menuitem"
               onClick={handleLogout}
               disabled={isLoggingOut}
             >

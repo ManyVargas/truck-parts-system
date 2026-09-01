@@ -40,6 +40,8 @@ Customers are lightweight reusable records, not a CRM. Keep name, phone, RNC/Cé
 
 Provide a stable generic customer such as `Cliente contado` for eligible nonfiscal counter sales. Do not allow that generic identity to satisfy fiscal RNC/Cédula requirements.
 
+A customer may have **multiple contacts** (name, phone, email, optional title). Phone and email belong on contacts, not on the customer record. Contacts may be empty (`Cliente Contado`). Directory search remains name/RNC only.
+
 At invoice confirmation, copy the applicable customer data into an immutable invoice customer snapshot. Later edits to the reusable customer record must not alter already completed invoices.
 
 ## Feature-level acceptance criteria
@@ -64,6 +66,7 @@ At invoice confirmation, copy the applicable customer data into an immutable inv
 - [x] Default `Cliente contado` behavior. *(WM8 `createDraft` usa C0; fiscal lo rechaza)*
 - [x] Fiscal-required field feedback. *(checkbox bloqueado + rechazo en servicio)*
 - [x] Basic customer maintenance. *(WM4 — `/customers`)*
+- [x] Multiple contacts on a customer. *(prototipo mock — lista dinámica; `prepareCustomerSave`)*
 
 ### Tests
 - [x] Generic nonfiscal sale succeeds. *(prototipo mock — C0 + `fiscal: false`)*
