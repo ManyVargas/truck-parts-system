@@ -13,6 +13,8 @@ import { PlaceholderPage } from './features/placeholder/PlaceholderPage';
 import { NotFoundPage } from './features/placeholder/NotFoundPage';
 import { PosPage } from './features/sales/PosPage';
 import { SalesPage } from './features/sales/SalesPage';
+import { WorkOrderDetailPage } from './features/work-orders/WorkOrderDetailPage';
+import { WorkOrdersPage } from './features/work-orders/WorkOrdersPage';
 import { AppShell } from './shared/layout/AppShell';
 import { CatchAllRoute } from './shared/layout/CatchAllRoute';
 import { GuestRoute } from './shared/layout/GuestRoute';
@@ -50,7 +52,11 @@ const desktopChildRoutes = [
   },
   {
     path: '/work-orders',
-    element: <PlaceholderPage title="Órdenes de Trabajo" milestone="WM9" />,
+    element: <WorkOrdersPage />,
+  },
+  {
+    path: '/work-orders/:id',
+    element: <WorkOrderDetailPage />,
   },
   {
     path: '/catalogs',

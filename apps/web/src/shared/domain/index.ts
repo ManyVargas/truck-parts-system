@@ -8,4 +8,6 @@ export {
   PhysicalWorkChip,
   RelationChip,
   ReservationChip,
+  WOStatusChip,
+  WOTypeChip,
 } from './StatusChips';

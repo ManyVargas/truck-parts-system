@@ -130,3 +130,31 @@ export function PaymentChip({
   }
   return <Chip tone="danger">Sin pagar</Chip>;
 }
+
+export function WOTypeChip({
+  type,
+}: {
+  type: 'DISMANTLING' | 'INSTALLATION';
+}) {
+  if (type === 'INSTALLATION') {
+    return <Chip tone="brand">Instalación</Chip>;
+  }
+  return <Chip tone="amber">Desarme</Chip>;
+}
+
+export function WOStatusChip({
+  status,
+}: {
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+}) {
+  if (status === 'IN_PROGRESS') {
+    return <Chip tone="amber">En proceso</Chip>;
+  }
+  if (status === 'COMPLETED') {
+    return <Chip tone="success">Completada</Chip>;
+  }
+  if (status === 'CANCELLED') {
+    return <Chip tone="danger">Cancelada</Chip>;
+  }
+  return <Chip tone="neutral">Pendiente</Chip>;
+}

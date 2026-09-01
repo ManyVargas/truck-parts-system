@@ -174,6 +174,8 @@ export type WorkOrder = {
   beforePhotos: string[];
   afterPhotos: string[];
   createdAt: string;
+  cancelReason?: string;
+  cancelledAt?: string;
 };
 
 export type AppEvent = {

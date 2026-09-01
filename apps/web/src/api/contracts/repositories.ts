@@ -32,6 +32,15 @@ import type {
   SetDraftMetaInput,
 } from './sales';
 import type {
+  CancelWorkOrderInput,
+  CreateManualWorkOrderInput,
+  ReassignWorkOrderInput,
+  WorkOrderCreateOptions,
+  WorkOrderDetailView,
+  WorkOrderListRow,
+  WorkOrderListTab,
+} from './work-orders';
+import type {
   AppEvent,
   Category,
   Customer,
@@ -99,9 +108,13 @@ export type SalesRepository = {
 };
 
 export type WorkOrderRepository = {
-  list(): Promise<Result<WorkOrder[]>>;
-  getById(id: string): Promise<Result<WorkOrder>>;
+  list(tab?: WorkOrderListTab): Promise<Result<WorkOrderListRow[]>>;
+  getById(id: string): Promise<Result<WorkOrderDetailView>>;
   listForMechanic(): Promise<Result<MechanicWorkOrderView[]>>;
+  getCreateOptions(): Promise<Result<WorkOrderCreateOptions>>;
+  createManual(input: CreateManualWorkOrderInput): Promise<Result<WorkOrderDetailView>>;
+  reassign(input: ReassignWorkOrderInput): Promise<Result<WorkOrderDetailView>>;
+  cancel(input: CancelWorkOrderInput): Promise<Result<WorkOrderDetailView>>;
 };
 
 export type CategoryRepository = {

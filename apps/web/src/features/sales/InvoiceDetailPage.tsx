@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
+import { useAuth } from '../auth/useAuth';
 import { InvoiceStatusChip, PaymentChip } from '../../shared/domain';
 import { Button, Card, Chip, Info, money, Mono } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
@@ -16,6 +17,7 @@ import { useInvoiceDetail } from './useInvoiceDetail';
 
 export function InvoiceDetailPage() {
   const { id } = useParams();
+  const { user } = useAuth();
   const { result, isMutating, addPayment, cancelInvoice, correctCurrency } = useInvoiceDetail(id);
   const [payOpen, setPayOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -132,7 +134,14 @@ export function InvoiceDetailPage() {
           <ul className="space-y-1 text-sm text-navy-400">
             {detail.linkedWorkOrders.map((order) => (
               <li key={order.id}>
-                <Mono>{order.id}</Mono> · {order.pieceName} · {order.status}
+                {user?.role === 'ADMINISTRATOR' ? (
+                  <Link to={`/work-orders/${order.id}`} className="text-brand hover:underline">
+                    <Mono>{order.id}</Mono>
+                  </Link>
+                ) : (
+                  <Mono>{order.id}</Mono>
+                )}{' '}
+                · {order.pieceName} · {order.status}
               </li>
             ))}
           </ul>

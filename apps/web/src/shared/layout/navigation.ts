@@ -80,6 +80,7 @@ const KNOWN_DESKTOP_ROUTE_PATTERNS: RegExp[] = [
   /^\/sales\/[^/]+$/,
   /^\/customers$/,
   /^\/work-orders$/,
+  /^\/work-orders\/[^/]+$/,
   /^\/catalogs$/,
   /^\/users$/,
   /^\/profitability$/,
@@ -143,6 +144,10 @@ export function isNavItemActive(pathname: string, itemPath: string): boolean {
     itemPath === '/sales' &&
     (/^\/sales\/draft\/[^/]+$/.test(pathname) || /^\/sales\/[^/]+$/.test(pathname))
   ) {
+    return true;
+  }
+
+  if (itemPath === '/work-orders' && /^\/work-orders\/[^/]+$/.test(pathname)) {
     return true;
   }
 
