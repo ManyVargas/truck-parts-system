@@ -1,6 +1,8 @@
 import type { Result } from '../../shared/auth/types';
 import type {
+  AddWorkOrderPhotoInput,
   CancelWorkOrderInput,
+  CompleteWorkOrderInput,
   CreateManualWorkOrderInput,
   ReassignWorkOrderInput,
   WorkOrderCreateOptions,
@@ -47,5 +49,35 @@ export async function reassignWorkOrderWithHttp(
 export async function cancelWorkOrderWithHttp(
   _input: CancelWorkOrderInput,
 ): Promise<Result<WorkOrderDetailView>> {
+  throw new Error('HttpWorkOrderRepository no implementado — use VITE_USE_MOCK_API=true (WM12)');
+}
+
+export async function getMechanicWorkOrderWithHttp(
+  _id: string,
+): Promise<Result<MechanicWorkOrderView>> {
+  throw new Error('HttpWorkOrderRepository no implementado — use VITE_USE_MOCK_API=true (WM12)');
+}
+
+export async function takeWorkOrderWithHttp(
+  _workOrderId: string,
+): Promise<Result<MechanicWorkOrderView>> {
+  throw new Error('HttpWorkOrderRepository no implementado — use VITE_USE_MOCK_API=true (WM12)');
+}
+
+export async function addWorkOrderPhotoWithHttp(
+  _input: AddWorkOrderPhotoInput,
+): Promise<Result<MechanicWorkOrderView>> {
+  throw new Error('HttpWorkOrderRepository no implementado — use VITE_USE_MOCK_API=true (WM12)');
+}
+
+export async function completeDesarmeWithHttp(
+  _input: CompleteWorkOrderInput,
+): Promise<Result<MechanicWorkOrderView>> {
+  throw new Error('HttpWorkOrderRepository no implementado — use VITE_USE_MOCK_API=true (WM12)');
+}
+
+export async function completeInstalacionWithHttp(
+  _input: CompleteWorkOrderInput,
+): Promise<Result<MechanicWorkOrderView>> {
   throw new Error('HttpWorkOrderRepository no implementado — use VITE_USE_MOCK_API=true (WM12)');
 }

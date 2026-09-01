@@ -1,7 +1,7 @@
 # Plan 001 — Frontend Prototipo Mock: SoloCamiones
 
 **Alcance:** Prototipo frontend funcional con datos dummy (sin backend)  
-**Estado:** WM9 completado — WM10 pendiente
+**Estado:** WM10 completado — WM11 pendiente
 **Último milestone planificado:** WM12 — Rentabilidad, recuperación, escenarios demo y preparación API  
 **Referencia de diseño:** [Prototipo Figma Make](https://www.figma.com/make/HzibQNQ88lqtv3rAup56eJ/Follow-prototype-instructions)
 
@@ -273,7 +273,7 @@ El resto del prototipo (inventario, ventas, OT, etc.) permanece mock hasta los r
 | WM7  | Ventas: listado, detalle, pagos, cancelación, PDF      | completado |
 | WM8  | Punto de venta y borradores (POS)                      | completado |
 | WM9  | Órdenes de trabajo (escritorio)                        | completado  |
-| WM10 | Experiencia Mecánico (móvil)                           | pendiente  |
+| WM10 | Experiencia Mecánico (móvil)                           | completado  |
 | WM11 | Catálogos y usuarios (admin)                           | pendiente  |
 | WM12 | Rentabilidad, recuperación, escenarios demo, prep API  | pendiente  |
 
@@ -670,12 +670,12 @@ Agregaciones sobre `items`, `invoices`, `workOrders`, `events`.
 
 ### Criterios de aceptación
 
-- [ ] Flujo venta instalada → desarme → `Vendido + Independiente`
-- [ ] OT de otro mecánico no editable
-- [ ] Payload mecánico sin campos comerciales
-- [ ] `takeOrder` falla si ya reclamada
-- [ ] Completar falla sin evidencia o sin ser asignado
-- [ ] UX táctil adecuada en móvil
+- [x] Flujo venta instalada → desarme → `Vendido + Independiente`
+- [x] OT de otro mecánico no editable
+- [x] Payload mecánico sin campos comerciales
+- [x] `takeOrder` falla si ya reclamada
+- [x] Completar falla sin evidencia o sin ser asignado
+- [x] UX táctil adecuada en móvil
 
 ---
 
@@ -816,3 +816,4 @@ Cada escenario reinicia datos y documenta qué credenciales usar para login.
 | 2026-08-31 | WM7 completado: listado de ventas, detalle, pagos, cancelación con ramas OT, PDF interno e ITBIS por flag fiscal |
 | 2026-09-01 | WM8 integrado sobre WM7: POS, confirmación atómica `FAC-`, snapshot de cliente e ITBIS fiscal. Criterios WM7 re-verificados (24 pruebas de ciclo post-venta siguen verdes). |
 | 2026-09-01 | WM9 completado: listado/detalle de OT de escritorio, creación manual, reasignación y cancelación admin. Completar desarme sigue en WM10. |
+| 2026-09-01 | WM10 completado: app móvil del mecánico, claim atómico, evidencia BEFORE/AFTER y completar desarme/instalación sin datos comerciales. |

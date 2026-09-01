@@ -1,4 +1,10 @@
-import type { AppState, User, WorkOrder, WorkOrderStatus } from '../../api/contracts/entities';
+import type {
+  AppState,
+  MechanicWorkOrderView,
+  User,
+  WorkOrder,
+  WorkOrderStatus,
+} from '../../api/contracts/entities';
 import type {
   WorkOrderCreateOptions,
   WorkOrderDetailView,
@@ -7,7 +13,7 @@ import type {
   WorkOrderPieceOption,
 } from '../../api/contracts/work-orders';
 import { can } from '../../shared/auth/policies';
-import { isAssemblyItem, protectedAncestor } from './inventory-helpers';
+import { effectiveLocation, isAssemblyItem, itemById, protectedAncestor } from './inventory-helpers';
 
 function itemName(state: AppState, id: string | undefined): string | undefined {
   if (!id) {
@@ -166,4 +172,67 @@ export function findWorkOrder(
 
 export function isActiveStatus(status: WorkOrderStatus): boolean {
   return status === 'PENDING' || status === 'IN_PROGRESS';
+}
+
+function hasRequiredEvidence(order: WorkOrder): boolean {
+  return order.beforePhotos.length > 0 && order.afterPhotos.length > 0;
+}
+
+export function isAssignedTo(order: WorkOrder, mechanicId: string): boolean {
+  return order.assignedMechanicId === mechanicId;
+}
+
+/** Pending queue plus the mechanic's own active/completed work (WO-003 / WO-004). */
+export function isVisibleToMechanic(order: WorkOrder, mechanicId: string): boolean {
+  if (order.status === 'PENDING') {
+    return true;
+  }
+  if (order.status === 'CANCELLED') {
+    return false;
+  }
+  return isAssignedTo(order, mechanicId);
+}
+
+export function toMechanicWorkOrderView(
+  state: AppState,
+  order: WorkOrder,
+  actor: User,
+): MechanicWorkOrderView {
+  const piece = itemById(state.items, order.pieceId);
+  const assigned = isAssignedTo(order, actor.id);
+  const inProgress = order.status === 'IN_PROGRESS' && assigned;
+
+  return {
+    id: order.id,
+    type: order.type,
+    status: order.status,
+    pieceId: order.pieceId,
+    pieceName: piece?.name ?? order.pieceId,
+    sourceParentId: order.sourceParentId,
+    sourceParentName: itemName(state, order.sourceParentId),
+    destinationParentId: order.destinationParentId,
+    destinationParentName: itemName(state, order.destinationParentId),
+    assignedMechanicId: order.assignedMechanicId,
+    assignedMechanicName: mechanicName(state, order.assignedMechanicId),
+    effectiveLocation: piece ? effectiveLocation(state.items, piece) : undefined,
+    notes: order.notes,
+    beforePhotos: [...order.beforePhotos],
+    afterPhotos: [...order.afterPhotos],
+    href: `/mechanic/orders/${order.id}`,
+    actions: {
+      canTake: order.status === 'PENDING' && !order.assignedMechanicId,
+      canAddEvidence: inProgress,
+      canComplete: inProgress && hasRequiredEvidence(order),
+    },
+  };
+}
+
+export function buildMechanicWorkOrderList(
+  state: AppState,
+  actor: User,
+): MechanicWorkOrderView[] {
+  return [...state.workOrders]
+    .filter((order) => isVisibleToMechanic(order, actor.id))
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+    .map((order) => toMechanicWorkOrderView(state, order, actor));
 }

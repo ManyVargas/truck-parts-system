@@ -8,7 +8,9 @@ import { InventoryDetailPage } from './features/inventory/InventoryDetailPage';
 import { InvoiceDetailPage } from './features/sales/InvoiceDetailPage';
 import { InventoryPage } from './features/inventory/InventoryPage';
 import { MechanicLayout } from './features/mechanic/MechanicLayout';
-import { MechanicPlaceholderPage } from './features/mechanic/MechanicPlaceholderPage';
+import { MechanicMinePage } from './features/mechanic/MechanicMinePage';
+import { MechanicOrderView } from './features/mechanic/MechanicOrderView';
+import { MechanicPendingPage } from './features/mechanic/MechanicPendingPage';
 import { PlaceholderPage } from './features/placeholder/PlaceholderPage';
 import { NotFoundPage } from './features/placeholder/NotFoundPage';
 import { PosPage } from './features/sales/PosPage';
@@ -98,18 +100,10 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <Navigate to="/mechanic/pending" replace /> },
-      {
-        path: 'pending',
-        element: <MechanicPlaceholderPage title="Pendientes" />,
-      },
-      {
-        path: 'mine',
-        element: <MechanicPlaceholderPage title="Mis órdenes" />,
-      },
-      {
-        path: 'profile',
-        element: <ProfilePage />,
-      },
+      { path: 'pending', element: <MechanicPendingPage /> },
+      { path: 'mine', element: <MechanicMinePage /> },
+      { path: 'orders/:id', element: <MechanicOrderView /> },
+      { path: 'profile', element: <ProfilePage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

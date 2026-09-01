@@ -92,6 +92,7 @@ const KNOWN_MECHANIC_ROUTE_PATTERNS: RegExp[] = [
   /^\/mechanic$/,
   /^\/mechanic\/pending$/,
   /^\/mechanic\/mine$/,
+  /^\/mechanic\/orders\/[^/]+$/,
   /^\/mechanic\/profile$/,
 ];
 

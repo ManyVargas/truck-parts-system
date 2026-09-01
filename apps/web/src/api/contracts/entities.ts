@@ -209,7 +209,13 @@ export type Session = {
   createdAt: string;
 };
 
-/** Mechanic-facing projection — no commercial fields (WM10). */
+export type MechanicWorkOrderActions = {
+  canTake: boolean;
+  canAddEvidence: boolean;
+  canComplete: boolean;
+};
+
+/** Mechanic-facing projection — no commercial fields (WM10 / WO-003). */
 export type MechanicWorkOrderView = {
   id: string;
   type: WorkOrderType;
@@ -217,9 +223,15 @@ export type MechanicWorkOrderView = {
   pieceId: string;
   pieceName: string;
   sourceParentId?: string;
+  sourceParentName?: string;
   destinationParentId?: string;
+  destinationParentName?: string;
+  assignedMechanicId?: string;
+  assignedMechanicName?: string;
   effectiveLocation?: string;
   notes?: string;
   beforePhotos: string[];
   afterPhotos: string[];
+  href: string;
+  actions: MechanicWorkOrderActions;
 };

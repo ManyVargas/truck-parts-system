@@ -557,7 +557,8 @@ export function createInitialState(): AppState {
     {
       id: 'EV-004',
       type: 'DISMANTLING_COMPLETED',
-      description: 'ALT-010 retirado de ENG-002 (OD-DEMO-063). Queda independiente; el motor registra el faltante.',
+      description:
+        'ALT-010 retirado de ENG-002 (OD-DEMO-063). Queda independiente; el motor registra el faltante.',
       actorId: 'U-CARLOS',
       createdAt: ISO('2026-08-18T12:00:00.000Z'),
       metadata: {

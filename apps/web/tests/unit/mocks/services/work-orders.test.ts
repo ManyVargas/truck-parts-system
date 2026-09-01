@@ -3,15 +3,21 @@ import { describe, expect, it } from 'vitest';
 import { createInitialState } from '../../../../src/mocks/data/seed';
 import { createManualWorkOrder } from '../../../../src/mocks/services/inventory-commands';
 import {
-  buildWorkOrderCreateOptions,
-  buildWorkOrderList,
-} from '../../../../src/mocks/services/work-order-catalog';
-import {
+  addPhoto,
   cancelOrder,
+  completeDesarme,
+  completeInstalacion,
   createInstalacion,
   createManualDesarme,
   reassignOrder,
+  takeOrder,
 } from '../../../../src/mocks/services/work-order-commands';
+import {
+  buildMechanicWorkOrderList,
+  buildWorkOrderCreateOptions,
+  buildWorkOrderList,
+  toMechanicWorkOrderView,
+} from '../../../../src/mocks/services/work-order-catalog';
 
 const ADMIN = {
   id: 'U-ADMIN',
@@ -195,5 +201,228 @@ describe('work order catalog and commands', () => {
       type: 'DISMANTLING',
     });
     expect(result.ok).toBe(true);
+  });
+});
+
+const PEDRO = {
+  id: 'U-PEDRO',
+  name: 'Pedro Santana',
+  username: 'pedro',
+  password: 'demo1234',
+  role: 'MECHANIC' as const,
+  active: true,
+};
+
+const CARLOS = {
+  id: 'U-CARLOS',
+  name: 'Carlos Méndez',
+  username: 'carlos',
+  password: 'demo1234',
+  role: 'MECHANIC' as const,
+  active: true,
+};
+
+describe('mechanic take, evidence and completion', () => {
+  it('assigns a pending order to the first mechanic and rejects a second claim', () => {
+    const state = createInitialState();
+
+    const first = takeOrder(state, PEDRO, 'OD-DEMO-061');
+    const second = takeOrder(state, CARLOS, 'OD-DEMO-061');
+
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(false);
+    expect(state.workOrders.find((order) => order.id === 'OD-DEMO-061')?.assignedMechanicId).toBe(
+      'U-PEDRO',
+    );
+    expect(state.workOrders.find((order) => order.id === 'OD-DEMO-061')?.status).toBe('IN_PROGRESS');
+  });
+
+  it('rejects take when the order is already in progress', () => {
+    const result = takeOrder(createInitialState(), PEDRO, 'OD-DEMO-060');
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects take from a non-mechanic even if the policy layer would allow it', () => {
+    const result = takeOrder(createInitialState(), ADMIN, 'OD-DEMO-061');
+    expect(result.ok).toBe(false);
+  });
+
+  it('denies evidence and completion to a mechanic who does not own the order', () => {
+    const state = createInitialState();
+
+    const photo = addPhoto(state, CARLOS, {
+      workOrderId: 'OD-DEMO-060',
+      kind: 'AFTER',
+      fileName: 'after-other.jpg',
+    });
+    const completed = completeDesarme(state, CARLOS, { workOrderId: 'OD-DEMO-060' });
+
+    expect(photo.ok).toBe(false);
+    expect(completed.ok).toBe(false);
+    expect(state.workOrders.find((order) => order.id === 'OD-DEMO-060')?.afterPhotos).toEqual([]);
+  });
+
+  it('rejects completion without BEFORE and AFTER evidence', () => {
+    const state = createInitialState();
+    const result = completeDesarme(state, PEDRO, { workOrderId: 'OD-DEMO-060' });
+    expect(result.ok).toBe(false);
+    expect(state.workOrders.find((order) => order.id === 'OD-DEMO-060')?.status).toBe('IN_PROGRESS');
+  });
+
+  it('completes dismantling with an explicit or pending post-removal location', () => {
+    const state = createInitialState();
+    const truckComplete = state.items.find((item) => item.id === 'TRK-001')?.complete;
+    const missingOnTruck = state.knownMissing.filter((entry) => entry.parentId === 'TRK-001').length;
+
+    expect(
+      addPhoto(state, PEDRO, {
+        workOrderId: 'OD-DEMO-060',
+        kind: 'AFTER',
+        fileName: 'after-turbo.jpg',
+      }).ok,
+    ).toBe(true);
+
+    const result = completeDesarme(state, PEDRO, {
+      workOrderId: 'OD-DEMO-060',
+      location: 'Patio D',
+    });
+
+    expect(result.ok).toBe(true);
+    const turbo = state.items.find((item) => item.id === 'TUR-009')!;
+    const engine = state.items.find((item) => item.id === 'ENG-001')!;
+    expect(turbo.commercialState).toBe('SOLD');
+    expect(turbo.physicalRelationship).toBe('INDEPENDENT');
+    expect(turbo.parentId).toBeUndefined();
+    expect(turbo.location).toBe('Patio D');
+    expect(engine.complete).toBe(false);
+    expect(
+      state.knownMissing.some(
+        (entry) =>
+          entry.parentId === 'ENG-001' &&
+          entry.formerItemId === 'TUR-009' &&
+          entry.origin === 'REMOVED_AFTER_BASELINE',
+      ),
+    ).toBe(true);
+    expect(state.items.find((item) => item.id === 'TRK-001')?.complete).toBe(truckComplete);
+    expect(state.knownMissing.filter((entry) => entry.parentId === 'TRK-001')).toHaveLength(
+      missingOnTruck,
+    );
+
+    const pendingLocationState = createInitialState();
+    const pendingLocationTurbo = pendingLocationState.items.find(
+      (item) => item.id === 'TUR-009',
+    )!;
+    pendingLocationTurbo.location = 'Ubicación anterior';
+    expect(
+      addPhoto(pendingLocationState, PEDRO, {
+        workOrderId: 'OD-DEMO-060',
+        kind: 'AFTER',
+        fileName: 'after-turbo.jpg',
+      }).ok,
+    ).toBe(true);
+    expect(
+      completeDesarme(pendingLocationState, PEDRO, { workOrderId: 'OD-DEMO-060' }).ok,
+    ).toBe(true);
+    expect(pendingLocationTurbo.location).toBeUndefined();
+  });
+
+  it('rejects dismantling completion under No desarmar', () => {
+    const state = createInitialState();
+    state.workOrders.push({
+      id: 'OD-DEMO-070',
+      type: 'DISMANTLING',
+      status: 'IN_PROGRESS',
+      pieceId: 'ALT-011',
+      sourceParentId: 'ENG-003',
+      assignedMechanicId: 'U-PEDRO',
+      beforePhotos: ['before.jpg'],
+      afterPhotos: ['after.jpg'],
+      createdAt: '2026-08-25T16:00:00.000Z',
+    });
+
+    const result = completeDesarme(state, PEDRO, { workOrderId: 'OD-DEMO-070' });
+    expect(result.ok).toBe(false);
+    expect(state.items.find((item) => item.id === 'ALT-011')?.parentId).toBe('ENG-003');
+  });
+
+  it('installs without resolving an unrelated missing component', () => {
+    const state = createInitialState();
+    expect(takeOrder(state, PEDRO, 'OD-DEMO-062').ok).toBe(true);
+    expect(
+      addPhoto(state, PEDRO, {
+        workOrderId: 'OD-DEMO-062',
+        kind: 'BEFORE',
+        fileName: 'before-filter.jpg',
+      }).ok,
+    ).toBe(true);
+    expect(
+      addPhoto(state, PEDRO, {
+        workOrderId: 'OD-DEMO-062',
+        kind: 'AFTER',
+        fileName: 'after-filter.jpg',
+      }).ok,
+    ).toBe(true);
+
+    const result = completeInstalacion(state, PEDRO, { workOrderId: 'OD-DEMO-062' });
+    expect(result.ok).toBe(true);
+
+    const filter = state.items.find((item) => item.id === 'FLT-001')!;
+    expect(filter.physicalRelationship).toBe('INSTALLED');
+    expect(filter.parentId).toBe('ENG-002');
+    expect(state.items.find((item) => item.id === 'ENG-002')?.complete).toBe(false);
+    expect(state.knownMissing.some((entry) => entry.id === 'KM-001')).toBe(true);
+    expect(state.knownMissing.some((entry) => entry.id === 'KM-003')).toBe(true);
+  });
+
+  it('resolves a category-matched missing component on installation', () => {
+    const state = createInitialState();
+    const created = createInstalacion(state, ADMIN, {
+      pieceId: 'ALT-010',
+      destinationParentId: 'ENG-002',
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    expect(takeOrder(state, PEDRO, created.value.id).ok).toBe(true);
+    expect(
+      addPhoto(state, PEDRO, {
+        workOrderId: created.value.id,
+        kind: 'BEFORE',
+        fileName: 'before-alt.jpg',
+      }).ok,
+    ).toBe(true);
+    expect(
+      addPhoto(state, PEDRO, {
+        workOrderId: created.value.id,
+        kind: 'AFTER',
+        fileName: 'after-alt.jpg',
+      }).ok,
+    ).toBe(true);
+
+    const result = completeInstalacion(state, PEDRO, { workOrderId: created.value.id });
+    expect(result.ok).toBe(true);
+    expect(state.knownMissing.some((entry) => entry.id === 'KM-003')).toBe(false);
+    expect(state.knownMissing.some((entry) => entry.id === 'KM-001')).toBe(true);
+    expect(state.items.find((item) => item.id === 'ENG-002')?.complete).toBe(false);
+    expect(state.items.find((item) => item.id === 'ALT-010')?.parentId).toBe('ENG-002');
+  });
+
+  it('projects mechanic views without commercial fields', () => {
+    const state = createInitialState();
+    const order = state.workOrders.find((entry) => entry.id === 'OD-DEMO-060')!;
+    const view = toMechanicWorkOrderView(state, order, PEDRO);
+    const serialized = JSON.stringify(view);
+
+    expect(view).not.toHaveProperty('invoiceId');
+    expect(serialized).not.toMatch(/invoice/i);
+    expect(serialized).not.toMatch(/FAC-/);
+    expect(serialized).not.toMatch(/acquisitionCost|profit|payment|customer|balance|refund/i);
+    expect(buildMechanicWorkOrderList(state, PEDRO).map((entry) => entry.id).sort()).toEqual([
+      'OD-DEMO-060',
+      'OD-DEMO-061',
+      'OD-DEMO-062',
+    ]);
   });
 });

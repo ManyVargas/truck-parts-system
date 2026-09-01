@@ -1,17 +1,12 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 
 import { useAuth } from '../auth/useAuth';
 import { DemoControls } from '../../shared/layout/DemoControls';
 import { UserMenu } from '../../shared/layout/UserMenu';
-
-const MECHANIC_NAV = [
-  { id: 'pending', label: 'Pendientes', path: '/mechanic/pending' },
-  { id: 'mine', label: 'Mis órdenes', path: '/mechanic/mine' },
-  { id: 'profile', label: 'Perfil', path: '/mechanic/profile' },
-] as const;
+import { MechanicBottomNav } from './MechanicBottomNav';
 
 /**
- * Mobile-first mechanic shell (~430px) — full flows in WM10.
+ * Mobile-first mechanic shell (~430px): pending queue, assigned work, evidence.
  */
 export function MechanicLayout() {
   const { user, logout } = useAuth();
@@ -37,24 +32,7 @@ export function MechanicLayout() {
         <Outlet />
       </main>
 
-      <nav
-        className="sticky bottom-0 grid grid-cols-3 border-t border-navy-100 bg-white"
-        aria-label="Navegación mecánico"
-      >
-        {MECHANIC_NAV.map((item) => (
-          <NavLink
-            key={item.id}
-            to={item.path}
-            className={({ isActive }) =>
-              `px-2 py-3 text-center text-xs font-medium ${
-                isActive ? 'text-brand' : 'text-navy-400'
-              }`
-            }
-          >
-            {item.label}
-          </NavLink>
-        ))}
-      </nav>
+      <MechanicBottomNav />
     </div>
   );
 }

@@ -75,4 +75,17 @@ export type CancelWorkOrderInput = {
 
 export type CreateManualWorkOrderInput = ManualWorkOrderInput;
 
+export type MechanicEvidenceKind = 'BEFORE' | 'AFTER';
+
+export type AddWorkOrderPhotoInput = {
+  workOrderId: string;
+  kind: MechanicEvidenceKind;
+  fileName: string;
+};
+
+export type CompleteWorkOrderInput = {
+  workOrderId: string;
+  location?: string;
+};
+
 export type { WorkOrder, WorkOrderStatus, WorkOrderType };

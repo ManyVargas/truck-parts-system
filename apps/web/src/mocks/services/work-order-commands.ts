@@ -1,9 +1,28 @@
-import type { AppEvent, AppState, User, WorkOrder } from '../../api/contracts/entities';
+import type {
+  AppEvent,
+  AppState,
+  Item,
+  KnownMissingComponent,
+  User,
+  WorkOrder,
+} from '../../api/contracts/entities';
 import type { ManualWorkOrderInput } from '../../api/contracts/inventory';
-import type { CancelWorkOrderInput, ReassignWorkOrderInput } from '../../api/contracts/work-orders';
+import type {
+  AddWorkOrderPhotoInput,
+  CancelWorkOrderInput,
+  CompleteWorkOrderInput,
+  ReassignWorkOrderInput,
+} from '../../api/contracts/work-orders';
 import { err, ok, type Result } from '../../shared/auth/types';
 import { DEMO_NOW_ISO } from '../data/demo-clock';
 import { createManualWorkOrder } from './inventory-commands';
+import {
+  collectSubtree,
+  isAssemblyItem,
+  itemById,
+  protectedAncestor,
+  syncDirectParentCompleteness,
+} from './inventory-helpers';
 import { findWorkOrder, isActiveStatus } from './work-order-catalog';
 
 function nextNumericId(ids: string[], prefix: string, pad: number): string {
@@ -188,6 +207,291 @@ export function cancelOrder(
       previousAssigneeId,
       reason: reason.value,
       physicalVerified: Boolean(input.physicalVerified),
+    },
+  );
+
+  return ok(order);
+}
+
+function requireAssignedInProgress(order: WorkOrder, actor: User): Result<WorkOrder> {
+  if (order.status !== 'IN_PROGRESS') {
+    return err({ code: 'CONFLICT', message: 'La OT debe estar en proceso' });
+  }
+
+  if (order.assignedMechanicId !== actor.id) {
+    return err({
+      code: 'FORBIDDEN',
+      message: 'Solo el mecánico asignado puede modificar esta OT',
+    });
+  }
+
+  return ok(order);
+}
+
+function requireEvidence(order: WorkOrder): Result<void> {
+  if (order.beforePhotos.length === 0 || order.afterPhotos.length === 0) {
+    return err({
+      code: 'VALIDATION',
+      message: 'Se requiere al menos una foto BEFORE y una AFTER',
+    });
+  }
+  return ok(undefined);
+}
+
+function categoryLabel(state: AppState, piece: Item): string {
+  return state.categories.find((entry) => entry.id === piece.categoryId)?.name ?? piece.name;
+}
+
+function matchingKnownMissing(
+  state: AppState,
+  parentId: string,
+  piece: Item,
+): KnownMissingComponent | undefined {
+  const expected = categoryLabel(state, piece);
+  return state.knownMissing.find(
+    (entry) => entry.parentId === parentId && entry.expectedComponentName === expected,
+  );
+}
+
+/**
+ * WO-004: one conditional assignment. In the mock this is a single check-then-set
+ * on the shared AppState; the future HTTP API must keep the same atomic semantics.
+ */
+export function takeOrder(state: AppState, actor: User, workOrderId: string): Result<WorkOrder> {
+  if (actor.role !== 'MECHANIC') {
+    return err({ code: 'FORBIDDEN', message: 'Solo un mecánico puede tomar una OT de la cola' });
+  }
+
+  const order = findWorkOrder(state, workOrderId);
+  if (!order) {
+    return err({ code: 'NOT_FOUND', message: 'OT no encontrada' });
+  }
+
+  if (order.status !== 'PENDING' || order.assignedMechanicId) {
+    return err({ code: 'CONFLICT', message: 'Esta OT ya fue tomada' });
+  }
+
+  order.assignedMechanicId = actor.id;
+  order.status = 'IN_PROGRESS';
+
+  appendEvent(state, 'WORK_ORDER_CLAIMED', `OT ${order.id} tomada por ${actor.name}`, actor, {
+    workOrderId: order.id,
+    assignedMechanicId: actor.id,
+  });
+
+  return ok(order);
+}
+
+export function addPhoto(
+  state: AppState,
+  actor: User,
+  input: AddWorkOrderPhotoInput,
+): Result<WorkOrder> {
+  const order = findWorkOrder(state, input.workOrderId);
+  if (!order) {
+    return err({ code: 'NOT_FOUND', message: 'OT no encontrada' });
+  }
+
+  const owned = requireAssignedInProgress(order, actor);
+  if (!owned.ok) {
+    return owned;
+  }
+
+  const fileName = input.fileName.trim();
+  if (!fileName) {
+    return err({ code: 'VALIDATION', message: 'Seleccione una foto' });
+  }
+
+  if (input.kind === 'BEFORE') {
+    order.beforePhotos.push(fileName);
+  } else {
+    order.afterPhotos.push(fileName);
+  }
+
+  appendEvent(
+    state,
+    'WORK_ORDER_EVIDENCE_ADDED',
+    `Evidencia ${input.kind} agregada a ${order.id}`,
+    actor,
+    { workOrderId: order.id, kind: input.kind, fileName },
+  );
+
+  return ok(order);
+}
+
+export function completeDesarme(
+  state: AppState,
+  actor: User,
+  input: CompleteWorkOrderInput,
+): Result<WorkOrder> {
+  const order = findWorkOrder(state, input.workOrderId);
+  if (!order) {
+    return err({ code: 'NOT_FOUND', message: 'OT no encontrada' });
+  }
+
+  if (order.type !== 'DISMANTLING') {
+    return err({ code: 'VALIDATION', message: 'Esta OT no es de desarme' });
+  }
+
+  const owned = requireAssignedInProgress(order, actor);
+  if (!owned.ok) {
+    return owned;
+  }
+
+  const evidence = requireEvidence(order);
+  if (!evidence.ok) {
+    return evidence;
+  }
+
+  const piece = itemById(state.items, order.pieceId);
+  if (!piece) {
+    return err({ code: 'NOT_FOUND', message: 'Ítem no encontrado' });
+  }
+
+  const restriction = protectedAncestor(state.items, piece);
+  if (restriction && restriction.id !== piece.id) {
+    return err({
+      code: 'CONFLICT',
+      message: `No desarmar en ${restriction.id} impide completar este desarme`,
+      details: { protectedRootId: restriction.id },
+    });
+  }
+
+  if (
+    piece.physicalRelationship !== 'INSTALLED' ||
+    !piece.parentId ||
+    piece.parentId !== order.sourceParentId
+  ) {
+    return err({
+      code: 'CONFLICT',
+      message: 'La relación física ya no coincide con esta OT; no se aplica el desarme',
+    });
+  }
+
+  const parent = itemById(state.items, piece.parentId);
+  if (!parent) {
+    return err({ code: 'CONFLICT', message: 'El padre de origen ya no existe' });
+  }
+
+  const parentId = parent.id;
+  piece.physicalRelationship = 'INDEPENDENT';
+  piece.parentId = undefined;
+  piece.location = input.location?.trim() || undefined;
+
+  const missing: KnownMissingComponent = {
+    id: nextNumericId(
+      state.knownMissing.map((entry) => entry.id),
+      'KM-',
+      3,
+    ),
+    parentId,
+    expectedComponentName: categoryLabel(state, piece),
+    origin: 'REMOVED_AFTER_BASELINE',
+    formerItemId: piece.id,
+    workOrderId: order.id,
+  };
+  state.knownMissing.push(missing);
+  syncDirectParentCompleteness(parent, state.knownMissing, state.categories);
+
+  order.status = 'COMPLETED';
+
+  appendEvent(
+    state,
+    'DISMANTLING_COMPLETED',
+    `${piece.id} retirado de ${parentId} (${order.id}). Queda independiente; el padre registra el faltante.`,
+    actor,
+    {
+      itemId: piece.id,
+      parentId,
+      workOrderId: order.id,
+    },
+  );
+
+  return ok(order);
+}
+
+export function completeInstalacion(
+  state: AppState,
+  actor: User,
+  input: CompleteWorkOrderInput,
+): Result<WorkOrder> {
+  const order = findWorkOrder(state, input.workOrderId);
+  if (!order) {
+    return err({ code: 'NOT_FOUND', message: 'OT no encontrada' });
+  }
+
+  if (order.type !== 'INSTALLATION') {
+    return err({ code: 'VALIDATION', message: 'Esta OT no es de instalación' });
+  }
+
+  const owned = requireAssignedInProgress(order, actor);
+  if (!owned.ok) {
+    return owned;
+  }
+
+  const evidence = requireEvidence(order);
+  if (!evidence.ok) {
+    return evidence;
+  }
+
+  const piece = itemById(state.items, order.pieceId);
+  if (!piece) {
+    return err({ code: 'NOT_FOUND', message: 'Ítem no encontrado' });
+  }
+
+  if (piece.physicalRelationship !== 'INDEPENDENT' || piece.parentId) {
+    return err({
+      code: 'CONFLICT',
+      message: 'La pieza ya no está independiente; no se aplica la instalación',
+    });
+  }
+
+  const destinationId = order.destinationParentId;
+  if (!destinationId) {
+    return err({ code: 'CONFLICT', message: 'La OT no tiene destino' });
+  }
+
+  const destination = itemById(state.items, destinationId);
+  if (!destination) {
+    return err({ code: 'NOT_FOUND', message: 'El destino no existe' });
+  }
+
+  if (!isAssemblyItem(destination, state.categories)) {
+    return err({ code: 'VALIDATION', message: 'El destino debe ser un ensamblaje' });
+  }
+
+  if (destinationId === piece.id) {
+    return err({ code: 'VALIDATION', message: 'Una pieza no puede instalarse en sí misma' });
+  }
+
+  if (collectSubtree(state.items, piece.id).some((child) => child.id === destinationId)) {
+    return err({
+      code: 'VALIDATION',
+      message: 'No se puede instalar una pieza en uno de sus descendientes',
+    });
+  }
+
+  piece.physicalRelationship = 'INSTALLED';
+  piece.parentId = destinationId;
+
+  const resolved = matchingKnownMissing(state, destinationId, piece);
+  if (resolved) {
+    state.knownMissing = state.knownMissing.filter((entry) => entry.id !== resolved.id);
+  }
+
+  syncDirectParentCompleteness(destination, state.knownMissing, state.categories);
+  order.status = 'COMPLETED';
+
+  appendEvent(
+    state,
+    'INSTALLATION_COMPLETED',
+    `${piece.id} instalado en ${destinationId} (${order.id})`,
+    actor,
+    {
+      itemId: piece.id,
+      parentId: destinationId,
+      workOrderId: order.id,
+      resolvedMissingId: resolved?.id,
     },
   );
 

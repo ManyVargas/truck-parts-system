@@ -35,6 +35,7 @@ describe('role navigation', () => {
     expect(isKnownDesktopRoute('/profile')).toBe(true);
     expect(isKnownDesktopRoute('/invenray')).toBe(false);
     expect(isKnownMechanicRoute('/mechanic/pending')).toBe(true);
+    expect(isKnownMechanicRoute('/mechanic/orders/OD-DEMO-060')).toBe(true);
     expect(isKnownMechanicRoute('/mechanic/nope')).toBe(false);
   });
 

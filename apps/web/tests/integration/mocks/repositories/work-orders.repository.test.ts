@@ -97,18 +97,61 @@ describe('MockWorkOrderRepository', () => {
     expect(state.events.some((event) => event.type === 'WORK_ORDER_CANCELLED')).toBe(true);
   });
 
-  it('lets a mechanic read the projected queue but not manage desktop orders', async () => {
+  it('lets a mechanic take a pending order and denies a second claim', async () => {
     signInAs('MECHANIC');
 
     const queue = await mockWorkOrderRepository.listForMechanic();
     const listed = await mockWorkOrderRepository.list();
+    const taken = await mockWorkOrderRepository.takeOrder('OD-DEMO-061');
+    const again = await mockWorkOrderRepository.takeOrder('OD-DEMO-061');
 
     expect(queue.ok).toBe(true);
     expect(listed.ok).toBe(false);
+    expect(taken.ok).toBe(true);
+    expect(again.ok).toBe(false);
     if (queue.ok) {
       expect(queue.value[0]).not.toHaveProperty('invoiceId');
       expect(queue.value[0]).not.toHaveProperty('invoiceNumber');
     }
+    if (taken.ok) {
+      expect(taken.value.status).toBe('IN_PROGRESS');
+      expect(taken.value.assignedMechanicId).toBe('U-PEDRO');
+      expect(taken.value).not.toHaveProperty('invoiceId');
+    }
+  });
+
+  it('lets the assigned mechanic complete dismantling after evidence', async () => {
+    signInAs('MECHANIC');
+
+    const missing = await mockWorkOrderRepository.completeDesarme({ workOrderId: 'OD-DEMO-060' });
+    expect(missing.ok).toBe(false);
+
+    const after = await mockWorkOrderRepository.addPhoto({
+      workOrderId: 'OD-DEMO-060',
+      kind: 'AFTER',
+      fileName: 'after-turbo.jpg',
+    });
+    const completed = await mockWorkOrderRepository.completeDesarme({
+      workOrderId: 'OD-DEMO-060',
+      location: 'Patio D',
+    });
+
+    expect(after.ok).toBe(true);
+    expect(completed.ok).toBe(true);
+
+    const turbo = getMockState().items.find((item) => item.id === 'TUR-009');
+    expect(turbo?.commercialState).toBe('SOLD');
+    expect(turbo?.physicalRelationship).toBe('INDEPENDENT');
+  });
+
+  it('denies seller take and complete', async () => {
+    signInAs('SELLER');
+
+    const taken = await mockWorkOrderRepository.takeOrder('OD-DEMO-061');
+    const completed = await mockWorkOrderRepository.completeDesarme({ workOrderId: 'OD-DEMO-060' });
+
+    expect(taken.ok).toBe(false);
+    expect(completed.ok).toBe(false);
   });
 
   it('returns defensive copies for list reads', async () => {

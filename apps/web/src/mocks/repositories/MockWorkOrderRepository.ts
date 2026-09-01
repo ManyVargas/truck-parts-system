@@ -1,40 +1,40 @@
-import type { MechanicWorkOrderView, WorkOrder } from '../../api/contracts/entities';
+import type { User, WorkOrder } from '../../api/contracts/entities';
 import type { WorkOrderRepository } from '../../api/contracts/repositories';
 import type {
+  AddWorkOrderPhotoInput,
   CancelWorkOrderInput,
+  CompleteWorkOrderInput,
   CreateManualWorkOrderInput,
   ReassignWorkOrderInput,
   WorkOrderListTab,
 } from '../../api/contracts/work-orders';
-import { err, ok } from '../../shared/auth/types';
+import { err, ok, type Result } from '../../shared/auth/types';
 import { createManualWorkOrder } from '../services/inventory-commands';
 import { requirePermission } from '../services/require-permission';
 import {
+  buildMechanicWorkOrderList,
   buildWorkOrderCreateOptions,
   buildWorkOrderDetail,
   buildWorkOrderList,
   findWorkOrder,
+  toMechanicWorkOrderView,
 } from '../services/work-order-catalog';
-import { cancelOrder, reassignOrder } from '../services/work-order-commands';
+import {
+  addPhoto,
+  cancelOrder,
+  completeDesarme,
+  completeInstalacion,
+  reassignOrder,
+  takeOrder,
+} from '../services/work-order-commands';
 import { cloneForRead, getMockState } from '../state';
 
-function toMechanicView(order: WorkOrder): MechanicWorkOrderView {
-  const state = getMockState();
-  const piece = state.items.find((item) => item.id === order.pieceId);
+function mechanicView(actor: User, result: Result<WorkOrder>) {
+  if (!result.ok) {
+    return result;
+  }
 
-  return {
-    id: order.id,
-    type: order.type,
-    status: order.status,
-    pieceId: order.pieceId,
-    pieceName: piece?.name ?? order.pieceId,
-    sourceParentId: order.sourceParentId,
-    destinationParentId: order.destinationParentId,
-    effectiveLocation: piece?.location,
-    notes: order.notes,
-    beforePhotos: [...order.beforePhotos],
-    afterPhotos: [...order.afterPhotos],
-  };
+  return ok(cloneForRead(toMechanicWorkOrderView(getMockState(), result.value, actor)));
 }
 
 export class MockWorkOrderRepository implements WorkOrderRepository {
@@ -67,8 +67,21 @@ export class MockWorkOrderRepository implements WorkOrderRepository {
       return permission;
     }
 
-    const views = getMockState().workOrders.map(toMechanicView);
-    return ok(cloneForRead(views));
+    return ok(cloneForRead(buildMechanicWorkOrderList(getMockState(), permission.value)));
+  }
+
+  async getForMechanic(id: string) {
+    const permission = requirePermission('workOrders.take');
+    if (!permission.ok) {
+      return permission;
+    }
+
+    const order = findWorkOrder(getMockState(), id);
+    if (!order) {
+      return err({ code: 'NOT_FOUND', message: 'OT no encontrada' });
+    }
+
+    return ok(cloneForRead(toMechanicWorkOrderView(getMockState(), order, permission.value)));
   }
 
   async getCreateOptions() {
@@ -120,6 +133,48 @@ export class MockWorkOrderRepository implements WorkOrderRepository {
     }
 
     return ok(cloneForRead(buildWorkOrderDetail(getMockState(), result.value, permission.value)));
+  }
+
+  async takeOrder(workOrderId: string) {
+    const permission = requirePermission('workOrders.take');
+    if (!permission.ok) {
+      return permission;
+    }
+
+    return mechanicView(permission.value, takeOrder(getMockState(), permission.value, workOrderId));
+  }
+
+  async addPhoto(input: AddWorkOrderPhotoInput) {
+    const permission = requirePermission('workOrders.complete');
+    if (!permission.ok) {
+      return permission;
+    }
+
+    return mechanicView(permission.value, addPhoto(getMockState(), permission.value, input));
+  }
+
+  async completeDesarme(input: CompleteWorkOrderInput) {
+    const permission = requirePermission('workOrders.complete');
+    if (!permission.ok) {
+      return permission;
+    }
+
+    return mechanicView(
+      permission.value,
+      completeDesarme(getMockState(), permission.value, input),
+    );
+  }
+
+  async completeInstalacion(input: CompleteWorkOrderInput) {
+    const permission = requirePermission('workOrders.complete');
+    if (!permission.ok) {
+      return permission;
+    }
+
+    return mechanicView(
+      permission.value,
+      completeInstalacion(getMockState(), permission.value, input),
+    );
   }
 }
 
