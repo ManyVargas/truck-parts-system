@@ -962,6 +962,8 @@ Realizar un hardening orientado al uso real en taller:
 
 # Milestone UX-7 — Responsive y comportamiento en distintos tamaños
 
+**Registro de implementación:** [`docs/done_web/UX_FRONTEND_HARDENING/ux-7.md`](../done_web/UX_FRONTEND_HARDENING/ux-7.md)
+
 ## Problema
 
 La interfaz comercial está correctamente orientada a escritorio, pero el sidebar fijo puede consumir demasiado espacio en laptops pequeñas, tablet horizontal o ventanas divididas.
@@ -996,17 +998,17 @@ No intentar comprimir todas las columnas hasta volverlas ilegibles.
 
 ## Tareas
 
-- [ ] Probar resoluciones comunes.
-- [ ] Revisar `w-64` fijo del sidebar.
-- [ ] Implementar modo compacto si aporta valor.
-- [ ] Revisar header.
-- [ ] Revisar POS en laptop.
-- [ ] Revisar tablas.
-- [ ] Revisar formularios.
-- [ ] Revisar modales en viewport bajo.
-- [ ] Evitar contenido inaccesible por `overflow-hidden`.
-- [ ] Revisar zoom del navegador al 200%.
-- [ ] Comprobar que no aparezca scroll horizontal global innecesario.
+- [x] Probar resoluciones comunes.
+- [x] Revisar `w-64` fijo del sidebar.
+- [x] Implementar modo compacto si aporta valor.
+- [x] Revisar header.
+- [x] Revisar POS en laptop.
+- [x] Revisar tablas.
+- [x] Revisar formularios.
+- [x] Revisar modales en viewport bajo.
+- [x] Evitar contenido inaccesible por `overflow-hidden`.
+- [x] Revisar zoom del navegador al 200%.
+- [x] Comprobar que no aparezca scroll horizontal global innecesario.
 
 ---
 
@@ -1308,7 +1310,7 @@ El plan completo puede considerarse terminado cuando:
 - [x] tablas siguen una interacción consistente;
 - [x] POS previene errores comunes;
 - [x] mecánico conserva una experiencia simple y mobile-first;
-- [ ] Admin/Seller funcionan correctamente en laptops;
+- [x] Admin/Seller funcionan correctamente en laptops;
 - [ ] los escenarios principales han sido probados manualmente;
 - [ ] no se alteraron reglas de negocio fuera del alcance;
 - [ ] la documentación relevante continúa alineada con el comportamiento del frontend.

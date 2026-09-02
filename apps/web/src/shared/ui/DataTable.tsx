@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 
 export function TableShell({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-navy-100 bg-white">
+    <div className="max-w-full overflow-x-auto rounded-xl border border-navy-100 bg-white">
       <table className="min-w-full text-left text-sm">{children}</table>
     </div>
   );

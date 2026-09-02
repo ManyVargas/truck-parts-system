@@ -8,6 +8,10 @@ COPY apps/web/package.json apps/web/package.json
 RUN npm ci
 
 COPY apps/web apps/web
+ARG VITE_ENABLE_DEMO_CONTROLS
+ARG VITE_CAPABILITIES_PRESET
+ENV VITE_ENABLE_DEMO_CONTROLS=$VITE_ENABLE_DEMO_CONTROLS
+ENV VITE_CAPABILITIES_PRESET=$VITE_CAPABILITIES_PRESET
 RUN npm run build --workspace @truck-parts/web
 
 FROM nginx:1.27-alpine AS runtime

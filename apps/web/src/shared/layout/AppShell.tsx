@@ -1,51 +1,150 @@
-import { Outlet } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 
 import { useAuth } from '../../features/auth/useAuth';
 import { APP_NAME } from '../config/brand';
 import { useAppCapabilities } from '../config/CapabilitiesProvider';
-import { Logo } from '../ui';
+import { Button } from '../ui';
+import { COMMERCIAL_SIDEBAR_ID } from './breakpoints';
+import { CommercialSidebar } from './CommercialSidebar';
 import { DemoControls } from './DemoControls';
-import { RoleNav } from './RoleNav';
+import { NavDrawer } from './NavDrawer';
+import { useCommercialNavMode } from './useCommercialNavMode';
 import { UserMenu } from './UserMenu';
 
+function MenuIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden>
+      <path
+        fill="currentColor"
+        d="M4 6.75h16a.75.75 0 0 0 0-1.5H4a.75.75 0 0 0 0 1.5Zm0 6h16a.75.75 0 0 0 0-1.5H4a.75.75 0 0 0 0 1.5Zm0 6h16a.75.75 0 0 0 0-1.5H4a.75.75 0 0 0 0 1.5Z"
+      />
+    </svg>
+  );
+}
+
 /**
- * Desktop shell for Administrator and Seller — sidebar + header + content outlet.
+ * Desktop shell for Administrator and Seller.
+ * Overflow lives on the content column only so a drawer is not clipped.
  */
 export function AppShell() {
   const { user, logout } = useAuth();
   const capabilities = useAppCapabilities();
+  const location = useLocation();
+  const navMode = useCommercialNavMode();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [compactCollapsed, setCompactCollapsed] = useState(false);
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (navMode !== 'drawer') {
+      setDrawerOpen(false);
+    }
+
+    if (navMode === 'full') {
+      setCompactCollapsed(false);
+    }
+  }, [navMode]);
 
   if (!user) {
     return null;
   }
 
-  return (
-    <div className="flex h-screen overflow-hidden">
-      <aside className="flex h-full w-64 shrink-0 flex-col bg-shell text-white">
-        <div className="border-b border-shell-border px-4 py-5">
-          <Logo size="md" />
-        </div>
+  const showInlineSidebar = navMode === 'full' || (navMode === 'compact' && !compactCollapsed);
+  const showMenuButton = navMode === 'drawer' || (navMode === 'compact' && compactCollapsed);
+  const menuExpanded = navMode === 'drawer' ? drawerOpen : !compactCollapsed;
 
-        <RoleNav role={user.role} />
-      </aside>
+  function closeOverlayNav() {
+    setDrawerOpen(false);
+  }
+
+  const collapseButton = (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="shrink-0 text-white hover:bg-shell-muted hover:text-white"
+      aria-label="Ocultar menú"
+      aria-controls={COMMERCIAL_SIDEBAR_ID}
+      aria-expanded
+      onClick={() => setCompactCollapsed(true)}
+    >
+      <span aria-hidden className="text-lg leading-none">
+        ‹
+      </span>
+    </Button>
+  );
+
+  const closeDrawerButton = (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="shrink-0 text-white hover:bg-shell-muted hover:text-white"
+      aria-label="Cerrar menú"
+      onClick={closeOverlayNav}
+    >
+      ✕
+    </Button>
+  );
+
+  return (
+    <div className="flex h-dvh">
+      {showInlineSidebar ? (
+        <CommercialSidebar
+          role={user.role}
+          density={navMode === 'compact' ? 'compact' : 'full'}
+          headerAction={navMode === 'compact' ? collapseButton : undefined}
+        />
+      ) : null}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface text-navy">
-        <header className="flex shrink-0 items-center justify-between border-b border-navy-100 bg-white px-4 py-3 sm:px-6">
-          <p className="text-sm text-navy-400">
+        <header className="flex min-w-0 shrink-0 items-center gap-2 border-b border-navy-100 bg-white px-3 py-3 sm:gap-3 sm:px-6">
+          {showMenuButton ? (
+            <Button
+              variant="secondary"
+              size="icon"
+              aria-label={drawerOpen ? 'Cerrar menú' : 'Abrir menú'}
+              aria-expanded={menuExpanded}
+              aria-controls={COMMERCIAL_SIDEBAR_ID}
+              onClick={() => {
+                if (navMode === 'drawer') {
+                  setDrawerOpen((open) => !open);
+                  return;
+                }
+
+                setCompactCollapsed(false);
+              }}
+            >
+              <MenuIcon />
+            </Button>
+          ) : null}
+
+          <p className="min-w-0 flex-1 truncate text-sm text-navy-400">
             {capabilities.prototypeControls ? `Prototipo ${APP_NAME}` : APP_NAME}
           </p>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <DemoControls />
             <UserMenu user={user} onLogout={logout} />
           </div>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+          <div className="mx-auto min-w-0 max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
             <Outlet />
           </div>
         </main>
       </div>
+
+      <NavDrawer open={navMode === 'drawer' && drawerOpen} onClose={closeOverlayNav}>
+        <CommercialSidebar
+          role={user.role}
+          density="full"
+          headerAction={closeDrawerButton}
+          onNavigate={closeOverlayNav}
+        />
+      </NavDrawer>
     </div>
   );
 }

@@ -141,8 +141,8 @@ export function PosPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(18rem,1fr)]">
-        <div className="flex flex-col gap-4">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(16rem,1fr)]">
+        <div className="flex min-w-0 flex-col gap-4">
           <Card>
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <h2 className="text-lg font-semibold text-navy">Líneas</h2>
@@ -231,7 +231,7 @@ export function PosPage() {
             ))}
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4">
           <Card>
             <h2 className="mb-4 text-lg font-semibold text-navy">Documento</h2>
             <DocumentPanel
@@ -334,7 +334,7 @@ export function PosPage() {
             Se perderán las líneas de este borrador. Esta acción no se puede deshacer desde el punto de
             venta.
           </p>
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button
               variant="secondary"
               disabled={pos.isMutating}
