@@ -72,18 +72,18 @@ Completeness is derived from unresolved Known Missing Components for the direct 
 
 ### Frontend
 - [ ] Assembly baseline registration/checklist.
-- [ ] Hierarchy/tree detail.
-- [ ] Missing-component and completeness display.
-- [ ] Administrator `No desarmar` controls.
-- [ ] Protected baseline-correction UI with reason and preview.
+- [x] Hierarchy/tree detail.
+- [x] Missing-component and completeness display.
+- [x] Administrator `No desarmar` controls.
+- [x] Protected baseline-correction UI with reason and preview.
 
 ### Tests
 - [ ] Second-parent/self/cycle rejection.
 - [ ] PRESENT/MISSING/NOT_APPLICABLE baseline scenarios.
-- [ ] Direct-parent-only completeness.
+- [x] Direct-parent-only completeness.
 - [ ] Baseline cannot be rerun.
-- [ ] Seller cannot correct baseline.
-- [ ] Protected subtree sale/desarme rejection.
+- [x] Seller cannot correct baseline.
+- [x] Protected subtree sale/desarme rejection.
 - [ ] Concurrent hierarchy-change conflict tests.
 
 ## Canonical validated requirements
@@ -178,7 +178,7 @@ The blocks below are the final reconciled requirements retained from the previou
 **Business Reason:** Assemblies may arrive incomplete, and installing one of several missing components must not falsely represent the parent as complete.  
 **Preconditions:** An initial checklist is being committed, a valid Dismantling Work Order is completing, or a valid Installation Work Order is completing.  
 **Main Flow:** The initial checklist records each absence as a `MISSING_AT_RECEIPT` Known Missing Component. Dismantling completion records the removed registered child as `REMOVED_AFTER_BASELINE`, including when its type was not on the receipt checklist, and makes the direct parent Incomplete. Installation completion may resolve a compatible condition from either origin, creates the relation, recalculates the direct parent, and records history atomically.  
-**Business Rules:** A `MISSING_AT_RECEIPT` condition has no physical item reference. `NOT_APPLICABLE` creates no Known Missing Component. A `REMOVED_AFTER_BASELINE` condition may reference the former real item and Dismantling Work Order. Completeness is derived and cannot be manually selected or overridden. A Known Missing Component is never an inventory item; engine testing remains outside MVP.  
+**Business Rules:** A `MISSING_AT_RECEIPT` condition has no physical item reference. `NOT_APPLICABLE` creates no Known Missing Component. A catalog-grown expected slot on an already-registered unsold assembly starts as provisional `NOT_APPLICABLE` (not a Known Missing Component) until Administrator confirms NA or records `MISSING_AT_RECEIPT`. A `REMOVED_AFTER_BASELINE` condition may reference the former real item and Dismantling Work Order. Completeness is derived and cannot be manually selected or overridden. A Known Missing Component is never an inventory item; engine testing remains outside MVP.  
 **Important Exceptions/Edge Cases:** Installing one of multiple missing components leaves the parent Incomplete; an installation that matches no applicable outstanding absence does not falsely resolve one; matching remains simple and category-based; completeness does not cascade.  
 **Dependencies:** CAT-001, HIER-002, HIER-004.  
 **Acceptance Notes:** An assembly may start Complete or Incomplete; removing any registered child creates a `REMOVED_AFTER_BASELINE` condition; the direct parent becomes Complete exactly when no Known Missing Component remains unresolved.
@@ -259,6 +259,6 @@ The blocks below are the final reconciled requirements retained from the previou
 **Preconditions:** The physical assembly has arrived, no baseline already exists for it, the applicable checklist is sufficiently defined, and every present component meets its category registration minimum.  
 **Main Flow:** Register the root assembly; present its category's general expected-component list; classify each definition for this unit; register each `PRESENT` child with its own identity and known data; validate one parent and no cycles; create initial relationships; create `MISSING_AT_RECEIPT` conditions only for `MISSING`; ignore `NOT_APPLICABLE` for inventory, absence, and completeness; derive completeness; and commit atomically with provenance.  
 **Business Rules:** This operation is not a Work Order, assigns no Mechanic, and requires no `BEFORE`/`AFTER` evidence. `PRESENT` means a real item and relationship; `MISSING` means an absence record; `NOT_APPLICABLE` means the definition does not apply to this unit. After commit, all later parent changes require eligible Work Order completion.  
-**Important Exceptions/Edge Cases:** The operation cannot be rerun or reopened. A verified original receipt-recording error uses the Administrator-only INV-006 correction, which preserves the original event and cannot represent later physical work. A duplicate ID, second parent, cycle, invalid checklist result, or concurrent baseline conflict rejects the whole operation without partial state.  
+**Important Exceptions/Edge Cases:** The operation cannot be rerun or reopened. Adding expected-component definitions to the category after commit does not reopen this path: unsold assemblies receive a provisional NA review for Administrator confirm/`MISSING` under CAT-001. A verified original receipt-recording error uses the Administrator-only INV-006 correction, which preserves the original event and cannot represent later physical work. A duplicate ID, second parent, cycle, invalid checklist result, or concurrent baseline conflict rejects the whole operation without partial state.  
 **Dependencies:** INV-001, INV-002, INV-003, INV-006, CAT-001, HIER-002, HIER-004, HIER-006, HIST-001, HIST-002.  
 **Acceptance Notes:** A complete received engine creates real child identities and no Known Missing Components; an incomplete one creates identities only for present children plus `MISSING_AT_RECEIPT` conditions, derives `Incomplete`, preserves provenance, and creates no Work Order.

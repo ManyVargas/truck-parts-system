@@ -61,31 +61,32 @@ Mechanic endpoints and UI must never return customer, invoice, price, cost, paym
 ## Implementation checklist
 
 ### Domain / persistence
-- [ ] Define Work Order type/state/assignment/version.
-- [ ] Implement manual Administrator creation rules.
-- [ ] Implement automatic Dismantling create-or-reuse hook used by Sales.
-- [ ] Implement atomic Pending claim.
-- [ ] Implement assigned-Mechanic authorization.
-- [ ] Implement evidence metadata and durable upload/finalization state.
-- [ ] Implement Dismantling completion transaction.
-- [ ] Implement Installation completion transaction.
-- [ ] Implement eligible cancellation/release/reassignment.
-- [ ] Prevent duplicate active physical operations.
+- [x] Define Work Order type/state/assignment/version.
+- [x] Implement manual Administrator creation rules.
+- [x] Implement automatic Dismantling create-or-reuse hook used by Sales.
+- [x] Implement atomic Pending claim.
+- [x] Implement assigned-Mechanic authorization.
+- [x] Implement evidence metadata and durable upload/finalization state.
+- [x] Implement Dismantling completion transaction.
+- [x] Implement Installation completion transaction.
+- [x] Implement eligible cancellation/release/reassignment.
+- [x] Prevent duplicate active physical operations.
 
 ### Frontend
-- [ ] Mobile-first Pending queue.
-- [ ] Take-order action with conflict refresh.
-- [ ] Assigned-order detail with technical notes.
-- [ ] BEFORE/AFTER upload with progress/retry.
-- [ ] Completion validation and clear error recovery.
+- [x] Desktop administrator list, detail, manual create, reassign and cancel (WM9).
+- [x] Mobile-first Pending queue.
+- [x] Take-order action with conflict refresh.
+- [x] Assigned-order detail with technical notes.
+- [x] BEFORE/AFTER upload with progress/retry.
+- [x] Completion validation and clear error recovery.
 
 ### Tests
-- [ ] Two-Mechanic claim race.
-- [ ] Duplicate active operation race.
-- [ ] Wrong-Mechanic action denial.
-- [ ] Missing/failed evidence rejection.
-- [ ] Completed order immutable/reversal-by-opposite-order.
-- [ ] Mechanic API response contains no financial/commercial fields.
+- [x] Two-Mechanic claim race.
+- [x] Duplicate active operation race.
+- [x] Wrong-Mechanic action denial.
+- [x] Missing/failed evidence rejection.
+- [x] Completed order immutable/reversal-by-opposite-order.
+- [x] Mechanic API response contains no financial/commercial fields.
 
 ## Canonical validated requirements
 

@@ -61,22 +61,22 @@ Use transaction/version checks for races between cancellation, payment, Work-Ord
 ## Implementation checklist
 
 ### Early financial slice
-- [ ] Administrator cancellation command with reason.
-- [ ] Non-inventory invoice cancellation.
-- [ ] Additive same-currency refund record.
-- [ ] Cancellation/refund history and idempotency.
+- [x] Administrator cancellation command with reason.
+- [x] Non-inventory invoice cancellation.
+- [x] Additive same-currency refund record.
+- [x] Cancellation/refund history and idempotency.
 
 ### Inventory slice
-- [ ] Eligible Sold → Available restoration rules.
-- [ ] Quantity restoration rule where applicable.
-- [ ] Prevent double restoration.
+- [x] Eligible Sold → Available restoration rules.
+- [x] Quantity restoration rule where applicable.
+- [x] Prevent double restoration.
 
 ### Work-Order slice
-- [ ] Pending linked Desarme branch.
-- [ ] In-Progress verified stop branch.
-- [ ] In-Progress continue-work branch.
-- [ ] Completed Desarme branch.
-- [ ] Resale/create-or-reuse interaction.
+- [x] Pending linked Desarme branch.
+- [x] In-Progress verified stop branch.
+- [x] In-Progress continue-work branch.
+- [x] Completed Desarme branch.
+- [x] Resale/create-or-reuse interaction.
 - [ ] Concurrency/version tests versus Work-Order completion and payments.
 
 ## Canonical validated requirements

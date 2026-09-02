@@ -26,7 +26,7 @@ The system must present and change these concepts separately:
 - **Invoice Currency:** exactly one of `DOP` or `USD` per invoice. Lines, totals, payments, balance, refunds, and profitability results use that currency, while the stored acquisition cost is always `DOP`.
 - **Acquisition Cost Currency:** acquisition cost is always recorded in `DOP` for tracked items, weighted-average quantity stock, external resale lines, and estimates. Any purchase made in another currency is converted by the employee outside the application.
 - **`exchangeRateDopPerUsd`:** the `DOP` required for `1 USD`, so `1 USD = DOP 61.50` gives `61.50`. Profitability for a `USD` invoice uses `costUsd = storedCostDop / exchangeRateDopPerUsd`. A provider returning the inverse or another representation is normalized to this convention first; no flow refers to an undirected "DOP/USD rate".
-- **Profitability Result:** an Administrator-only value that is either calculated in the invoice currency or `UNAVAILABLE / PENDING FX RATE` when a `USD` invoice's rate could not be obtained. It is never invented and never blocks a sale.
+- **Profitability Result:** an Administrator-only value that is either calculated from selling price minus known/estimated cost, `UNAVAILABLE / PENDING FX RATE` when a `USD` invoice's rate could not be obtained, or an Administrator-recorded `DOP` amount when cost is unknown (COST-005). The system never invents a number, and profitability never blocks a sale.
 - **Completeness:** `Complete` or `Incomplete` describes a parent separately from all states above. A direct parent is Complete only when it has zero unresolved Known Missing Components; a protected receipt-baseline correction may repair an original registration error but cannot imitate physical work.
 - **Known Missing Component:** an unresolved absence for one direct parent, distinct from an Expected Component Definition, real inventory item, and physical relationship. Its origin is `MISSING_AT_RECEIPT` or `REMOVED_AFTER_BASELINE`.
 
@@ -226,17 +226,18 @@ For quantity stock, `availableToReserve = physical/on-hand quantity - currently 
 **Preconditions:**
 
 - A reservation is stuck, orphaned, or tied to an abandoned Draft.
+- At least six hours have elapsed since the Draft's `createdAt`; younger Drafts remain active and cannot be released through recovery.
 - The Administrator has inspected its owner, Draft, inventory effects, and current operation.
 
 **Main Flow:**
 
 1. The Administrator selects the named `Release abandoned reservation` recovery operation and supplies a reason.
-2. The system revalidates that no confirmation is committing and identifies every reservation owned by the affected Draft or line.
+2. The system revalidates the six-hour threshold, confirms that no sale confirmation is committing, and identifies every reservation owned by the affected Draft or line.
 3. In one transaction, the system releases the eligible reservation, updates or closes the abandoned Draft as appropriate, and records before/after state, actor, reason, and time.
 
 **State Result:** Inventory becomes reservable again; Commercial State, Physical Relationship, Payment State, and completed sales remain unchanged.
 
-**Conflicts:** Do not release a reservation consumed by a completed sale, split a parent/descendant reservation set, or expose a raw status editor.
+**Conflicts:** Reject Drafts younger than six hours. Do not release a reservation consumed by a completed sale, split a parent/descendant reservation set, or expose a raw status editor. Reaching six hours does not trigger automatic release.
 
 ## Sell an independent item
 

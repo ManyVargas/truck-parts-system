@@ -63,16 +63,16 @@ Reservation and sale must use conditional atomic writes so `onHand - reserved` n
 - [ ] Add transaction-safe reserve/release/consume operations.
 
 ### Frontend
-- [ ] Quantity product registration.
-- [ ] Normal stock receipt/entry flow.
-- [ ] Administrator adjustment flow.
-- [ ] Display on-hand, reserved, and available-to-reserve separately.
+- [x] Quantity product registration.
+- [x] Normal stock receipt/entry flow.
+- [x] Administrator adjustment flow.
+- [x] Display on-hand, reserved, and available-to-reserve separately.
 
 ### Tests
-- [ ] Weighted-average examples.
+- [x] Weighted-average examples.
 - [ ] Concurrent oversell/reservation race tests against PostgreSQL.
 - [ ] Negative-stock rejection.
-- [ ] Seller adjustment denial.
+- [x] Seller adjustment denial.
 - [ ] Historical sale cost remains unchanged after later receipt.
 
 ## Canonical validated requirements

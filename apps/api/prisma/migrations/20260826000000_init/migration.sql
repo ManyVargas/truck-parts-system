@@ -1,0 +1,3 @@
+-- Milestone 2 baseline migration.
+-- No domain tables yet; establishes the Prisma migration workflow.
+-- User/Session models are added in Milestone 5.

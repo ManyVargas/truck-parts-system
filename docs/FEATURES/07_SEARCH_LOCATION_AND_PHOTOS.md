@@ -66,16 +66,16 @@ Photo bytes live in private S3-compatible object storage; PostgreSQL stores meta
 - [ ] Validate upload MIME/size/signature and object authorization.
 
 ### Frontend
-- [ ] Inventory search/results.
-- [ ] Installed/independent/quantity state display.
-- [ ] Historical filter/view.
+- [x] Inventory search/results.
+- [x] Installed/independent/quantity state display.
+- [x] Historical filter/view.
 - [ ] Free-text location edit/display.
 - [ ] Photo gallery, upload, primary selection, edit/remove rules.
 
 ### Tests
-- [ ] Installed and independent examples both searchable.
-- [ ] Sold exclusion/history inclusion.
-- [ ] Effective root-location inheritance.
+- [x] Installed and independent examples both searchable.
+- [x] Sold exclusion/history inclusion.
+- [x] Effective root-location inheritance.
 - [ ] Optional post-removal location.
 - [ ] Multiple-photo/primary behavior.
 - [ ] Unauthorized object access and Mechanic search denial.

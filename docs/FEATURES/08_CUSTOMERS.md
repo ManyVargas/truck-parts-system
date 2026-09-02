@@ -40,6 +40,8 @@ Customers are lightweight reusable records, not a CRM. Keep name, phone, RNC/Cé
 
 Provide a stable generic customer such as `Cliente contado` for eligible nonfiscal counter sales. Do not allow that generic identity to satisfy fiscal RNC/Cédula requirements.
 
+A customer may have **multiple contacts** (name, phone, email, optional title). Phone and email belong on contacts, not on the customer record. Contacts may be empty (`Cliente Contado`). Directory search remains name/RNC only.
+
 At invoice confirmation, copy the applicable customer data into an immutable invoice customer snapshot. Later edits to the reusable customer record must not alter already completed invoices.
 
 ## Feature-level acceptance criteria
@@ -53,23 +55,24 @@ At invoice confirmation, copy the applicable customer data into an immutable inv
 ## Implementation checklist
 
 ### Backend
-- [ ] Define customer record and generic-customer strategy.
-- [ ] Implement create/search/edit.
-- [ ] Implement fiscal identity validation hook used by Sales.
-- [ ] Implement immutable invoice customer snapshot at confirmation.
-- [ ] Prevent completed snapshots from following later customer edits.
+- [x] Define customer record and generic-customer strategy. *(prototipo mock: C0 bloqueado; persistencia en sesión)*
+- [x] Implement create/search/edit. *(WM4 — `MockCustomerRepository`)*
+- [x] Implement fiscal identity validation hook used by Sales. *(prototipo mock — WM8 `setDraftMeta` / `confirmInvoice`)*
+- [x] Implement immutable invoice customer snapshot at confirmation. *(prototipo mock — WM8)*
+- [x] Prevent completed snapshots from following later customer edits. *(prototipo mock — WM8)*
 
 ### Frontend
-- [ ] Customer search/select/create inside Draft flow.
-- [ ] Default `Cliente contado` behavior.
-- [ ] Fiscal-required field feedback.
-- [ ] Basic customer maintenance.
+- [x] Customer search/select/create inside Draft flow. *(WM8: selector en POS; alta sigue en `/customers`)*
+- [x] Default `Cliente contado` behavior. *(WM8 `createDraft` usa C0; fiscal lo rechaza)*
+- [x] Fiscal-required field feedback. *(checkbox bloqueado + rechazo en servicio)*
+- [x] Basic customer maintenance. *(WM4 — `/customers`)*
+- [x] Multiple contacts on a customer. *(prototipo mock — lista dinámica; `prepareCustomerSave`)*
 
 ### Tests
-- [ ] Generic nonfiscal sale succeeds.
-- [ ] Generic fiscal sale rejected.
-- [ ] Later customer edit leaves completed invoice unchanged.
-- [ ] Mechanic access denied.
+- [x] Generic nonfiscal sale succeeds. *(prototipo mock — C0 + `fiscal: false`)*
+- [x] Generic fiscal sale rejected. *(prototipo mock — WM8)*
+- [x] Later customer edit leaves completed invoice unchanged. *(prototipo mock — WM8 snapshot)*
+- [x] Mechanic access denied. *(WM4 — `customers.manage` en repositorio)*
 
 ## Canonical validated requirements
 

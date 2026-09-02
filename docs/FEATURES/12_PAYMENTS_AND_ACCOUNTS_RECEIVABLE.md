@@ -67,31 +67,31 @@ Advanced AR such as due-date policy, aging buckets, credit limits, interest, col
 ## Implementation checklist
 
 ### Payment domain
-- [ ] Additive payment record model.
-- [ ] Payment idempotency/retry protection.
-- [ ] Same-currency and positive-balance validation.
-- [ ] Derived payment state/balance service.
-- [ ] Initial payment at confirmation coordination.
-- [ ] Additional/partial/mixed-method payment commands.
+- [x] Additive payment record model.
+- [x] Payment idempotency/retry protection.
+- [x] Same-currency and positive-balance validation.
+- [x] Derived payment state/balance service.
+- [x] Initial payment at confirmation coordination.
+- [x] Additional/partial/mixed-method payment commands.
 
 ### Basic AR read models
 - [ ] Open receivables query.
 - [ ] Customer outstanding summary grouped by currency.
-- [ ] Invoice receivable/payment-history detail.
+- [x] Invoice receivable/payment-history detail.
 - [ ] Filters by customer, invoice, payment state, date, and currency as justified.
 - [ ] Do not add overdue/aging until due-date behavior is validated.
 
 ### Frontend
-- [ ] Record initial/additional payment.
-- [ ] Invoice payment history and current balance.
+- [x] Record initial/additional payment.
+- [x] Invoice payment history and current balance.
 - [ ] Accounts Receivable list.
 - [ ] Customer open-balance summary.
 
 ### Tests
-- [ ] Zero/partial/full payment cases.
-- [ ] Multiple/mixed-method cases.
-- [ ] Duplicate/concurrent payment tests.
-- [ ] Overpayment and cross-currency rejection.
+- [x] Zero/partial/full payment cases.
+- [x] Multiple/mixed-method cases.
+- [x] Duplicate/concurrent payment tests.
+- [x] Overpayment and cross-currency rejection.
 - [ ] AR totals equal underlying ledger calculations.
 
 ## Canonical validated requirements

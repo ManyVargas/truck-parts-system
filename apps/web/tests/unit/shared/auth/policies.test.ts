@@ -1,0 +1,86 @@
+import { describe, expect, it } from 'vitest';
+
+import type { Role, User } from '../../../../src/api/contracts/entities';
+import { can, roleLabel, type PolicyAction } from '../../../../src/shared/auth/policies';
+
+function user(role: Role, active = true): User {
+  return {
+    id: `U-${role}`,
+    name: role,
+    username: role.toLowerCase(),
+    password: 'test',
+    role,
+    active,
+  };
+}
+
+describe('authorization policies', () => {
+  it('grants administrators every declared action except taking and completing work orders', () => {
+    const actions: PolicyAction[] = [
+      'dashboard.view',
+      'inventory.view',
+      'inventory.register',
+      'inventory.admin',
+      'customers.manage',
+      'sales.manage',
+      'sales.cancel',
+      'sales.correctCurrency',
+      'workOrders.manage',
+      'catalogs.manage',
+      'users.manage',
+      'profile.update',
+      'profit.view',
+      'recovery.manage',
+    ];
+
+    expect(actions.every((action) => can(user('ADMINISTRATOR'), action))).toBe(true);
+    expect(can(user('ADMINISTRATOR'), 'workOrders.take')).toBe(false);
+    expect(can(user('ADMINISTRATOR'), 'workOrders.complete')).toBe(false);
+  });
+
+  it('denies administrators taking and completing work orders', () => {
+    const administrator = user('ADMINISTRATOR');
+
+    expect(can(administrator, 'workOrders.take')).toBe(false);
+    expect(can(administrator, 'workOrders.complete')).toBe(false);
+    expect(can(administrator, 'workOrders.manage')).toBe(true);
+  });
+
+  it('limits sellers to operational inventory, customer and sales actions', () => {
+    const seller = user('SELLER');
+
+    expect(can(seller, 'dashboard.view')).toBe(true);
+    expect(can(seller, 'inventory.view')).toBe(true);
+    expect(can(seller, 'customers.manage')).toBe(true);
+    expect(can(seller, 'sales.manage')).toBe(true);
+    expect(can(seller, 'profile.update')).toBe(true);
+    expect(can(seller, 'inventory.admin')).toBe(false);
+    expect(can(seller, 'catalogs.manage')).toBe(false);
+    expect(can(seller, 'users.manage')).toBe(false);
+    expect(can(seller, 'profit.view')).toBe(false);
+    expect(can(seller, 'workOrders.manage')).toBe(false);
+  });
+
+  it('limits mechanics to taking and completing work orders', () => {
+    const mechanic = user('MECHANIC');
+
+    expect(can(mechanic, 'workOrders.take')).toBe(true);
+    expect(can(mechanic, 'workOrders.complete')).toBe(true);
+    expect(can(mechanic, 'profile.update')).toBe(true);
+    expect(can(mechanic, 'inventory.view')).toBe(false);
+    expect(can(mechanic, 'customers.manage')).toBe(false);
+  });
+
+  it('denies guests and inactive users regardless of role', () => {
+    expect(can(null, 'dashboard.view')).toBe(false);
+    expect(can(user('ADMINISTRATOR', false), 'users.manage')).toBe(false);
+    expect(can(user('SELLER', false), 'profile.update')).toBe(false);
+    expect(can(user('MECHANIC', false), 'profile.update')).toBe(false);
+  });
+
+  it('provides the approved Spanish role labels', () => {
+    expect(roleLabel('ADMINISTRATOR')).toBe('Administrador');
+    expect(roleLabel('SELLER')).toBe('Vendedor');
+    expect(roleLabel('MECHANIC')).toBe('Mecánico');
+  });
+});

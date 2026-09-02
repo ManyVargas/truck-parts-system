@@ -22,7 +22,7 @@ The prototype may show functionality from later releases before that functionali
 
 # 2. Product Experience Demonstrated
 
-The prototype presents one responsive operational system named **RepuTruck** with three role-specific experiences:
+The prototype presents one responsive operational system named **SoloCamiones** with three role-specific experiences:
 
 - Administrator
 - Seller

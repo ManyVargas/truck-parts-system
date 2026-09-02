@@ -68,16 +68,16 @@ Acquisition cost is entered in DOP when known or estimated; unknown is a real st
 ### Frontend
 - [ ] Registration form driven by category minimums.
 - [ ] Detail/edit screen for ordinary fields.
-- [ ] Clear visual separation of availability, condition, relationship, completeness, and reservation.
-- [ ] Administrator-only protected correction flow.
+- [x] Clear visual separation of availability, condition, relationship, completeness, and reservation.
+- [x] Administrator-only protected correction flow.
 
 ### Tests
 - [ ] Duplicate/reused ID rejection.
 - [ ] Partial registration and later enrichment.
 - [ ] Missing serial/part number allowed when category minimums pass.
 - [ ] Unknown cost remains unknown.
-- [ ] Seller protected-correction denial.
-- [ ] Additive correction history.
+- [x] Seller protected-correction denial.
+- [x] Additive correction history.
 
 ## Canonical validated requirements
 
@@ -170,7 +170,7 @@ The blocks below are the final reconciled requirements retained from the previou
 **Business Reason:** Mistakes must be repairable without silently rewriting evidence.  
 **Preconditions:** A correction is necessary and cannot be made as a normal edit. For an initial-baseline correction, the business has verified that receipt reality was recorded incorrectly rather than changed later. For a completed-invoice currency correction, the invoice has no payment records.  
 **Main Flow:** Administrator selects the named correction, supplies a reason, reviews the before and corrected states, and confirms. The system validates the operation-specific invariants and dependencies on later immutable events before applying the correction atomically and appending history.  
-**Business Rules:** Corrections preserve the original event and record actor, timestamp, reason, before state, and corrected state. An initial-baseline correction may repair `PRESENT`/`MISSING`/`NOT_APPLICABLE` results, an original parent, or derived completeness, but it never reopens HIER-011 or substitutes for a Work Order. Currency correction preserves the previous and corrected currency and converts no operational amount: no paid amount, line price, balance, or refund is recalculated through an exchange rate. Protected acquisition-cost correction records a `DOP` amount. A successful currency correction leaves the stored acquisition cost in `DOP` and re-derives profitability under the corrected currency, so `DOP → USD` uses the COST-003 FX profitability flow while `USD → DOP` computes gross profit directly in `DOP` with no provider call.  
+**Business Rules:** Corrections preserve the original event and record actor, timestamp, reason, before state, and corrected state. An initial-baseline correction may repair `PRESENT`/`MISSING`/`NOT_APPLICABLE` results, an original parent, or derived completeness, but it never reopens HIER-011 or substitutes for a Work Order. Currency correction preserves the previous and corrected currency and converts no operational amount: no paid amount, line price, balance, or refund is recalculated through an exchange rate. Protected acquisition-cost correction records a `DOP` amount. A successful currency correction invalidates any Administrator-recorded gross profit tied to the obsolete currency while preserving its prior value in additive history, then re-derives profitability under the corrected currency. Thus `DOP → USD` uses the COST-003 FX profitability flow while `USD → DOP` computes gross profit directly in `DOP` with no provider call.  
 **Important Exceptions/Edge Cases:** A `Completed` invoice with one or more payments rejects direct currency correction and requires the applicable cancellation/reversal flow; no exchange-rate repair of operational amounts is supported, which does not restrict the profitability-only conversion in COST-003. When a `DOP → USD` correction cannot obtain the required rate, the correction still succeeds and profitability becomes `UNAVAILABLE / PENDING FX RATE`; the sale and inventory transaction are never rerun in either direction, and no profitability value may remain expressed under the obsolete currency. No correction may silently rewrite immutable snapshots, completed Work Orders, evidence, payment/refund records, or later physical relationship history. A request that would contradict such history is surfaced for protected administrative reconciliation.  
 **Dependencies:** AUTH-005, COST-003, HIER-002, HIER-004, HIER-006, HIER-011, HIST-003, ADMIN-001.  
 **Acceptance Notes:** Seller and Mechanic are denied; a safe receipt error correction preserves both original and corrective events, while a conflicting request is not silently applied. A `DOP → USD` correction with an unavailable rate still commits and shows pending profitability; a `USD → DOP` correction shows `DOP` profitability without contacting a provider.
