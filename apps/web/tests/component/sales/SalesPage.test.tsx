@@ -37,7 +37,7 @@ describe('SalesPage', () => {
     renderWithProviders(<SalesPage />, { route: '/sales', auth: createAuthValue('SELLER') });
     await screen.findByText('FAC-000098');
 
-    await user.click(screen.getByRole('tab', { name: 'Borrador' }));
+    await user.click(screen.getByRole('button', { name: 'Borrador' }));
 
     expect(await screen.findByText(/Borrador INV-DRAFT-01/)).toBeVisible();
     expect(screen.queryByText('FAC-000098')).not.toBeInTheDocument();

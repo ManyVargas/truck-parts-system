@@ -10,7 +10,7 @@ import {
   type AuthUser,
 } from '../../src/features/auth/auth-context';
 import { CapabilitiesProvider } from '../../src/shared/config/CapabilitiesProvider';
-import type { AppCapabilities } from '../../src/shared/config/capabilities';
+import { CAPABILITY_PRESETS, type AppCapabilities } from '../../src/shared/config/capabilities';
 import { ToastProvider, Toaster } from '../../src/shared/ui';
 
 function authUser(role: Role): AuthUser {
@@ -50,7 +50,8 @@ export function renderWithProviders(
     ...render(
       <MemoryRouter initialEntries={[options.route ?? '/']}>
         <AuthContext.Provider value={auth}>
-          <CapabilitiesProvider value={options.capabilities}>
+          {/* Component tests use the full prototype set so a local VITE_CAPABILITIES_PRESET does not hide later-release UI. */}
+          <CapabilitiesProvider value={options.capabilities ?? CAPABILITY_PRESETS.prototype}>
             <ToastProvider>
               {ui}
               <Toaster />

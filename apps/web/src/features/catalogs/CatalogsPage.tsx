@@ -4,7 +4,7 @@ import type { SaveCategoryInput, SaveServiceInput } from '../../api/contracts/ca
 import type { Category, Service } from '../../api/contracts/entities';
 import { Button, Info, useToast } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
-import { TabBar } from '../../shared/layout/TabBar';
+import { Tabs } from '../../shared/layout/Tabs';
 import { CategoryFormModal } from './CategoryFormModal';
 import { CategoryList } from './CategoryList';
 import { ServiceFormModal } from './ServiceFormModal';
@@ -134,35 +134,46 @@ export function CatalogsPage() {
         }
       />
 
-      <TabBar tabs={TABS} value={tab} onChange={setTab} />
-
-      {isLoading ? (
-        <p className="text-sm text-navy-400" aria-live="polite">
-          Cargando catálogos…
-        </p>
-      ) : tab === 'categories' && categories.status === 'ready' ? (
-        <CategoryList
-          rows={categories.rows}
-          onEdit={(row) => {
-            setEditingCategory(row);
-            setFormError(null);
-            setCategoryModalOpen(true);
-          }}
-        />
-      ) : tab === 'services' && services.status === 'ready' ? (
-        <ServiceList
-          rows={services.rows}
-          togglingId={togglingServiceId}
-          onEdit={(row) => {
-            setEditingService(row);
-            setFormError(null);
-            setServiceModalOpen(true);
-          }}
-          onToggleActive={(row) => {
-            void handleToggleService(row);
-          }}
-        />
-      ) : null}
+      <Tabs
+        aria-label="Tipo de catálogo"
+        tabs={TABS}
+        value={tab}
+        onChange={setTab}
+        panels={{
+          categories: isLoading ? (
+            <p className="text-sm text-navy-400" aria-live="polite">
+              Cargando catálogos…
+            </p>
+          ) : categories.status === 'ready' ? (
+            <CategoryList
+              rows={categories.rows}
+              onEdit={(row) => {
+                setEditingCategory(row);
+                setFormError(null);
+                setCategoryModalOpen(true);
+              }}
+            />
+          ) : null,
+          services: isLoading ? (
+            <p className="text-sm text-navy-400" aria-live="polite">
+              Cargando catálogos…
+            </p>
+          ) : services.status === 'ready' ? (
+            <ServiceList
+              rows={services.rows}
+              togglingId={togglingServiceId}
+              onEdit={(row) => {
+                setEditingService(row);
+                setFormError(null);
+                setServiceModalOpen(true);
+              }}
+              onToggleActive={(row) => {
+                void handleToggleService(row);
+              }}
+            />
+          ) : null,
+        }}
+      />
 
       <CategoryFormModal
         open={categoryModalOpen}

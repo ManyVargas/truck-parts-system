@@ -38,7 +38,7 @@ export function SalesPage() {
         }
       />
 
-      <TabBar tabs={TABS} value={tab} onChange={setTab} />
+      <TabBar tabs={TABS} value={tab} onChange={setTab} aria-label="Estado de factura" />
 
       {result.status === 'loading' ? (
         <p className="text-sm text-navy-400" aria-live="polite">

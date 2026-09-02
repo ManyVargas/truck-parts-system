@@ -11,22 +11,24 @@ import {
 } from '../../../../src/shared/layout/navigation';
 import { CAPABILITY_PRESETS } from '../../../../src/shared/config/capabilities';
 
+const prototype = CAPABILITY_PRESETS.prototype;
+
 describe('role navigation', () => {
   it('shows nine desktop entries to administrators and four to sellers', () => {
-    expect(navItemsForRole('ADMINISTRATOR')).toHaveLength(9);
-    expect(navItemsForRole('SELLER').map((item) => item.id)).toEqual([
+    expect(navItemsForRole('ADMINISTRATOR', prototype)).toHaveLength(9);
+    expect(navItemsForRole('SELLER', prototype).map((item) => item.id)).toEqual([
       'dashboard',
       'inventory',
       'sales',
       'customers',
     ]);
-    expect(navItemsForRole('MECHANIC')).toEqual([]);
+    expect(navItemsForRole('MECHANIC', prototype)).toEqual([]);
   });
 
   it('maps every role to its correct home', () => {
-    expect(defaultPathForRole('ADMINISTRATOR')).toBe('/dashboard');
-    expect(defaultPathForRole('SELLER')).toBe('/dashboard');
-    expect(defaultPathForRole('MECHANIC')).toBe('/mechanic');
+    expect(defaultPathForRole('ADMINISTRATOR', prototype)).toBe('/dashboard');
+    expect(defaultPathForRole('SELLER', prototype)).toBe('/dashboard');
+    expect(defaultPathForRole('MECHANIC', prototype)).toBe('/mechanic');
   });
 
   it('recognizes registered route patterns and rejects typos', () => {
@@ -49,11 +51,11 @@ describe('role navigation', () => {
   });
 
   it('enforces administrator-only desktop sections', () => {
-    expect(isRouteAllowedForRole('/customers', 'SELLER')).toBe(true);
-    expect(isRouteAllowedForRole('/work-orders', 'SELLER')).toBe(false);
-    expect(isRouteAllowedForRole('/work-orders/OD-DEMO-060', 'SELLER')).toBe(false);
-    expect(isRouteAllowedForRole('/users', 'SELLER')).toBe(false);
-    expect(isRouteAllowedForRole('/profitability', 'ADMINISTRATOR')).toBe(true);
+    expect(isRouteAllowedForRole('/customers', 'SELLER', prototype)).toBe(true);
+    expect(isRouteAllowedForRole('/work-orders', 'SELLER', prototype)).toBe(false);
+    expect(isRouteAllowedForRole('/work-orders/OD-DEMO-060', 'SELLER', prototype)).toBe(false);
+    expect(isRouteAllowedForRole('/users', 'SELLER', prototype)).toBe(false);
+    expect(isRouteAllowedForRole('/profitability', 'ADMINISTRATOR', prototype)).toBe(true);
   });
 
   it('blocks a role-permitted URL when its capability is disabled', () => {

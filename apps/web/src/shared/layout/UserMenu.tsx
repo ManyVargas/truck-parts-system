@@ -27,6 +27,22 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open]);
+
   function handleOpenProfile() {
     const path = user.role === 'MECHANIC' ? '/mechanic/profile' : '/profile';
     setOpen(false);
@@ -49,7 +65,7 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="menu"
-        aria-label={user.name}
+        aria-label={`Cuenta de ${user.name}`}
       >
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand/10 text-sm font-semibold text-brand-dark">
           {user.name.charAt(0)}

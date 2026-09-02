@@ -156,6 +156,8 @@ export function RegisterItemWizard({
               </div>
             </fieldset>
 
+            {error && <Info tone="error">{error}</Info>}
+
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="ID interno" htmlFor="register-id">
                 <Input
@@ -331,7 +333,6 @@ export function RegisterItemWizard({
               </>
             )}
 
-            {error && <Info tone="error">{error}</Info>}
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={close}>
                 Cancelar
@@ -353,13 +354,13 @@ export function RegisterItemWizard({
               void save();
             }}
           >
+            {error && <Info tone="error">{error}</Info>}
             <BaselineChecklist
               expectedComponents={selectedCategory?.expectedComponents ?? []}
               categories={categories}
               entries={baseline}
               onChange={setBaseline}
             />
-            {error && <Info tone="error">{error}</Info>}
             <div className="flex justify-between gap-2">
               <Button variant="secondary" onClick={() => setStep(1)}>
                 Atrás

@@ -45,6 +45,8 @@ describe('LoginForm', () => {
     await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
 
     expect(await screen.findByText('Usuario o contraseña incorrectos')).toBeVisible();
+    expect(screen.getByLabelText('Usuario')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Contraseña')).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('toggles password visibility without submitting the form', async () => {

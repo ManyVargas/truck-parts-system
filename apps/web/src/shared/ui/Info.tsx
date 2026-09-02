@@ -6,6 +6,7 @@ export type InfoProps = {
   children: ReactNode;
   tone?: InfoTone;
   title?: string;
+  id?: string;
 };
 
 const toneClasses: Record<InfoTone, string> = {
@@ -15,9 +16,16 @@ const toneClasses: Record<InfoTone, string> = {
   error: 'border-red-200 bg-red-50 text-red-900',
 };
 
-export function Info({ children, tone = 'info', title }: InfoProps) {
+export function Info({ children, tone = 'info', title, id }: InfoProps) {
+  const isError = tone === 'error';
+
   return (
-    <div className={`rounded-lg border px-4 py-3 text-sm ${toneClasses[tone]}`}>
+    <div
+      id={id}
+      role={isError ? 'alert' : undefined}
+      tabIndex={isError ? -1 : undefined}
+      className={`rounded-lg border px-4 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-light/50 ${toneClasses[tone]}`}
+    >
       {title && <p className="mb-1 font-semibold">{title}</p>}
       <div>{children}</div>
     </div>

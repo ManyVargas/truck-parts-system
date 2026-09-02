@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 
 import { Button, Field, Info, Input } from '../../shared/ui';
 import { useAuth } from './useAuth';
@@ -51,6 +51,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const errorId = useId();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -73,7 +74,18 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label="Usuario" htmlFor="username">
+      {error && (
+        <Info id={errorId} tone="error" title="No se pudo iniciar sesión">
+          {error}
+        </Info>
+      )}
+
+      <Field
+        label="Usuario"
+        htmlFor="username"
+        invalid={Boolean(error)}
+        describedBy={error ? errorId : undefined}
+      >
         <Input
           id="username"
           name="username"
@@ -85,7 +97,12 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         />
       </Field>
 
-      <Field label="Contraseña" htmlFor="password">
+      <Field
+        label="Contraseña"
+        htmlFor="password"
+        invalid={Boolean(error)}
+        describedBy={error ? errorId : undefined}
+      >
         <div className="relative">
           <Input
             id="password"
@@ -95,12 +112,12 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             placeholder="demo1234"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="pr-10"
+            className="pr-11"
             required
           />
           <button
             type="button"
-            className="absolute inset-y-0 right-0 flex items-center px-3 text-navy-400 hover:text-navy"
+            className="absolute inset-y-0 right-0 flex min-h-11 min-w-11 items-center justify-center px-3 text-navy-400 hover:text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-light/50"
             onClick={() => setShowPassword((value) => !value)}
             aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
           >
@@ -108,12 +125,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           </button>
         </div>
       </Field>
-
-      {error && (
-        <Info tone="error" title="No se pudo iniciar sesión">
-          {error}
-        </Info>
-      )}
 
       <Button type="submit" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? 'Iniciando sesión…' : 'Iniciar sesión'}

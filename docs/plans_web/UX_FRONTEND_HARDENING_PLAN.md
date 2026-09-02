@@ -263,6 +263,8 @@ Probar al menos:
 
 # Milestone UX-1 — Accesibilidad de componentes base
 
+**Registro de implementación:** [`docs/done_web/UX_FRONTEND_HARDENING/ux-1.md`](../done_web/UX_FRONTEND_HARDENING/ux-1.md)
+
 ## Problema
 
 La aplicación ya utiliza componentes compartidos, pero algunos todavía no implementan completamente patrones de accesibilidad importantes.
@@ -328,32 +330,34 @@ Si se evalúa una dependencia como Radix UI o React Aria:
 
 ## Tareas — Modal
 
-- [ ] Mantener `role="dialog"`.
-- [ ] Mantener `aria-modal="true"`.
-- [ ] Asociar correctamente el título mediante `aria-labelledby`.
-- [ ] Implementar cierre con `Escape`.
-- [ ] Colocar foco inicial dentro del modal.
-- [ ] Mantener el foco dentro del modal mientras está abierto.
-- [ ] Devolver el foco al trigger al cerrar.
-- [ ] Evitar interacción involuntaria con contenido del fondo.
-- [ ] Revisar cierre mediante backdrop.
-- [ ] Confirmar que acciones destructivas no se disparan accidentalmente.
+- [x] Mantener `role="dialog"`.
+- [x] Mantener `aria-modal="true"`.
+- [x] Asociar correctamente el título mediante `aria-labelledby`.
+- [x] Implementar cierre con `Escape`.
+- [x] Colocar foco inicial dentro del modal.
+- [x] Mantener el foco dentro del modal mientras está abierto.
+- [x] Devolver el foco al trigger al cerrar.
+- [x] Evitar interacción involuntaria con contenido del fondo.
+- [x] Revisar cierre mediante backdrop.
+- [x] Confirmar que acciones destructivas no se disparan accidentalmente.
 
 ---
 
 ## Tareas — Field y formularios
 
-- [ ] Asociar mensajes de ayuda mediante `aria-describedby`.
-- [ ] Asociar errores al campo correspondiente.
-- [ ] Añadir `aria-invalid` cuando corresponda.
-- [ ] Mantener labels visibles.
-- [ ] Evitar depender exclusivamente de placeholders.
-- [ ] Revisar mensajes de validación para que indiquen cómo corregir el problema.
-- [ ] Revisar formularios largos para que el primer error pueda localizarse fácilmente.
+- [x] Asociar mensajes de ayuda mediante `aria-describedby`.
+- [x] Asociar errores al campo correspondiente.
+- [x] Añadir `aria-invalid` cuando corresponda.
+- [x] Mantener labels visibles.
+- [x] Evitar depender exclusivamente de placeholders.
+- [x] Revisar mensajes de validación para que indiquen cómo corregir el problema.
+- [x] Revisar formularios largos para que el primer error pueda localizarse fácilmente.
 
 ---
 
 ## Tareas — TabBar
+
+`TabBar` es **Opción A** (filtros de listado en Ventas y OT). Catálogos usa `Tabs` (**Opción B**).
 
 Determinar si el componente representa:
 
@@ -381,12 +385,12 @@ No mantener una semántica incompleta.
 
 ## Tareas — controles pequeños
 
-- [ ] Revisar botones de icono.
-- [ ] Revisar botones de cerrar.
-- [ ] Revisar menús de tres puntos.
-- [ ] Revisar targets táctiles.
-- [ ] Garantizar focus visible.
-- [ ] Añadir `aria-label` cuando el icono no tenga texto visible.
+- [x] Revisar botones de icono.
+- [x] Revisar botones de cerrar.
+- [x] Revisar menús de tres puntos.
+- [x] Revisar targets táctiles.
+- [x] Garantizar focus visible.
+- [x] Añadir `aria-label` cuando el icono no tenga texto visible.
 
 ---
 
@@ -1286,8 +1290,8 @@ El plan completo puede considerarse terminado cuando:
 
 - [x] capabilities controlan correctamente funcionalidades por release;
 - [x] PrototypeControls están aislados de producción;
-- [ ] modales son utilizables completamente con teclado;
-- [ ] formularios comunican errores de manera accesible;
+- [x] modales son utilizables completamente con teclado;
+- [x] formularios comunican errores de manera accesible;
 - [ ] navegación es fácil de escanear;
 - [ ] registro de inventario utiliza progressive disclosure;
 - [ ] estados de inventario tienen jerarquía visual;

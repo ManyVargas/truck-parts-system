@@ -71,6 +71,11 @@ export function CategoryFormModal({
   return (
     <Modal open={open} title={isEdit ? 'Editar categoría' : 'Nueva categoría'} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <Info tone="error" title="No se pudo guardar">
+            {error}
+          </Info>
+        )}
         <Field label="Nombre" htmlFor="category-name">
           <Input
             id="category-name"
@@ -113,12 +118,6 @@ export function CategoryFormModal({
               }
             />
           </Field>
-        )}
-
-        {error && (
-          <Info tone="error" title="No se pudo guardar">
-            {error}
-          </Info>
         )}
 
         <div className="flex justify-end gap-2 pt-2">

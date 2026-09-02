@@ -69,7 +69,7 @@ export function WorkOrdersPage() {
         }
       />
 
-      <TabBar tabs={TABS} value={tab} onChange={setTab} />
+      <TabBar tabs={TABS} value={tab} onChange={setTab} aria-label="Estado de la orden" />
 
       {result.status === 'loading' ? (
         <p className="text-sm text-navy-400" aria-live="polite">

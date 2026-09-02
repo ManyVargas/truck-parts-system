@@ -58,7 +58,7 @@ describe('WorkOrdersPage', () => {
     });
 
     expect(await screen.findByText('OD-DEMO-060')).toBeVisible();
-    await user.click(screen.getByRole('tab', { name: 'En proceso' }));
+    await user.click(screen.getByRole('button', { name: 'En proceso' }));
 
     expect(await screen.findByText('OD-DEMO-060')).toBeVisible();
     expect(screen.queryByText('OD-DEMO-061')).not.toBeInTheDocument();
