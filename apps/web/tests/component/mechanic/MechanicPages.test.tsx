@@ -3,8 +3,9 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { workOrderRepository } from '../../../src/api/repositories';
 import { MechanicMinePage } from '../../../src/features/mechanic/MechanicMinePage';
 import { MechanicOrderView } from '../../../src/features/mechanic/MechanicOrderView';
 import { MechanicPendingPage } from '../../../src/features/mechanic/MechanicPendingPage';
@@ -55,7 +56,7 @@ describe('MechanicPendingPage', () => {
 
     await user.click(screen.getAllByRole('button', { name: 'Tomar orden' })[1]!);
 
-    expect(await screen.findByText('Esta orden de trabajo ya fue tomada')).toBeVisible();
+    expect(await screen.findByText('Otro mecánico ya tomó esta orden. La cola se actualizó.')).toBeVisible();
     await waitFor(() => expect(screen.queryByText('OD-DEMO-062')).not.toBeInTheDocument());
 
     await user.click(screen.getAllByRole('button', { name: 'Tomar orden' })[0]!);
@@ -71,6 +72,7 @@ describe('MechanicMinePage and MechanicOrderView', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     resetMockState();
   });
 
@@ -82,9 +84,28 @@ describe('MechanicMinePage and MechanicOrderView', () => {
     });
 
     expect(await screen.findByRole('heading', { name: 'Mis órdenes' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'En proceso' })).toBeVisible();
     expect(screen.getByText('OD-DEMO-060')).toBeVisible();
     expect(screen.getByText('Turbo Garrett')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Continuar' })).toBeVisible();
     expect(screen.queryByText('OD-DEMO-061')).not.toBeInTheDocument();
+    expect(screen.getByText('Todavía no hay órdenes terminadas.')).toBeVisible();
+  });
+
+  it('treats a completed order as history, not as work to finish', async () => {
+    signInAs('MECHANIC');
+    const assigned = getMockState().workOrders.find((order) => order.id === 'OD-DEMO-060')!;
+    assigned.status = 'COMPLETED';
+
+    renderWithProviders(mechanicRoutes(), {
+      route: '/mechanic/orders/OD-DEMO-060',
+      auth: createAuthValue('MECHANIC'),
+    });
+
+    expect(await screen.findByText('Trabajo terminado. La evidencia queda en el historial.')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Ir a pendientes' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Completar desarme' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Después')).not.toBeInTheDocument();
   });
 
   it('completes dismantling after adding the missing AFTER photo', async () => {
@@ -107,7 +128,51 @@ describe('MechanicMinePage and MechanicOrderView', () => {
     expect(complete).toBeEnabled();
     await user.click(complete);
 
-    expect(await screen.findByText('Orden completada')).toBeVisible();
+    expect(await screen.findByRole('link', { name: 'Ir a pendientes' })).toBeVisible();
     expect(screen.getByText('Completada')).toBeVisible();
+    expect(screen.getByText('Orden completada')).toBeVisible();
+  });
+
+  it('keeps the selected photo and location when a recoverable upload or complete fails', async () => {
+    signInAs('MECHANIC');
+    const user = userEvent.setup();
+    const file = new File(['after'], 'after-turbo.jpg', { type: 'image/jpeg' });
+
+    const addPhoto = vi.spyOn(workOrderRepository, 'addPhoto').mockResolvedValueOnce({
+      ok: false,
+      error: { code: 'INTERNAL', message: 'HTTP 503: /evidence' },
+    });
+
+    renderWithProviders(mechanicRoutes(), {
+      route: '/mechanic/orders/OD-DEMO-060',
+      auth: createAuthValue('MECHANIC'),
+    });
+
+    expect(await screen.findByText('Turbo Garrett')).toBeVisible();
+    await user.type(screen.getByLabelText('Ubicación después del desarme'), 'Patio norte');
+    await user.upload(screen.getByLabelText('Después'), file);
+
+    expect(
+      await screen.findByText(
+        'No hay conexión estable. Lo que ya fotografió o escribió sigue aquí; inténtelo de nuevo.',
+      ),
+    ).toBeVisible();
+    expect(screen.getByText('after-turbo.jpg')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Reintentar subida' })).toBeVisible();
+    expect(screen.getByLabelText('Ubicación después del desarme')).toHaveValue('Patio norte');
+
+    addPhoto.mockRestore();
+    await user.click(screen.getByRole('button', { name: 'Reintentar subida' }));
+    expect(await screen.findByText('Foto de después agregada')).toBeVisible();
+
+    vi.spyOn(workOrderRepository, 'completeDesarme').mockResolvedValueOnce({
+      ok: false,
+      error: { code: 'INTERNAL', message: 'Failed to fetch' },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Completar desarme' }));
+    expect(await screen.findAllByText(/conexión estable/)).not.toHaveLength(0);
+    expect(screen.getByLabelText('Ubicación después del desarme')).toHaveValue('Patio norte');
+    expect(screen.getByText('after-turbo.jpg')).toBeVisible();
   });
 });

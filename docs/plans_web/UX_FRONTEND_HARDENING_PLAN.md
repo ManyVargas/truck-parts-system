@@ -894,6 +894,8 @@ sobre:
 
 # Milestone UX-6 — Experiencia del mecánico
 
+**Registro de implementación:** [`docs/done_web/UX_FRONTEND_HARDENING/ux-6.md`](../done_web/UX_FRONTEND_HARDENING/ux-6.md)
+
 ## Situación actual
 
 La experiencia del mecánico es una de las áreas mejor orientadas del frontend.
@@ -933,18 +935,18 @@ Realizar un hardening orientado al uso real en taller:
 
 ## Tareas
 
-- [ ] Revisar tamaño de targets táctiles.
-- [ ] Revisar legibilidad en teléfonos pequeños.
-- [ ] Revisar comportamiento con teclado móvil.
-- [ ] Revisar subida de fotografías.
-- [ ] Mostrar progreso de subida cuando corresponda.
-- [ ] Evitar perder fotos/notas por un error recuperable.
-- [ ] Mantener cliente, factura, precios y datos financieros fuera de la experiencia.
-- [ ] Asegurar que la acción principal de cada orden sea evidente.
-- [ ] Revisar estados vacíos.
-- [ ] Revisar órdenes ya completadas.
-- [ ] Revisar mensajes de error con conexión intermitente.
-- [ ] Mantener bottom navigation simple.
+- [x] Revisar tamaño de targets táctiles.
+- [x] Revisar legibilidad en teléfonos pequeños.
+- [x] Revisar comportamiento con teclado móvil.
+- [x] Revisar subida de fotografías.
+- [x] Mostrar progreso de subida cuando corresponda.
+- [x] Evitar perder fotos/notas por un error recuperable.
+- [x] Mantener cliente, factura, precios y datos financieros fuera de la experiencia.
+- [x] Asegurar que la acción principal de cada orden sea evidente.
+- [x] Revisar estados vacíos.
+- [x] Revisar órdenes ya completadas.
+- [x] Revisar mensajes de error con conexión intermitente.
+- [x] Mantener bottom navigation simple.
 
 ---
 
@@ -1305,7 +1307,7 @@ El plan completo puede considerarse terminado cuando:
 - [x] estados de inventario tienen jerarquía visual;
 - [x] tablas siguen una interacción consistente;
 - [x] POS previene errores comunes;
-- [ ] mecánico conserva una experiencia simple y mobile-first;
+- [x] mecánico conserva una experiencia simple y mobile-first;
 - [ ] Admin/Seller funcionan correctamente en laptops;
 - [ ] los escenarios principales han sido probados manualmente;
 - [ ] no se alteraron reglas de negocio fuera del alcance;

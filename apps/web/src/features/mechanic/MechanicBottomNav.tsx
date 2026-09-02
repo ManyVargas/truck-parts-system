@@ -15,7 +15,7 @@ export function MechanicBottomNav() {
 
   return (
     <nav
-      className={`sticky bottom-0 grid ${columns} border-t border-navy-100 bg-white`}
+      className={`grid shrink-0 ${columns} border-t border-navy-100 bg-white pb-[max(0.25rem,env(safe-area-inset-bottom))]`}
       aria-label="Navegación mecánico"
     >
       {items.map((item) => (
@@ -23,7 +23,7 @@ export function MechanicBottomNav() {
           key={item.id}
           to={item.path}
           className={({ isActive }) =>
-            `min-h-14 px-2 py-3 text-center text-sm font-medium ${
+            `min-h-14 px-2 py-3 text-center text-base font-medium ${
               isActive ? 'text-brand' : 'text-navy-400'
             }`
           }

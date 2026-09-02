@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { MechanicWorkOrderView } from '../../api/contracts/entities';
 import { WOStatusChip, WOTypeChip } from '../../shared/domain';
 import { Button, Card, Mono } from '../../shared/ui';
+import { mechanicCardActionLabel } from './mechanic-copy';
 
 export type MechanicOrderCardProps = {
   order: MechanicWorkOrderView;
@@ -23,15 +24,18 @@ function contextLine(order: MechanicWorkOrderView): string {
 }
 
 export function MechanicOrderCard({ order, isMutating, onTake }: MechanicOrderCardProps) {
+  const canTakeHere = Boolean(order.actions.canTake && onTake);
+  const actionLabel = mechanicCardActionLabel(order, canTakeHere);
+
   return (
     <Card className="space-y-3" padding="md">
       <div className="flex items-start justify-between gap-2">
-        <Link to={order.href} className="min-w-0">
+        <Link to={order.href} className="min-h-11 min-w-0">
           <p className="font-semibold text-brand">
-            <Mono>{order.id}</Mono>
+            <Mono className="text-base">{order.id}</Mono>
           </p>
-          <p className="mt-1 text-sm text-navy">{order.pieceName}</p>
-          <p className="text-xs text-navy-400">
+          <p className="mt-1 text-base text-navy">{order.pieceName}</p>
+          <p className="text-sm text-navy-400">
             <Mono>{order.pieceId}</Mono>
           </p>
         </Link>
@@ -41,26 +45,26 @@ export function MechanicOrderCard({ order, isMutating, onTake }: MechanicOrderCa
         </div>
       </div>
 
-      <p className="text-sm text-navy-400">{contextLine(order)}</p>
+      <p className="text-sm text-navy">{contextLine(order)}</p>
       {order.effectiveLocation && (
-        <p className="text-xs text-navy-400">Ubicación: {order.effectiveLocation}</p>
+        <p className="text-sm text-navy-400">Ubicación: {order.effectiveLocation}</p>
       )}
 
-      {order.actions.canTake && onTake ? (
+      {canTakeHere ? (
         <Button
           size="lg"
-          className="min-h-12 w-full"
+          className="w-full"
           disabled={isMutating}
-          onClick={() => onTake(order.id)}
+          onClick={() => onTake?.(order.id)}
         >
-          Tomar orden
+          {isMutating ? 'Tomando…' : actionLabel}
         </Button>
       ) : (
         <Link
           to={order.href}
-          className="block min-h-12 rounded-lg border border-navy-200 py-3 text-center text-sm font-medium text-navy hover:bg-navy-50"
+          className="block min-h-12 rounded-lg border border-navy-200 py-3 text-center text-base font-medium text-navy hover:bg-navy-50"
         >
-          Ver orden
+          {actionLabel}
         </Link>
       )}
     </Card>

@@ -65,7 +65,7 @@ type DetailQuery =
 export function useMechanicOrder(id: string | undefined) {
   const [reloadToken, setReloadToken] = useState(0);
   const [result, setResult] = useState<DetailQuery>({ status: 'loading' });
-  const [isMutating, setIsMutating] = useState(false);
+  const [mutation, setMutation] = useState<'idle' | 'photo' | 'complete'>('idle');
 
   useEffect(() => {
     if (!id) {
@@ -110,9 +110,9 @@ export function useMechanicOrder(id: string | undefined) {
 
   const addPhoto = useCallback(
     async (input: AddWorkOrderPhotoInput): Promise<Result<MechanicWorkOrderView>> => {
-      setIsMutating(true);
+      setMutation('photo');
       const response = await workOrderRepository.addPhoto(input);
-      setIsMutating(false);
+      setMutation('idle');
       if (response.ok) {
         setResult({ status: 'ready', order: response.value });
       }
@@ -126,12 +126,12 @@ export function useMechanicOrder(id: string | undefined) {
       input: CompleteWorkOrderInput,
       type: WorkOrderType,
     ): Promise<Result<MechanicWorkOrderView>> => {
-      setIsMutating(true);
+      setMutation('complete');
       const response =
         type === 'INSTALLATION'
           ? await workOrderRepository.completeInstalacion(input)
           : await workOrderRepository.completeDesarme(input);
-      setIsMutating(false);
+      setMutation('idle');
       if (response.ok) {
         setResult({ status: 'ready', order: response.value });
       }
@@ -140,5 +140,12 @@ export function useMechanicOrder(id: string | undefined) {
     [],
   );
 
-  return { result, isMutating, addPhoto, complete, reload };
+  return {
+    result,
+    isMutating: mutation !== 'idle',
+    isCompleting: mutation === 'complete',
+    addPhoto,
+    complete,
+    reload,
+  };
 }

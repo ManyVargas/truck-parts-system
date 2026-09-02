@@ -5,7 +5,7 @@ import { useAuth } from '../../features/auth/useAuth';
 import { resetDemoData } from '../../mocks/demo-controls';
 import { useAppCapabilities } from '../config/CapabilitiesProvider';
 import { Button, useToast } from '../ui';
-import { ScenarioRunner } from './ScenarioRunner';
+// import { ScenarioRunner } from './ScenarioRunner';
 
 /**
  * Dev-only controls to reset mock data. Never bypasses login — session is cleared on reset.
@@ -43,6 +43,10 @@ export function DemoControls() {
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
+      {/* Selector de tipos de escenario + botón "Cargar escenario".
+          Para reactivar: descomentar el import de ScenarioRunner (arriba)
+          y este bloque. El componente vive en ScenarioRunner.tsx. */}
+      {/*
       <ScenarioRunner
         disabled={isResetting}
         onError={(message) => pushToast(message, 'error')}
@@ -50,6 +54,7 @@ export function DemoControls() {
           await finishReset(message);
         }}
       />
+      */}
       <Button variant="secondary" size="sm" onClick={() => void handleReset()} disabled={isResetting}>
         {isResetting ? 'Reiniciando…' : 'Reiniciar datos demo'}
       </Button>
