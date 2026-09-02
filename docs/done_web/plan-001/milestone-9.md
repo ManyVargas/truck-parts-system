@@ -1,11 +1,11 @@
-# Milestone 9 — WM9: Órdenes de trabajo (escritorio)
+﻿# Milestone 9 — WM9: Órdenes de trabajo (escritorio)
 
 | Campo          | Valor                                                          |
 | -------------- | -------------------------------------------------------------- |
 | **ID plan**    | WM9                                                            |
 | **Estado**     | Completado                                                     |
 | **Fecha**      | 2026-09-01                                                     |
-| **Referencia** | [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM9 |
+| **Referencia** | [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM9 |
 | **Alcance**    | Listado, detalle, OT manual, reasignación y cancelación admin  |
 | **Siguiente**  | WM10 — Experiencia Mecánico (móvil)                            |
 

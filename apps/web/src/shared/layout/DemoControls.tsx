@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../features/auth/useAuth';
 import { resetDemoData } from '../../mocks/demo-controls';
+import { useAppCapabilities } from '../config/CapabilitiesProvider';
 import { Button, useToast } from '../ui';
 import { ScenarioRunner } from './ScenarioRunner';
 
@@ -14,10 +15,9 @@ export function DemoControls() {
   const { logout } = useAuth();
   const { pushToast } = useToast();
   const [isResetting, setIsResetting] = useState(false);
+  const { prototypeControls } = useAppCapabilities();
 
-  const isEnabled = import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO_CONTROLS === 'true';
-
-  if (!isEnabled) {
+  if (!prototypeControls) {
     return null;
   }
 

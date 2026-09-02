@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ItemAdminActions } from '../../../src/features/inventory/ItemAdminActions';
+import { CAPABILITY_PRESETS } from '../../../src/shared/config/capabilities';
 import { createInitialState } from '../../../src/mocks/data/seed';
 import { backfillPendingExpectedComponents } from '../../../src/mocks/services/catalogs-reviews';
 import { buildItemDetail } from '../../../src/mocks/services/inventory-catalog';
@@ -125,5 +126,15 @@ describe('ItemAdminActions', () => {
       },
       baseline: [{ expectedComponentName: 'Alternador', status: 'MISSING' }],
     });
+  });
+
+  it('hides manual work-order creation when workOrders is disabled', () => {
+    const detail = buildItemDetail(createInitialState(), 'FLT-001')!;
+
+    renderWithProviders(<ItemAdminActions detail={detail} isMutating={false} {...handlers()} />, {
+      capabilities: CAPABILITY_PRESETS['release-4'],
+    });
+
+    expect(screen.queryByRole('button', { name: 'Orden de trabajo manual' })).not.toBeInTheDocument();
   });
 });

@@ -1,4 +1,5 @@
 import { err, ok, type Result } from '../shared/auth/types';
+import { getAppCapabilities } from '../shared/config/capabilities';
 import { writeLastDemoScenarioHint } from '../shared/config/demo-scenario-hint';
 import { applyDemoScenario, DEMO_SCENARIOS, type DemoScenario } from './scenarios';
 import { clearSession } from './session';
@@ -7,10 +8,10 @@ import { getMockState, resetMockState } from './state';
 export type { DemoScenario } from './scenarios';
 export { DEMO_SCENARIOS } from './scenarios';
 
-const DEV_ONLY_MESSAGE = 'Los controles demo solo están disponibles en modo desarrollo.';
+const DEV_ONLY_MESSAGE = 'Los controles demo solo están disponibles cuando prototypeControls está habilitado.';
 
 function isDemoControlsEnabled(): boolean {
-  return import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO_CONTROLS === 'true';
+  return getAppCapabilities().prototypeControls;
 }
 
 /** Restores seed data and clears the mock session. Does not bypass login. */

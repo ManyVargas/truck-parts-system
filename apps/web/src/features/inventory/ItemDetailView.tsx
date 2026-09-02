@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { ItemDetailView } from '../../api/contracts/inventory';
+import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
 import { Card, Mono, SectionTitle, money } from '../../shared/ui';
 import { HierarchyTree } from './HierarchyTree';
 import { PhotoGrid } from './PhotoGrid';
@@ -26,6 +27,7 @@ export function ItemDetailViewPanel({
   detail: ItemDetailView;
   actions: ReactNode;
 }) {
+  const { workOrders } = useAppCapabilities();
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -108,23 +110,25 @@ export function ItemDetailViewPanel({
           {detail.notes && <p className="mt-3 text-sm text-navy-400">{detail.notes}</p>}
         </Card>
 
-        <Card>
-          <SectionTitle title="Órdenes de trabajo" />
-          {detail.workOrders.length === 0 ? (
-            <p className="text-sm text-navy-400">Sin órdenes de trabajo ligadas a esta pieza.</p>
-          ) : (
-            <ul className="space-y-2 text-sm">
-              {detail.workOrders.map((order) => (
-                <li key={order.id} className="rounded-lg bg-navy-50 px-3 py-2">
-                  <Mono>{order.id}</Mono>
-                  <span className="ml-2">
-                    {WO_TYPE[order.type]} · {WO_STATUS[order.status]}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        {workOrders && (
+          <Card>
+            <SectionTitle title="Órdenes de trabajo" />
+            {detail.workOrders.length === 0 ? (
+              <p className="text-sm text-navy-400">Sin órdenes de trabajo ligadas a esta pieza.</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {detail.workOrders.map((order) => (
+                  <li key={order.id} className="rounded-lg bg-navy-50 px-3 py-2">
+                    <Mono>{order.id}</Mono>
+                    <span className="ml-2">
+                      {WO_TYPE[order.type]} · {WO_STATUS[order.status]}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        )}
       </div>
 
       <Card>

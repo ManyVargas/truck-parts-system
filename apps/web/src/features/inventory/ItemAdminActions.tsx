@@ -7,6 +7,7 @@ import type {
   RegisterItemInput,
 } from '../../api/contracts/inventory';
 import { Button, Field, Info, Input, Modal, Select, Textarea } from '../../shared/ui';
+import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
 import { BaselineChecklist } from './BaselineChecklist';
 
 type ItemAdminActionsProps = {
@@ -44,6 +45,7 @@ export function ItemAdminActions({
   onResolveCatalogReview,
   onCreateWorkOrder,
 }: ItemAdminActionsProps) {
+  const { workOrders, hierarchy } = useAppCapabilities();
   const [error, setError] = useState<string | null>(null);
   const [costOpen, setCostOpen] = useState(false);
   const [baselineOpen, setBaselineOpen] = useState(false);
@@ -60,7 +62,7 @@ export function ItemAdminActions({
           {error}
         </Info>
       )}
-      {detail.pendingCatalogReviews.length > 0 && (
+      {hierarchy && detail.pendingCatalogReviews.length > 0 && (
         <div className="rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm text-navy">
           <p className="font-medium">Validar componentes nuevos del catálogo</p>
           <p className="mt-1 text-navy-400">
@@ -187,7 +189,7 @@ export function ItemAdminActions({
         />
       )}
       <div className="flex flex-wrap gap-2">
-        {detail.isAssembly && (
+        {hierarchy && detail.isAssembly && (
           <Button
             variant="secondary"
             size="sm"
@@ -199,17 +201,19 @@ export function ItemAdminActions({
             {flagOnThisItem ? 'Quitar No desarmar' : 'Aplicar No desarmar'}
           </Button>
         )}
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={isMutating}
-          onClick={() => {
-            setError(null);
-            setWoOpen(true);
-          }}
-        >
-          Orden de trabajo manual
-        </Button>
+        {workOrders && (
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={isMutating}
+            onClick={() => {
+              setError(null);
+              setWoOpen(true);
+            }}
+          >
+            Orden de trabajo manual
+          </Button>
+        )}
         <Button
           variant="secondary"
           size="sm"
@@ -221,7 +225,8 @@ export function ItemAdminActions({
         >
           Corregir costo
         </Button>
-        {detail.missingComponents.some((entry) => entry.origin === 'MISSING_AT_RECEIPT') && (
+        {hierarchy &&
+          detail.missingComponents.some((entry) => entry.origin === 'MISSING_AT_RECEIPT') && (
           <Button
             variant="secondary"
             size="sm"
@@ -308,7 +313,7 @@ export function ItemAdminActions({
       </Modal>
 
       <Modal
-        open={woOpen}
+        open={woOpen && workOrders}
         title="Crear orden de trabajo manual"
         onClose={() => {
           setError(null);

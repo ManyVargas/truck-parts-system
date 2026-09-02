@@ -1,11 +1,11 @@
-# Milestone 2 — WM2: Autenticación, shell y navegación por rol
+﻿# Milestone 2 — WM2: Autenticación, shell y navegación por rol
 
 | Campo | Valor |
 |---|---|
 | **ID plan** | WM2 |
 | **Estado** | Completado |
 | **Fecha** | 2026-08-27 |
-| **Referencia** | [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM2 |
+| **Referencia** | [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM2 |
 | **Alcance** | Login, sesión mock, shell desktop/mecánico, guards UX, policies en mutaciones |
 | **Siguiente** | WM3 — Dashboard operativo |
 
@@ -212,6 +212,6 @@ La ruta `/dashboard` ya existe como placeholder; reemplazar el elemento en `rout
 
 ## 10. Referencias
 
-- [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM2
-- [`docs/done_web/milestone-1.md`](./milestone-1.md)
-- [`docs/ROLES_AND_PERMISSIONS.md`](../ROLES_AND_PERMISSIONS.md)
+- [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM2
+- [`docs/done_web/plan-001/milestone-1.md`](./milestone-1.md)
+- [`docs/ROLES_AND_PERMISSIONS.md`](../../ROLES_AND_PERMISSIONS.md)

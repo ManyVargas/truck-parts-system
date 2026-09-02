@@ -9,6 +9,7 @@ import {
   layoutAccessDecision,
   navItemsForRole,
 } from '../../../../src/shared/layout/navigation';
+import { CAPABILITY_PRESETS } from '../../../../src/shared/config/capabilities';
 
 describe('role navigation', () => {
   it('shows nine desktop entries to administrators and four to sellers', () => {
@@ -53,6 +54,15 @@ describe('role navigation', () => {
     expect(isRouteAllowedForRole('/work-orders/OD-DEMO-060', 'SELLER')).toBe(false);
     expect(isRouteAllowedForRole('/users', 'SELLER')).toBe(false);
     expect(isRouteAllowedForRole('/profitability', 'ADMINISTRATOR')).toBe(true);
+  });
+
+  it('blocks a role-permitted URL when its capability is disabled', () => {
+    expect(isRouteAllowedForRole('/inventory', 'ADMINISTRATOR', CAPABILITY_PRESETS['release-1'])).toBe(
+      false,
+    );
+    expect(isRouteAllowedForRole('/users', 'ADMINISTRATOR', CAPABILITY_PRESETS['release-1'])).toBe(
+      true,
+    );
   });
 });
 

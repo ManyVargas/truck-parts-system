@@ -3,6 +3,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 import type { Category, ItemCondition } from '../../api/contracts/entities';
 import type { AssemblyBaselineEntry, RegisterItemInput } from '../../api/contracts/inventory';
 import { inventoryRepository } from '../../api/repositories';
+import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
 import { Button, Field, Info, Input, Modal, Select, Textarea } from '../../shared/ui';
 import { BaselineChecklist } from './BaselineChecklist';
 import { PhotoEditor } from './PhotoEditor';
@@ -44,6 +45,7 @@ export function RegisterItemWizard({
   onClose,
   onRegistered,
 }: RegisterItemWizardProps) {
+  const { hierarchy } = useAppCapabilities();
   const [mode, setMode] = useState<RegistrationMode>('INDIVIDUAL');
   const [step, setStep] = useState<1 | 2>(1);
   const [item, setItem] = useState<RegisterItemInput>(EMPTY_ITEM);
@@ -54,9 +56,12 @@ export function RegisterItemWizard({
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
 
+  const visibleCategories = hierarchy
+    ? categories
+    : categories.filter((category) => !category.isAssembly);
   const selectedCategory = useMemo(
-    () => categories.find((category) => category.id === item.categoryId),
-    [categories, item.categoryId],
+    () => visibleCategories.find((category) => category.id === item.categoryId),
+    [visibleCategories, item.categoryId],
   );
 
   const patchItem = (patch: Partial<RegisterItemInput>) =>
@@ -108,7 +113,7 @@ export function RegisterItemWizard({
   const handleFirstStep = (event: FormEvent) => {
     event.preventDefault();
     setError(undefined);
-    if (mode === 'INDIVIDUAL' && selectedCategory?.isAssembly) {
+    if (hierarchy && mode === 'INDIVIDUAL' && selectedCategory?.isAssembly) {
       const expected = selectedCategory.expectedComponents ?? [];
       setBaseline(
         expected.map((expectedComponentName) => ({
@@ -176,7 +181,7 @@ export function RegisterItemWizard({
                   required
                 >
                   <option value="">Seleccione…</option>
-                  {categories.map((category) => (
+                  {visibleCategories.map((category) => (
                     <option
                       key={category.id}
                       value={category.id}
@@ -332,7 +337,7 @@ export function RegisterItemWizard({
                 Cancelar
               </Button>
               <Button type="submit" disabled={saving}>
-                {selectedCategory?.isAssembly && mode === 'INDIVIDUAL'
+                {hierarchy && selectedCategory?.isAssembly && mode === 'INDIVIDUAL'
                   ? 'Continuar'
                   : saving
                     ? 'Guardando…'

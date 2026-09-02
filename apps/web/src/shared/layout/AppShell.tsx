@@ -1,20 +1,26 @@
 import { Outlet } from 'react-router-dom';
 
 import { useAuth } from '../../features/auth/useAuth';
+import { APP_NAME } from '../config/brand';
+import { useAppCapabilities } from '../config/CapabilitiesProvider';
 import { Logo } from '../ui';
 import { DemoControls } from './DemoControls';
 import { RoleNav } from './RoleNav';
 import { UserMenu } from './UserMenu';
+import { navItemsForRole } from './navigation';
 
 /**
  * Desktop shell for Administrator and Seller — sidebar + header + content outlet.
  */
 export function AppShell() {
   const { user, logout } = useAuth();
+  const capabilities = useAppCapabilities();
 
   if (!user) {
     return null;
   }
+
+  const sectionCount = navItemsForRole(user.role, capabilities).length;
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -26,13 +32,15 @@ export function AppShell() {
         <RoleNav role={user.role} />
 
         <p className="border-t border-shell-border px-4 py-3 text-xs text-white/50">
-          {user.role === 'ADMINISTRATOR' ? '9 secciones' : '4 secciones'}
+          {sectionCount} {sectionCount === 1 ? 'sección' : 'secciones'}
         </p>
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface text-navy">
         <header className="flex shrink-0 items-center justify-between border-b border-navy-100 bg-white px-4 py-3 sm:px-6">
-          <p className="text-sm text-navy-400">Prototipo SoloCamiones</p>
+          <p className="text-sm text-navy-400">
+            {capabilities.prototypeControls ? `Prototipo ${APP_NAME}` : APP_NAME}
+          </p>
           <div className="flex items-center gap-3">
             <DemoControls />
             <UserMenu user={user} onLogout={logout} />

@@ -1,18 +1,24 @@
 import { NavLink } from 'react-router-dom';
 
-const MECHANIC_NAV = [
-  { id: 'pending', label: 'Pendientes', path: '/mechanic/pending' },
-  { id: 'mine', label: 'Mis órdenes', path: '/mechanic/mine' },
+import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
+
+const MECHANIC_NAV: { id: string; label: string; path: string; requiresWorkOrders?: boolean }[] = [
+  { id: 'pending', label: 'Pendientes', path: '/mechanic/pending', requiresWorkOrders: true },
+  { id: 'mine', label: 'Mis órdenes', path: '/mechanic/mine', requiresWorkOrders: true },
   { id: 'profile', label: 'Perfil', path: '/mechanic/profile' },
-] as const;
+];
 
 export function MechanicBottomNav() {
+  const { workOrders } = useAppCapabilities();
+  const items = MECHANIC_NAV.filter((item) => !item.requiresWorkOrders || workOrders);
+  const columns = items.length === 1 ? 'grid-cols-1' : items.length === 2 ? 'grid-cols-2' : 'grid-cols-3';
+
   return (
     <nav
-      className="sticky bottom-0 grid grid-cols-3 border-t border-navy-100 bg-white"
+      className={`sticky bottom-0 grid ${columns} border-t border-navy-100 bg-white`}
       aria-label="Navegación mecánico"
     >
-      {MECHANIC_NAV.map((item) => (
+      {items.map((item) => (
         <NavLink
           key={item.id}
           to={item.path}

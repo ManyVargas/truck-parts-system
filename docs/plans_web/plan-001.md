@@ -314,7 +314,7 @@ flowchart TD
 
 **Paralelizable tras WM2:** WM3, WM4, WM11 (parcial)
 
-**Ciclo por milestone:** plan → implementación → verificación manual → actualizar `[../done_web/](../done_web/)` → commit
+**Ciclo por milestone:** plan → implementación → verificación manual → actualizar [`../done_web/plan-001/`](../done_web/plan-001/) → commit
 
 ---
 

@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 
 import { UnauthorizedPage } from '../../features/auth/UnauthorizedPage';
 import { useAuth } from '../../features/auth/useAuth';
+import { useAppCapabilities } from '../config/CapabilitiesProvider';
 import { isKnownDesktopRoute, isRouteAllowedForRole } from './navigation';
 
 /**
@@ -11,6 +12,7 @@ import { isKnownDesktopRoute, isRouteAllowedForRole } from './navigation';
 export function RouteAccessGuard() {
   const { user, isLoading } = useAuth();
   const location = useLocation();
+  const capabilities = useAppCapabilities();
 
   if (isLoading) {
     return (
@@ -28,7 +30,7 @@ export function RouteAccessGuard() {
     return <Outlet />;
   }
 
-  if (!isRouteAllowedForRole(location.pathname, user.role)) {
+  if (!isRouteAllowedForRole(location.pathname, user.role, capabilities)) {
     return <UnauthorizedPage attemptedPath={location.pathname} />;
   }
 

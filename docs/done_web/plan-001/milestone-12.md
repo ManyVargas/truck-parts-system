@@ -1,11 +1,11 @@
-# Milestone 12 — WM12: Rentabilidad, recuperación, escenarios demo y preparación API
+﻿# Milestone 12 — WM12: Rentabilidad, recuperación, escenarios demo y preparación API
 
 | Campo          | Valor                                                           |
 | -------------- | --------------------------------------------------------------- |
 | **ID plan**    | WM12                                                            |
 | **Estado**     | Completado                                                      |
 | **Fecha**      | 2026-09-01                                                      |
-| **Referencia** | [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM12 |
+| **Referencia** | [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM12 |
 | **Alcance**    | `/profitability`, `/recovery`, 12 escenarios demo, `VITE_USE_MOCK_API` + `Http*Repository` |
 | **Siguiente**  | Integración HTTP milestone a milestone cuando existan los endpoints API |
 
@@ -103,4 +103,4 @@ No hay herramientas de navegador en esta sesión; la UI se verificó con pruebas
 
 ## 8. Handoff
 
-El prototipo web del plan 001 está cerrado. El swap a API real se hace repositorio a repositorio: `VITE_USE_MOCK_API=false` ya selecciona `Http*Repository`; implementar esos métodos contra Express cuando existan M10+.
+El prototipo web del plan 001 está cerrado. Los registros de implementación posteriores de frontend (hardening UX) viven en [`docs/done_web/UX_FRONTEND_HARDENING/`](../UX_FRONTEND_HARDENING/). El swap a API real se hace repositorio a repositorio: `VITE_USE_MOCK_API=false` ya selecciona `Http*Repository`; implementar esos métodos contra Express cuando existan M10+.

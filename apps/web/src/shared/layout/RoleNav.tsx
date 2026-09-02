@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 
 import type { Role } from '../../api/contracts/entities';
+import { useAppCapabilities } from '../config/CapabilitiesProvider';
 import { isNavItemActive, navItemsForRole } from './navigation';
 
 export type RoleNavProps = {
@@ -9,7 +10,7 @@ export type RoleNavProps = {
 
 export function RoleNav({ role }: RoleNavProps) {
   const location = useLocation();
-  const items = navItemsForRole(role);
+  const items = navItemsForRole(role, useAppCapabilities());
 
   return (
     <nav className="flex-1 space-y-1 p-3" aria-label="Navegación principal">

@@ -1,11 +1,11 @@
-# Milestone 10 — WM10: Experiencia Mecánico (móvil)
+﻿# Milestone 10 — WM10: Experiencia Mecánico (móvil)
 
 | Campo          | Valor                                                           |
 | -------------- | --------------------------------------------------------------- |
 | **ID plan**    | WM10                                                            |
 | **Estado**     | Completado                                                      |
 | **Fecha**      | 2026-09-01                                                      |
-| **Referencia** | [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM10 |
+| **Referencia** | [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM10 |
 | **Alcance**    | Cola móvil, claim atómico, evidencia BEFORE/AFTER, completar desarme/instalación |
 | **Siguiente**  | WM11 — Catálogos y usuarios (admin)                             |
 

@@ -1,11 +1,11 @@
-# Milestone 8 — WM8: Punto de venta y borradores (POS)
+﻿# Milestone 8 — WM8: Punto de venta y borradores (POS)
 
 | Campo          | Valor                                                          |
 | -------------- | -------------------------------------------------------------- |
 | **ID plan**    | WM8                                                            |
 | **Estado**     | Completado                                                     |
 | **Fecha**      | 2026-09-01                                                     |
-| **Referencia** | [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM8 |
+| **Referencia** | [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM8 |
 | **Alcance**    | Editor de borrador, 6 tipos de línea, ITBIS fiscal, confirmación atómica |
 | **Siguiente**  | WM9 — Órdenes de trabajo (escritorio)                          |
 

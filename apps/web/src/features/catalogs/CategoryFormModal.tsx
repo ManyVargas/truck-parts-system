@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 
 import type { SaveCategoryInput } from '../../api/contracts/catalogs';
 import type { Category } from '../../api/contracts/entities';
+import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
 import { Button, Field, Info, Input, Modal, Textarea } from '../../shared/ui';
 
 export type CategoryFormModalProps = {
@@ -33,6 +34,7 @@ export function CategoryFormModal({
   onClose,
   onSubmit,
 }: CategoryFormModalProps) {
+  const { hierarchy } = useAppCapabilities();
   const [fields, setFields] = useState<FormFields>(EMPTY_FIELDS);
   const isEdit = category != null;
 
@@ -58,10 +60,11 @@ export function CategoryFormModal({
     onSubmit({
       id: category?.id,
       name: fields.name,
-      isAssembly: fields.isAssembly,
-      expectedComponents: fields.isAssembly
-        ? fields.expectedComponentsText.split('\n')
-        : undefined,
+      isAssembly: hierarchy ? fields.isAssembly : false,
+      expectedComponents:
+        hierarchy && fields.isAssembly
+          ? fields.expectedComponentsText.split('\n')
+          : undefined,
     });
   }
 
@@ -78,19 +81,21 @@ export function CategoryFormModal({
           />
         </Field>
 
-        <label htmlFor="category-assembly" className="flex items-center gap-2 text-sm text-navy">
-          <input
-            id="category-assembly"
-            type="checkbox"
-            checked={fields.isAssembly}
-            onChange={(event) =>
-              setFields((current) => ({ ...current, isAssembly: event.target.checked }))
-            }
-          />
-          Es ensamblaje (requiere componentes esperados)
-        </label>
+        {hierarchy && (
+          <label htmlFor="category-assembly" className="flex items-center gap-2 text-sm text-navy">
+            <input
+              id="category-assembly"
+              type="checkbox"
+              checked={fields.isAssembly}
+              onChange={(event) =>
+                setFields((current) => ({ ...current, isAssembly: event.target.checked }))
+              }
+            />
+            Es ensamblaje (requiere componentes esperados)
+          </label>
+        )}
 
-        {fields.isAssembly && (
+        {hierarchy && fields.isAssembly && (
           <Field
             label="Componentes esperados"
             htmlFor="category-expected"

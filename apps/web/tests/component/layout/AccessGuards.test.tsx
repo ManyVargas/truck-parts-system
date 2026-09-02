@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { GuestRoute } from '../../../src/shared/layout/GuestRoute';
 import { ProtectedRoute } from '../../../src/shared/layout/ProtectedRoute';
 import { RouteAccessGuard } from '../../../src/shared/layout/RouteAccessGuard';
+import { CAPABILITY_PRESETS } from '../../../src/shared/config/capabilities';
 import { createAuthValue, renderWithProviders } from '../../support/render';
 import '../../support/dom';
 
@@ -101,5 +102,23 @@ describe('access guards', () => {
 
     expect(await screen.findByRole('heading', { name: 'Acceso no autorizado' })).toBeVisible();
     expect(screen.queryByText('Gestión de usuarios')).not.toBeInTheDocument();
+  });
+
+  it('blocks a known route when its capability is disabled even for an administrator', async () => {
+    renderWithProviders(
+      <Routes>
+        <Route element={<RouteAccessGuard />}>
+          <Route path="/inventory" element={<div>Inventario visible</div>} />
+        </Route>
+      </Routes>,
+      {
+        route: '/inventory',
+        auth: createAuthValue('ADMINISTRATOR'),
+        capabilities: CAPABILITY_PRESETS['release-1'],
+      },
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Acceso no autorizado' })).toBeVisible();
+    expect(screen.queryByText('Inventario visible')).not.toBeInTheDocument();
   });
 });

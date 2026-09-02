@@ -1,11 +1,11 @@
-# Milestone 5 — WM5: Inventario listado, búsqueda y detalle
+﻿# Milestone 5 — WM5: Inventario listado, búsqueda y detalle
 
 | Campo          | Valor                                                                                                           |
 | -------------- | --------------------------------------------------------------------------------------------------------------- |
 | **ID plan**    | WM5                                                                                                             |
 | **Estado**     | Completado                                                                                                      |
 | **Fecha**      | 2026-08-28                                                                                                      |
-| **Referencia** | [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM5                                                  |
+| **Referencia** | [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM5                                                  |
 | **Alcance**    | Catálogo unificado (piezas + cantidad), búsqueda, detalle, chips de dominio, agregar a borrador, acciones admin |
 | **Siguiente**  | WM6 — Registro de inventario                                                                                    |
 
@@ -170,8 +170,8 @@ Listo para el wizard `Registrar inventario` desde Inventario. Catálogo y detall
 
 ## 10. Referencias
 
-- [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM5
-- [`docs/FEATURES/02_INVENTORY.md`](../FEATURES/02_INVENTORY.md)
-- [`docs/FEATURES/03_QUANTITY_STOCK.md`](../FEATURES/03_QUANTITY_STOCK.md)
-- [`docs/FEATURES/05_HIERARCHY_AND_BASELINE.md`](../FEATURES/05_HIERARCHY_AND_BASELINE.md)
-- [`docs/FEATURES/07_SEARCH_LOCATION_AND_PHOTOS.md`](../FEATURES/07_SEARCH_LOCATION_AND_PHOTOS.md)
+- [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM5
+- [`docs/FEATURES/02_INVENTORY.md`](../../FEATURES/02_INVENTORY.md)
+- [`docs/FEATURES/03_QUANTITY_STOCK.md`](../../FEATURES/03_QUANTITY_STOCK.md)
+- [`docs/FEATURES/05_HIERARCHY_AND_BASELINE.md`](../../FEATURES/05_HIERARCHY_AND_BASELINE.md)
+- [`docs/FEATURES/07_SEARCH_LOCATION_AND_PHOTOS.md`](../../FEATURES/07_SEARCH_LOCATION_AND_PHOTOS.md)

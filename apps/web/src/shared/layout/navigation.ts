@@ -1,13 +1,20 @@
 import type { Role } from '../../api/contracts/entities';
+import {
+  getAppCapabilities,
+  type AppCapabilities,
+  type AppCapability,
+} from '../config/capabilities';
 
 export type NavItem = {
   id: string;
   label: string;
   path: string;
   roles: Role[];
+  /** When set, the item is hidden and its URLs are blocked unless the capability is on. */
+  capability?: AppCapability;
 };
 
-/** Desktop sidebar entries — Admin sees 9, Seller sees the first 4. */
+/** Desktop sidebar entries — Admin sees 9, Seller sees the first 4 when all capabilities are on. */
 export const DESKTOP_NAV_ITEMS: NavItem[] = [
   {
     id: 'dashboard',
@@ -20,53 +27,70 @@ export const DESKTOP_NAV_ITEMS: NavItem[] = [
     label: 'Inventario',
     path: '/inventory',
     roles: ['ADMINISTRATOR', 'SELLER'],
+    capability: 'inventory',
   },
   {
     id: 'sales',
     label: 'Ventas y Facturas',
     path: '/sales',
     roles: ['ADMINISTRATOR', 'SELLER'],
+    capability: 'sales',
   },
   {
     id: 'customers',
     label: 'Clientes',
     path: '/customers',
     roles: ['ADMINISTRATOR', 'SELLER'],
+    capability: 'customers',
   },
   {
     id: 'work-orders',
     label: 'Órdenes de Trabajo',
     path: '/work-orders',
     roles: ['ADMINISTRATOR'],
+    capability: 'workOrders',
   },
   {
     id: 'catalogs',
     label: 'Catálogos',
     path: '/catalogs',
     roles: ['ADMINISTRATOR'],
+    capability: 'catalogs',
   },
   {
     id: 'users',
     label: 'Usuarios',
     path: '/users',
     roles: ['ADMINISTRATOR'],
+    capability: 'users',
   },
   {
     id: 'profitability',
     label: 'Rentabilidad',
     path: '/profitability',
     roles: ['ADMINISTRATOR'],
+    capability: 'profitability',
   },
   {
     id: 'recovery',
     label: 'Administración y Recuperación',
     path: '/recovery',
     roles: ['ADMINISTRATOR'],
+    capability: 'recovery',
   },
 ];
 
-export function navItemsForRole(role: Role): NavItem[] {
-  return DESKTOP_NAV_ITEMS.filter((item) => item.roles.includes(role));
+function isNavItemEnabled(item: NavItem, capabilities: AppCapabilities): boolean {
+  return !item.capability || capabilities[item.capability];
+}
+
+export function navItemsForRole(
+  role: Role,
+  capabilities: AppCapabilities = getAppCapabilities(),
+): NavItem[] {
+  return DESKTOP_NAV_ITEMS.filter(
+    (item) => item.roles.includes(role) && isNavItemEnabled(item, capabilities),
+  );
 }
 
 /** Registered desktop routes — unknown paths should 404, not unauthorized. */
@@ -155,7 +179,11 @@ export function isNavItemActive(pathname: string, itemPath: string): boolean {
   return false;
 }
 
-export function isRouteAllowedForRole(pathname: string, role: Role): boolean {
+export function isRouteAllowedForRole(
+  pathname: string,
+  role: Role,
+  capabilities: AppCapabilities = getAppCapabilities(),
+): boolean {
   const match = DESKTOP_NAV_ITEMS.find(
     (item) => pathname === item.path || pathname.startsWith(`${item.path}/`),
   );
@@ -164,7 +192,23 @@ export function isRouteAllowedForRole(pathname: string, role: Role): boolean {
     return true;
   }
 
-  return match.roles.includes(role);
+  return match.roles.includes(role) && isNavItemEnabled(match, capabilities);
+}
+
+/** Mechanic queue/order URLs require workOrders; profile remains available. */
+export function isMechanicPathAllowed(
+  pathname: string,
+  capabilities: AppCapabilities = getAppCapabilities(),
+): boolean {
+  if (!isKnownMechanicRoute(pathname)) {
+    return true;
+  }
+
+  if (pathname === '/mechanic' || pathname === '/mechanic/profile') {
+    return true;
+  }
+
+  return capabilities.workOrders;
 }
 
 export function getRouteLabel(pathname: string): string | undefined {
@@ -175,10 +219,13 @@ export function getRouteLabel(pathname: string): string | undefined {
   return match?.label;
 }
 
-export function defaultPathForRole(role: Role): string {
+export function defaultPathForRole(
+  role: Role,
+  capabilities: AppCapabilities = getAppCapabilities(),
+): string {
   switch (role) {
     case 'MECHANIC':
-      return '/mechanic';
+      return capabilities.workOrders ? '/mechanic' : '/mechanic/profile';
     case 'ADMINISTRATOR':
     case 'SELLER':
       return '/dashboard';

@@ -9,6 +9,8 @@ import {
   type AuthContextValue,
   type AuthUser,
 } from '../../src/features/auth/auth-context';
+import { CapabilitiesProvider } from '../../src/shared/config/CapabilitiesProvider';
+import type { AppCapabilities } from '../../src/shared/config/capabilities';
 import { ToastProvider, Toaster } from '../../src/shared/ui';
 
 function authUser(role: Role): AuthUser {
@@ -38,6 +40,7 @@ export function renderWithProviders(
   options: {
     route?: string;
     auth?: AuthContextValue;
+    capabilities?: AppCapabilities;
   } = {},
 ) {
   const auth = options.auth ?? createAuthValue();
@@ -47,10 +50,12 @@ export function renderWithProviders(
     ...render(
       <MemoryRouter initialEntries={[options.route ?? '/']}>
         <AuthContext.Provider value={auth}>
-          <ToastProvider>
-            {ui}
-            <Toaster />
-          </ToastProvider>
+          <CapabilitiesProvider value={options.capabilities}>
+            <ToastProvider>
+              {ui}
+              <Toaster />
+            </ToastProvider>
+          </CapabilitiesProvider>
         </AuthContext.Provider>
       </MemoryRouter>,
     ),
