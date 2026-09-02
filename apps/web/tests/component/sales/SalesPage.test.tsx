@@ -30,6 +30,11 @@ describe('SalesPage', () => {
     const partialRow = screen.getByText('FAC-000099').closest('tr');
     expect(unpaidRow && within(unpaidRow).getByText('Sin pagar')).toBeTruthy();
     expect(partialRow && within(partialRow).getByText('Pago parcial')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'FAC-000098' })).toHaveAttribute(
+      'href',
+      '/sales/INV-098',
+    );
+    expect(unpaidRow).toHaveClass('cursor-pointer');
   });
 
   it('filters drafts in the Borrador tab', async () => {

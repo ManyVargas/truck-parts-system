@@ -1,16 +1,12 @@
-import { Link, useNavigate } from 'react-router-dom';
-
 import type { SalesListRow } from '../../api/contracts/sales';
 import { InvoiceStatusChip, PaymentChip } from '../../shared/domain';
-import { Empty, money, Mono } from '../../shared/ui';
+import { Empty, EntityLink, HoverRow, money, Mono, TableShell } from '../../shared/ui';
 
 export type SalesTableProps = {
   rows: SalesListRow[];
 };
 
 export function SalesTable({ rows }: SalesTableProps) {
-  const navigate = useNavigate();
-
   if (rows.length === 0) {
     return (
       <Empty
@@ -21,54 +17,44 @@ export function SalesTable({ rows }: SalesTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-navy-100 bg-white">
-      <table className="min-w-full text-left text-sm">
-        <thead className="border-b border-navy-100 bg-navy-50 text-navy-400">
-          <tr>
-            <th className="px-4 py-3 font-medium">Documento</th>
-            <th className="px-4 py-3 font-medium">Cliente</th>
-            <th className="px-4 py-3 font-medium">Estado</th>
-            <th className="px-4 py-3 font-medium">Pago</th>
-            <th className="px-4 py-3 font-medium text-right">Total</th>
-            <th className="px-4 py-3 font-medium text-right">Saldo</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-navy-100">
-          {rows.map((row) => (
-            <tr
-              key={row.id}
-              className="cursor-pointer text-navy hover:bg-navy-50/60"
-              onClick={() => navigate(row.href)}
-            >
-              <td className="px-4 py-3">
-                <Link
-                  to={row.href}
-                  className="font-medium text-brand hover:underline"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <Mono>{row.number}</Mono>
-                </Link>
-                {row.fiscal && <p className="mt-0.5 text-xs text-navy-400">Con comprobante fiscal</p>}
-              </td>
-              <td className="px-4 py-3">{row.customerName}</td>
-              <td className="px-4 py-3">
-                <InvoiceStatusChip status={row.status} />
-              </td>
-              <td className="px-4 py-3">
-                {row.status === 'DRAFT' ? (
-                  <span className="text-navy-400">—</span>
-                ) : (
-                  <PaymentChip state={row.paymentState} />
-                )}
-              </td>
-              <td className="px-4 py-3 text-right font-mono">{money(row.total, row.currency)}</td>
-              <td className="px-4 py-3 text-right font-mono">
-                {row.status === 'COMPLETED' ? money(row.balance, row.currency) : '—'}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <TableShell>
+      <thead className="border-b border-navy-100 bg-navy-50 text-navy-400">
+        <tr>
+          <th className="px-4 py-3 font-medium">Documento</th>
+          <th className="px-4 py-3 font-medium">Cliente</th>
+          <th className="px-4 py-3 font-medium">Estado</th>
+          <th className="px-4 py-3 font-medium">Pago</th>
+          <th className="px-4 py-3 font-medium text-right">Total</th>
+          <th className="px-4 py-3 font-medium text-right">Saldo</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-navy-100">
+        {rows.map((row) => (
+          <HoverRow key={row.id} to={row.href}>
+            <td className="px-4 py-3">
+              <EntityLink to={row.href}>
+                <Mono>{row.number}</Mono>
+              </EntityLink>
+              {row.fiscal && <p className="mt-0.5 text-xs text-navy-400">Con comprobante fiscal</p>}
+            </td>
+            <td className="px-4 py-3">{row.customerName}</td>
+            <td className="px-4 py-3">
+              <InvoiceStatusChip status={row.status} />
+            </td>
+            <td className="px-4 py-3">
+              {row.status === 'DRAFT' ? (
+                <span className="text-navy-400">—</span>
+              ) : (
+                <PaymentChip state={row.paymentState} />
+              )}
+            </td>
+            <td className="px-4 py-3 text-right font-mono">{money(row.total, row.currency)}</td>
+            <td className="px-4 py-3 text-right font-mono">
+              {row.status === 'COMPLETED' ? money(row.balance, row.currency) : '—'}
+            </td>
+          </HoverRow>
+        ))}
+      </tbody>
+    </TableShell>
   );
 }

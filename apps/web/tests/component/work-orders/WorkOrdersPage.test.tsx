@@ -47,6 +47,9 @@ describe('WorkOrdersPage', () => {
     expect(screen.getAllByText('En proceso').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Pendiente').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Completada').length).toBeGreaterThan(0);
+    const orderLink = screen.getByRole('link', { name: 'OD-DEMO-060' });
+    expect(orderLink).toHaveAttribute('href', '/work-orders/OD-DEMO-060');
+    expect(orderLink.closest('tr')).toHaveClass('cursor-pointer');
   });
 
   it('filters the in-progress tab to the assigned seed order', async () => {

@@ -2,6 +2,7 @@
 
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { InventoryPage } from '../../../src/features/inventory/InventoryPage';
@@ -172,5 +173,42 @@ describe('InventoryPage', () => {
     expect(
       within(within(dialog).getByRole('group', { name: 'Motor' })).getByLabelText('ID del componente'),
     ).toHaveValue('ENG-021');
+  });
+
+  it('ranks inventory states and opens detail from the row or the named link', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route path="/inventory" element={<InventoryPage />} />
+        <Route path="/inventory/:id" element={<p>Detalle de pieza</p>} />
+      </Routes>,
+      { route: '/inventory' },
+    );
+    const engineName = await screen.findByRole('link', { name: /Detroit DD15 Completo/ });
+    const engineRow = engineName.closest('tr');
+    expect(engineRow).not.toBeNull();
+    expect(engineRow).toHaveClass('cursor-pointer');
+    expect(engineName).toHaveAttribute('href', '/inventory/ENG-001');
+    expect(within(engineRow!).getByText('Comercial')).toBeVisible();
+    expect(within(engineRow!).getByText('Físico')).toBeVisible();
+    expect(within(engineRow!).getByText('Instalado en Freightliner Cascadia 2018')).toBeVisible();
+    expect(within(engineRow!).queryByText('Independiente')).not.toBeInTheDocument();
+    expect(within(engineRow!).queryByText(/^Completo$/)).not.toBeInTheDocument();
+
+    const reservedRow = screen.getByRole('link', { name: /Alternador 24V/ }).closest('tr');
+    expect(reservedRow).not.toBeNull();
+    expect(within(reservedRow!).getByText('Reservado')).toBeVisible();
+
+    const incompleteRow = screen.getByRole('link', { name: /Cummins ISX Incompleto/ }).closest('tr');
+    expect(incompleteRow).not.toBeNull();
+    expect(within(incompleteRow!).getByText('Independiente')).toBeVisible();
+    expect(within(incompleteRow!).getByText('Incompleto')).toBeVisible();
+
+    const protectedRow = screen.getByRole('link', { name: /Detroit DD13 Protegido/ }).closest('tr');
+    expect(protectedRow).not.toBeNull();
+    expect(within(protectedRow!).getByText('No desarmar')).toBeVisible();
+
+    await user.click(within(engineRow!).getByText('Patio A'));
+    expect(await screen.findByText('Detalle de pieza')).toBeVisible();
   });
 });

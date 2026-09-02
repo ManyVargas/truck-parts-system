@@ -7,7 +7,8 @@ import { Route, Routes } from 'react-router-dom';
 
 import { PosPage } from '../../../src/features/sales/PosPage';
 import { mockCustomerRepository } from '../../../src/mocks/repositories/MockCustomerRepository';
-import { resetMockState } from '../../../src/mocks/state';
+import { mockSalesRepository } from '../../../src/mocks/repositories/MockSalesRepository';
+import { reloadMockStateFromStorage, resetMockState } from '../../../src/mocks/state';
 import { renderWithProviders } from '../../support/render';
 import { signInAs } from '../../support/session';
 import '../../support/dom';
@@ -38,6 +39,16 @@ describe('PosPage', () => {
     expect(screen.getByText('Aceite 15W-40 Galón')).toBeVisible();
     expect(screen.getByTestId('pos-itbis')).toHaveTextContent('RD$0.00');
     expect(screen.getByText('Transportes del Caribe SRL', { exact: false })).toBeVisible();
+
+    const addLine = screen.getByRole('button', { name: 'Agregar línea' });
+    const discardDraft = screen.getByRole('button', { name: 'Descartar borrador' });
+    const confirmSale = screen.getByRole('button', { name: 'Confirmar venta' });
+    expect(addLine.className).toEqual(expect.stringContaining('text-sm'));
+    expect(discardDraft.className).toEqual(expect.stringContaining('text-sm'));
+    expect(addLine.className).toEqual(expect.stringContaining('min-h-11'));
+    expect(discardDraft.className).toEqual(expect.stringContaining('min-h-11'));
+    expect(confirmSale.className).toEqual(expect.stringContaining('text-base'));
+    expect(confirmSale.className).toEqual(expect.stringContaining('min-h-12'));
   });
 
   it('recalculates included ITBIS when fiscal mode is enabled', async () => {
@@ -82,5 +93,20 @@ describe('PosPage', () => {
     expect(screen.getByRole('option', { name: 'Instalación mecánica' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Desarme especializado' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Diagnóstico electrónico' })).not.toBeInTheDocument();
+  });
+
+  it('keeps an open draft after a simulated page reload', async () => {
+    const created = await mockSalesRepository.createDraft();
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    await Promise.resolve();
+    reloadMockStateFromStorage();
+    renderPos(created.value.draftId);
+
+    expect(await screen.findByRole('heading', { name: 'Punto de venta' })).toBeVisible();
+    expect(screen.queryByText('Borrador no encontrado')).not.toBeInTheDocument();
   });
 });

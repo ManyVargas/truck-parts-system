@@ -2,6 +2,7 @@ export { Logo } from './Logo';
 export { Button } from './Button';
 export { Card } from './Card';
 export { Chip } from './Chip';
+export { EntityLink, HoverRow, TableShell } from './DataTable';
 export { Empty } from './Empty';
 export { Field, Input, Select, Textarea } from './Field';
 export { SearchInput } from './SearchInput';

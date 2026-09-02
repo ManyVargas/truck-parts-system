@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { QtyProductDetailView } from '../../api/contracts/inventory';
-import { CommercialChip, ReservationChip } from '../../shared/domain';
+import { InventoryStatusCluster } from '../../shared/domain';
 import { Button, Card, Field, Info, Input, Modal, Mono, SectionTitle, Textarea, money } from '../../shared/ui';
 import { PhotoGrid } from './PhotoGrid';
 
@@ -87,9 +87,14 @@ export function QtyProductDetail({
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <SectionTitle title="Existencia" />
-          <div className="mb-4 flex flex-wrap gap-1.5">
-            <CommercialChip state={detail.commercialState} />
-            <ReservationChip reserved={detail.reserved > 0} />
+          <div className="mb-4">
+            <InventoryStatusCluster
+              commercialState={detail.commercialState}
+              reserved={detail.reserved > 0}
+              noDesarmar={false}
+              includePhysicalContext={false}
+              layout="stack"
+            />
           </div>
           <dl className="grid gap-3 text-sm sm:grid-cols-3">
             <div>

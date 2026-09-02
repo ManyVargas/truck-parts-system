@@ -49,7 +49,7 @@ export function ItemDetailViewPanel({
           </p>
           <h1 className="mt-1 text-3xl font-bold text-navy">{detail.name}</h1>
           <p className="mt-1 text-navy-400">
-            {detail.categoryName}
+            {detail.isAssembly ? 'Ensamblaje' : 'Pieza'} · {detail.categoryName}
             {detail.brand ? ` · ${detail.brand}` : ''}
             {detail.model ? ` ${detail.model}` : ''}
           </p>

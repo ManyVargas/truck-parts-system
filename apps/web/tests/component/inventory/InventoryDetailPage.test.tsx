@@ -35,6 +35,8 @@ describe('InventoryDetailPage', () => {
     });
 
     expect(await screen.findByRole('heading', { name: 'Cummins ISX Incompleto' })).toBeVisible();
+    expect(screen.getByText(/Ensamblaje · Motor/)).toBeVisible();
+    expect(screen.getByText('Completitud')).toBeVisible();
     expect(screen.getAllByText('Incompleto').length).toBeGreaterThan(0);
     expect(screen.getByText(/Turbo \(en recepción\)/)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Corregir baseline' })).toBeVisible();

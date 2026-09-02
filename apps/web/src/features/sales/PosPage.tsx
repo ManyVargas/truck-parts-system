@@ -65,12 +65,18 @@ export function PosPage() {
         }
         actions={
           !readOnly && (
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" disabled={pos.isMutating} onClick={() => setAddOpen(true)}>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={pos.isMutating}
+                onClick={() => setAddOpen(true)}
+              >
                 Agregar línea
               </Button>
               <Button
                 variant="danger"
+                size="sm"
                 disabled={pos.isMutating}
                 onClick={async () => {
                   setDiscardError(null);
@@ -83,6 +89,7 @@ export function PosPage() {
                 Descartar borrador
               </Button>
               <Button
+                size="lg"
                 disabled={pos.isMutating || draft.blockers.length > 0}
                 onClick={() => {
                   setConfirmError(null);

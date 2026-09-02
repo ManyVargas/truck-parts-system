@@ -668,6 +668,8 @@ Evitar mensajes genéricos como simplemente:
 
 # Milestone UX-4 — Inventario: jerarquía visual e interacción
 
+**Registro de implementación:** [`docs/done_web/UX_FRONTEND_HARDENING/ux-4.md`](../done_web/UX_FRONTEND_HARDENING/ux-4.md)
+
 ## Problema
 
 El modelo de inventario maneja varios estados simultáneos.
@@ -746,19 +748,19 @@ Si se decide que toda la fila debe ser interactiva, debe existir comportamiento 
 
 ## Tareas
 
-- [ ] Inventariar todos los chips/estados existentes.
-- [ ] Clasificarlos entre estado principal, contexto y excepción.
-- [ ] Reducir uso innecesario de colores.
-- [ ] Mantener colores consistentes para un mismo significado.
-- [ ] Revisar contraste.
-- [ ] Unificar interacción de tablas.
-- [ ] Revisar tablas de inventario.
-- [ ] Revisar tablas de ventas.
-- [ ] Revisar tablas de usuarios.
-- [ ] Revisar tablas de órdenes.
-- [ ] Mantener scroll horizontal cuando sea necesario.
-- [ ] Revisar qué columnas son realmente necesarias en listado.
-- [ ] Mover información secundaria al detalle cuando corresponda.
+- [x] Inventariar todos los chips/estados existentes.
+- [x] Clasificarlos entre estado principal, contexto y excepción.
+- [x] Reducir uso innecesario de colores.
+- [x] Mantener colores consistentes para un mismo significado.
+- [x] Revisar contraste.
+- [x] Unificar interacción de tablas.
+- [x] Revisar tablas de inventario.
+- [x] Revisar tablas de ventas.
+- [x] Revisar tablas de usuarios.
+- [x] Revisar tablas de órdenes.
+- [x] Mantener scroll horizontal cuando sea necesario.
+- [x] Revisar qué columnas son realmente necesarias en listado.
+- [x] Mover información secundaria al detalle cuando corresponda.
 
 ---
 
@@ -1296,10 +1298,10 @@ El plan completo puede considerarse terminado cuando:
 - [x] PrototypeControls están aislados de producción;
 - [x] modales son utilizables completamente con teclado;
 - [x] formularios comunican errores de manera accesible;
-- [ ] navegación es fácil de escanear;
+- [x] navegación es fácil de escanear;
 - [x] registro de inventario utiliza progressive disclosure;
-- [ ] estados de inventario tienen jerarquía visual;
-- [ ] tablas siguen una interacción consistente;
+- [x] estados de inventario tienen jerarquía visual;
+- [x] tablas siguen una interacción consistente;
 - [ ] POS previene errores comunes;
 - [ ] mecánico conserva una experiencia simple y mobile-first;
 - [ ] Admin/Seller funcionan correctamente en laptops;

@@ -232,7 +232,7 @@ export type AppEvent = {
   metadata?: Record<string, unknown>;
 };
 
-/** In-memory application state — mock persistence until HTTP repositories. */
+/** In-memory application state with sessionStorage backup in the mock until HTTP repositories. */
 export type AppState = {
   users: User[];
   items: Item[];
