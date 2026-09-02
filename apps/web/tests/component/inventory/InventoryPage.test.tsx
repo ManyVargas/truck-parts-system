@@ -66,7 +66,10 @@ describe('InventoryPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Registrar' }));
 
     expect(await screen.findByText('Alternador de mostrador')).toBeVisible();
-    expect(await screen.findByText('ALT-020 registrado correctamente')).toBeVisible();
+    expect(await screen.findByText('ALT-020 quedó registrado')).toBeVisible();
+    expect(within(dialog).getByText(/Aún puede completar:/)).toBeVisible();
+    await user.click(within(dialog).getByRole('button', { name: 'Volver al listado' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('registers quantity inventory from the Por cantidad mode', async () => {
@@ -76,7 +79,7 @@ describe('InventoryPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
     const dialog = screen.getByRole('dialog');
-    await user.click(within(dialog).getByLabelText('Por cantidad'));
+    await user.click(within(dialog).getByLabelText('Producto por cantidad'));
     await user.type(within(dialog).getByLabelText('ID interno'), 'QTY-FIL-NEW');
     await user.type(within(dialog).getByLabelText('Nombre'), 'Filtro por caja');
     await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-FIL');
@@ -125,5 +128,49 @@ describe('InventoryPage', () => {
     expect(getMockState().knownMissing).toContainEqual(
       expect.objectContaining({ parentId: 'ENG-020', expectedComponentName: 'Turbo' }),
     );
+    expect(await screen.findByText('TRK-020 quedó registrado')).toBeVisible();
+  });
+
+  it('keeps enrichment fields collapsed until the operator opens them', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<InventoryPage />, { route: '/inventory' });
+    await screen.findByText('Filtro de aceite HD');
+
+    await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
+    const dialog = screen.getByRole('dialog');
+
+    expect(within(dialog).getByLabelText('ID interno')).toBeVisible();
+    expect(within(dialog).getByLabelText('Condición')).toBeVisible();
+    expect(within(dialog).getByLabelText('Costo en pesos (opcional)')).toBeVisible();
+    expect(within(dialog).queryByText('Paso 1 de 2 — Información del ensamblaje')).not.toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Serial (opcional)')).not.toBeVisible();
+
+    await user.click(within(dialog).getByText('Información adicional (opcional)'));
+    expect(within(dialog).getByLabelText('Serial (opcional)')).toBeVisible();
+  });
+
+  it('announces both assembly steps and keeps checklist data after going back', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<InventoryPage />, { route: '/inventory' });
+    await screen.findByText('Filtro de aceite HD');
+
+    await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText('ID interno'), 'TRK-021');
+    await user.type(within(dialog).getByLabelText('Nombre'), 'Camión para volver atrás');
+    await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-TRK');
+    expect(within(dialog).getByText('Paso 1 de 2 — Información del ensamblaje')).toBeVisible();
+    await user.click(within(dialog).getByRole('button', { name: 'Continuar' }));
+
+    expect(within(dialog).getByText('Paso 2 de 2 — Componentes iniciales')).toBeVisible();
+    const motorGroup = within(dialog).getByRole('group', { name: 'Motor' });
+    await user.click(within(motorGroup).getByLabelText('Presente'));
+    await user.type(within(motorGroup).getByLabelText('ID del componente'), 'ENG-021');
+    await user.click(within(dialog).getByRole('button', { name: 'Atrás' }));
+    expect(within(dialog).getByLabelText('ID interno')).toHaveValue('TRK-021');
+    await user.click(within(dialog).getByRole('button', { name: 'Continuar' }));
+    expect(
+      within(within(dialog).getByRole('group', { name: 'Motor' })).getByLabelText('ID del componente'),
+    ).toHaveValue('ENG-021');
   });
 });

@@ -517,6 +517,8 @@ Utilizarlo solo si existe una agrupación real con suficiente contenido.
 
 # Milestone UX-3 — Registro de inventario simplificado
 
+**Registro de implementación:** [`docs/done_web/UX_FRONTEND_HARDENING/ux-3.md`](../done_web/UX_FRONTEND_HARDENING/ux-3.md)
+
 ## Problema
 
 La pantalla de registro de inventario puede presentar demasiados campos simultáneamente.
@@ -624,17 +626,17 @@ Evitar sorprender al usuario con un segundo paso inesperado después de pulsar C
 
 ## Tareas
 
-- [ ] Identificar campos realmente obligatorios según documentación.
-- [ ] Separar campos obligatorios de información enriquecida.
-- [ ] Introducir progressive disclosure.
-- [ ] Mantener la posibilidad de completar datos posteriormente.
-- [ ] Mostrar stepper únicamente cuando exista más de un paso real.
-- [ ] Mostrar claramente qué campos son opcionales.
-- [ ] Revisar labels y ejemplos.
-- [ ] Evitar campos técnicos que el usuario operativo no comprenda.
-- [ ] Mantener los flows diferentes para artículos individuales y productos por cantidad.
-- [ ] Revisar comportamiento de errores.
-- [ ] Mantener datos ingresados al cambiar entre pasos.
+- [x] Identificar campos realmente obligatorios según documentación.
+- [x] Separar campos obligatorios de información enriquecida.
+- [x] Introducir progressive disclosure.
+- [x] Mantener la posibilidad de completar datos posteriormente.
+- [x] Mostrar stepper únicamente cuando exista más de un paso real.
+- [x] Mostrar claramente qué campos son opcionales.
+- [x] Revisar labels y ejemplos.
+- [x] Evitar campos técnicos que el usuario operativo no comprenda.
+- [x] Mantener los flows diferentes para artículos individuales y productos por cantidad.
+- [x] Revisar comportamiento de errores.
+- [x] Mantener datos ingresados al cambiar entre pasos.
 
 ---
 
@@ -1295,7 +1297,7 @@ El plan completo puede considerarse terminado cuando:
 - [x] modales son utilizables completamente con teclado;
 - [x] formularios comunican errores de manera accesible;
 - [ ] navegación es fácil de escanear;
-- [ ] registro de inventario utiliza progressive disclosure;
+- [x] registro de inventario utiliza progressive disclosure;
 - [ ] estados de inventario tienen jerarquía visual;
 - [ ] tablas siguen una interacción consistente;
 - [ ] POS previene errores comunes;

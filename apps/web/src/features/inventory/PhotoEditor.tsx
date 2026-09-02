@@ -8,9 +8,9 @@ type PhotoEditorProps = {
 export function PhotoEditor({ photos, onChange }: PhotoEditorProps) {
   return (
     <Field
-      label="Fotos simuladas"
+      label="Fotos (opcional)"
       htmlFor="registration-photos"
-      hint="En este prototipo solo se conserva el nombre del archivo."
+      hint="Puede añadirlas después. En este prototipo se guarda el nombre del archivo."
     >
       <Input
         id="registration-photos"

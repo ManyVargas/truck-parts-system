@@ -7,7 +7,7 @@
 | **Fecha** | 2026-09-02 |
 | **Referencia** | [`docs/plans_web/UX_FRONTEND_HARDENING_PLAN.md`](../../plans_web/UX_FRONTEND_HARDENING_PLAN.md) § UX-2 |
 | **Alcance** | Solo frontend (`apps/web`). No cambia reglas de negocio ni el backend. |
-| **Siguiente** | UX-3 — Registro de inventario simplificado |
+| **Siguiente** | UX-4 — Inventario: jerarquía visual e interacción |
 
 ---
 
