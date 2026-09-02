@@ -66,7 +66,7 @@ Seller and Administrator may view acquisition cost. Only Administrator may view 
 
 ### Domain / persistence
 - [x] Define cost amount + actual/estimated/unknown provenance.
-- [ ] Snapshot applicable cost basis on completed sale lines.
+- [x] Snapshot applicable cost basis on completed sale lines.
 - [x] Implement DOP gross-profit calculation.
 - [x] Implement FX adapter interface and normalization to DOP-per-USD.
 - [x] Persist FX provenance and profitability status.

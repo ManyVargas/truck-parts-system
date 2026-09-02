@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import type {
   AddDraftLineInput,
+  ConfirmInvoicePayment,
   PosDraftView,
   SetDraftMetaInput,
 } from '../../api/contracts/sales';
@@ -133,12 +134,12 @@ export function usePos(draftId: string | undefined) {
     [applyDraftResult, draftId],
   );
 
-  const confirm = useCallback(async (): Promise<Result<void>> => {
+  const confirm = useCallback(async (payment?: ConfirmInvoicePayment): Promise<Result<void>> => {
     if (!draftId || draftId === 'new') {
       return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
     }
     setIsMutating(true);
-    const response = await salesRepository.confirmInvoice(draftId);
+    const response = await salesRepository.confirmInvoice(draftId, payment);
     setIsMutating(false);
     if (!response.ok) {
       return response;

@@ -2,9 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { createInitialState } from '../../../../src/mocks/data/seed';
 import {
+  addDraftLine,
   addPayment,
   cancelInvoice,
+  confirmInvoice,
   correctCurrency,
+  createDraft,
+  setDraftLinePrice,
 } from '../../../../src/mocks/services/sales-commands';
 import { buildInvoiceDetail, buildSalesList } from '../../../../src/mocks/services/sales-catalog';
 import {
@@ -179,6 +183,129 @@ describe('cancelInvoice', () => {
   it('rejects cancellation without a reason', () => {
     const result = cancelInvoice(createInitialState(), admin, { invoiceId: 'INV-097', reason: '   ' });
     expect(result.ok).toBe(false);
+  });
+
+  it('CANCEL-003: restoring an assembly sale also restores Sold descendants', () => {
+    const state = createInitialState();
+    const created = createDraft(state, seller);
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    const draftId = created.value.draftId;
+
+    expect(addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'ENG-003' }).ok).toBe(true);
+    const lineId = state.invoices.find((entry) => entry.id === draftId)!.lines[0]!.id;
+    expect(setDraftLinePrice(state, seller, { draftId, lineId, unitPrice: 350_000 }).ok).toBe(true);
+    expect(confirmInvoice(state, seller, draftId).ok).toBe(true);
+
+    const engineAfterSale = state.items.find((item) => item.id === 'ENG-003')!;
+    const alternatorAfterSale = state.items.find((item) => item.id === 'ALT-011')!;
+    expect(engineAfterSale.commercialState).toBe('SOLD');
+    expect(alternatorAfterSale.commercialState).toBe('SOLD');
+    expect(alternatorAfterSale.physicalRelationship).toBe('INSTALLED');
+    expect(alternatorAfterSale.parentId).toBe('ENG-003');
+
+    const cancelled = cancelInvoice(state, admin, {
+      invoiceId: draftId,
+      reason: 'Cliente desistió del ensamblaje',
+    });
+    expect(cancelled.ok).toBe(true);
+
+    const engine = state.items.find((item) => item.id === 'ENG-003')!;
+    const alternator = state.items.find((item) => item.id === 'ALT-011')!;
+    expect(engine.commercialState).toBe('AVAILABLE');
+    expect(alternator.commercialState).toBe('AVAILABLE');
+    expect(alternator.physicalRelationship).toBe('INSTALLED');
+    expect(alternator.parentId).toBe('ENG-003');
+  });
+
+  it('CANCEL-002: rejects cancelling a paid or partial invoice without refundAmount', () => {
+    const paidState = createInitialState();
+    const missingPaid = cancelInvoice(paidState, admin, {
+      invoiceId: 'INV-097',
+      reason: 'Cliente devolvió la mercancía',
+    });
+    expect(missingPaid.ok).toBe(false);
+    if (!missingPaid.ok) {
+      expect(missingPaid.error.code).toBe('VALIDATION');
+      expect(missingPaid.error.message).toBe(
+        'La cancelación de una factura pagada o parcialmente pagada requiere un reembolso mayor que cero',
+      );
+    }
+    expect(paidState.invoices.find((entry) => entry.id === 'INV-097')?.status).toBe('COMPLETED');
+
+    const zeroPaid = cancelInvoice(createInitialState(), admin, {
+      invoiceId: 'INV-097',
+      reason: 'Cliente devolvió la mercancía',
+      refundAmount: 0,
+      refundMethod: 'CASH',
+    });
+    expect(zeroPaid.ok).toBe(false);
+
+    const missingPartial = cancelInvoice(createInitialState(), admin, {
+      invoiceId: 'INV-099',
+      reason: 'Devolución',
+    });
+    expect(missingPartial.ok).toBe(false);
+  });
+
+  it('CANCEL-002: records a refund equal to paid when cancelling a paid invoice', () => {
+    const state = createInitialState();
+    const result = cancelInvoice(state, admin, {
+      invoiceId: 'INV-097',
+      reason: 'Cliente devolvió la mercancía',
+      refundAmount: 5_500,
+      refundMethod: 'CASH',
+    });
+
+    expect(result.ok).toBe(true);
+    const invoice = state.invoices.find((entry) => entry.id === 'INV-097')!;
+    expect(invoice.status).toBe('CANCELLED');
+    expect(invoice.payments.some((payment) => payment.kind === 'REFUND' && payment.amount === 5_500)).toBe(
+      true,
+    );
+  });
+
+  it('CANCEL-002: cancels an unpaid completed invoice with only a reason', () => {
+    const state = createInitialState();
+    const result = cancelInvoice(state, admin, { invoiceId: 'INV-098', reason: 'Cliente desistió' });
+
+    expect(result.ok).toBe(true);
+    const invoice = state.invoices.find((entry) => entry.id === 'INV-098')!;
+    expect(invoice.status).toBe('CANCELLED');
+    expect(invoice.payments.some((payment) => payment.kind === 'REFUND')).toBe(false);
+  });
+
+  it('CANCEL-005: CONTINUE then resale reuses the WO without dropping the cancelled invoice link', () => {
+    const state = createInitialState();
+    expect(
+      cancelInvoice(state, admin, {
+        invoiceId: 'INV-096',
+        reason: 'Sigue el desarme',
+        inProgressDecision: 'CONTINUE',
+      }).ok,
+    ).toBe(true);
+
+    const created = createDraft(state, seller);
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    const draftId = created.value.draftId;
+    expect(addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'TUR-009' }).ok).toBe(true);
+    const lineId = state.invoices.find((entry) => entry.id === draftId)!.lines[0]!.id;
+    expect(setDraftLinePrice(state, seller, { draftId, lineId, unitPrice: 85_000 }).ok).toBe(true);
+    expect(confirmInvoice(state, seller, draftId).ok).toBe(true);
+
+    const wo = state.workOrders.find((order) => order.id === 'OD-DEMO-060')!;
+    expect(wo.invoiceId).toBe(draftId);
+    expect(wo.linkedInvoiceIds).toEqual(['INV-096', draftId]);
+
+    const cancelled = state.invoices.find((entry) => entry.id === 'INV-096')!;
+    expect(buildInvoiceDetail(state, cancelled, admin).linkedWorkOrders.map((order) => order.id)).toEqual([
+      'OD-DEMO-060',
+    ]);
   });
 
   it('leaves a completed dismantling independent and the parent incomplete', () => {

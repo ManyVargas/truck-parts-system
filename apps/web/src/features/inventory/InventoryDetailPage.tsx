@@ -68,7 +68,32 @@ export function InventoryDetailPage() {
   );
 
   if (detail.kind === 'QTY') {
-    return <QtyProductDetail detail={detail} actions={draftButton} />;
+    const canReceive = user?.role === 'SELLER' || user?.role === 'ADMINISTRATOR';
+    return (
+      <QtyProductDetail
+        detail={detail}
+        actions={draftButton}
+        canReceive={canReceive}
+        canAdjust={isAdmin}
+        isMutating={query.isMutating}
+        onReceive={async (input) => {
+          const response = await query.receiveQtyStock({ qtyProductId: detail.id, ...input });
+          if (!response.ok) {
+            return response.error.message;
+          }
+          pushToast('Entrada de stock registrada', 'success');
+          return null;
+        }}
+        onAdjust={async (input) => {
+          const response = await query.adjustQtyStock({ qtyProductId: detail.id, ...input });
+          if (!response.ok) {
+            return response.error.message;
+          }
+          pushToast('Existencia ajustada', 'success');
+          return null;
+        }}
+      />
+    );
   }
 
   return (

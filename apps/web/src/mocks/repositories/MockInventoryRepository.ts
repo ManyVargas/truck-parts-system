@@ -14,6 +14,8 @@ import {
   registerAssembly,
   registerItem,
   registerQtyProduct,
+  receiveQtyStock,
+  adjustQtyStock,
   resolveCatalogReview,
   setNoDesarmar,
 } from '../services/inventory-commands';
@@ -180,6 +182,20 @@ export class MockInventoryRepository implements InventoryRepository {
     const permission = requirePermission('inventory.register');
     if (!permission.ok) return permission;
     const result = registerQtyProduct(getMockState(), permission.value, input);
+    return result.ok ? ok(cloneForRead(result.value)) : result;
+  }
+
+  async receiveQtyStock(input: Parameters<InventoryRepository['receiveQtyStock']>[0]) {
+    const permission = requirePermission('inventory.register');
+    if (!permission.ok) return permission;
+    const result = receiveQtyStock(getMockState(), permission.value, input);
+    return result.ok ? ok(cloneForRead(result.value)) : result;
+  }
+
+  async adjustQtyStock(input: Parameters<InventoryRepository['adjustQtyStock']>[0]) {
+    const permission = requirePermission('inventory.admin');
+    if (!permission.ok) return permission;
+    const result = adjustQtyStock(getMockState(), permission.value, input);
     return result.ok ? ok(cloneForRead(result.value)) : result;
   }
 }

@@ -243,3 +243,17 @@ export type RegisterAssemblyResult = {
 };
 
 export type InventoryRegistrationResult = Item | QtyProduct | RegisterAssemblyResult;
+
+/** Normal quantity receipt/entry (Seller and Administrator). */
+export type ReceiveQtyStockInput = {
+  qtyProductId: string;
+  quantity: number;
+  unitCostDop: number;
+};
+
+/** Audited Administrator-only quantity correction. Not a generic set-quantity. */
+export type AdjustQtyStockInput = {
+  qtyProductId: string;
+  difference: number;
+  reason: string;
+};

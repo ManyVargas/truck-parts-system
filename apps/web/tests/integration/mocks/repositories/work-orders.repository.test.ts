@@ -97,6 +97,26 @@ describe('MockWorkOrderRepository', () => {
     expect(state.events.some((event) => event.type === 'WORK_ORDER_CANCELLED')).toBe(true);
   });
 
+  it('lets a mechanic get own IN_PROGRESS and PENDING, but not another mechanic IN_PROGRESS', async () => {
+    signInAs('MECHANIC');
+
+    const ownInProgress = await mockWorkOrderRepository.getForMechanic('OD-DEMO-060');
+    const pending = await mockWorkOrderRepository.getForMechanic('OD-DEMO-061');
+
+    const otherMechanicOrder = getMockState().workOrders.find((order) => order.id === 'OD-DEMO-060');
+    expect(otherMechanicOrder).toBeDefined();
+    otherMechanicOrder!.assignedMechanicId = 'U-CARLOS';
+    const otherInProgress = await mockWorkOrderRepository.getForMechanic('OD-DEMO-060');
+
+    expect(ownInProgress.ok).toBe(true);
+    expect(pending.ok).toBe(true);
+    expect(otherInProgress.ok).toBe(false);
+    if (!otherInProgress.ok) {
+      expect(otherInProgress.error.code).toBe('NOT_FOUND');
+      expect(otherInProgress.error.message).toBe('Orden de trabajo no encontrada');
+    }
+  });
+
   it('lets a mechanic take a pending order and denies a second claim', async () => {
     signInAs('MECHANIC');
 

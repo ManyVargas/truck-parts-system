@@ -1,6 +1,7 @@
 import type {
   AppEvent,
   Currency,
+  DeliveredAssembly,
   InvoiceStatus,
   LineType,
   PaymentKind,
@@ -111,10 +112,20 @@ export type InvoiceDetailView = {
   history: InvoiceHistoryEntry[];
   profitability?: InvoiceProfitabilityView;
   actions: InvoiceDetailActions;
+  /** Copied as-is from the invoice; omitted when no assembly was sold. */
+  deliveredAssemblies?: DeliveredAssembly[];
 };
 
 export type AddPaymentInput = {
   invoiceId: string;
+  amount: number;
+  method: PaymentMethod;
+  reference?: string;
+  idempotencyKey?: string;
+};
+
+/** Optional cash/partial receipt recorded atomically with SALE-005 confirmation. */
+export type ConfirmInvoicePayment = {
   amount: number;
   method: PaymentMethod;
   reference?: string;

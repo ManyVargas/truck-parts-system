@@ -19,6 +19,8 @@ import type {
   RegisterAssemblyResult,
   RegisterItemInput,
   RegisterQtyProductInput,
+  ReceiveQtyStockInput,
+  AdjustQtyStockInput,
 } from './inventory';
 import type {
   ProfitabilitySnapshot,
@@ -31,6 +33,7 @@ import type {
   AddDraftLineInput,
   AddPaymentInput,
   CancelInvoiceInput,
+  ConfirmInvoicePayment,
   CorrectCurrencyInput,
   CreateDraftResult,
   InvoiceDetailView,
@@ -95,6 +98,8 @@ export type InventoryRepository = {
   registerItem(input: RegisterItemInput): Promise<Result<Item>>;
   registerAssembly(input: RegisterAssemblyInput): Promise<Result<RegisterAssemblyResult>>;
   registerQtyProduct(input: RegisterQtyProductInput): Promise<Result<QtyProduct>>;
+  receiveQtyStock(input: ReceiveQtyStockInput): Promise<Result<QtyProduct>>;
+  adjustQtyStock(input: AdjustQtyStockInput): Promise<Result<QtyProduct>>;
 };
 
 export type CustomerRepository = {
@@ -116,7 +121,7 @@ export type SalesRepository = {
   removeLine(input: RemoveDraftLineInput): Promise<Result<PosDraftView>>;
   setLinePrice(input: SetDraftLinePriceInput): Promise<Result<PosDraftView>>;
   setDraftMeta(input: SetDraftMetaInput): Promise<Result<PosDraftView>>;
-  confirmInvoice(draftId: string): Promise<Result<PosDraftView>>;
+  confirmInvoice(draftId: string, payment?: ConfirmInvoicePayment): Promise<Result<PosDraftView>>;
   discardDraft(draftId: string): Promise<Result<void>>;
 };
 

@@ -3,6 +3,7 @@ import type {
   AddDraftLineInput,
   AddPaymentInput,
   CancelInvoiceInput,
+  ConfirmInvoicePayment,
   CorrectCurrencyInput,
   CreateDraftResult,
   InvoiceDetailView,
@@ -78,7 +79,10 @@ export async function setDraftMetaWithHttp(
   throw new Error('HttpSalesRepository no implementado — use VITE_USE_MOCK_API=true (WM12)');
 }
 
-export async function confirmInvoiceWithHttp(_draftId: string): Promise<Result<PosDraftView>> {
+export async function confirmInvoiceWithHttp(
+  _draftId: string,
+  _payment?: ConfirmInvoicePayment,
+): Promise<Result<PosDraftView>> {
   throw new Error('HttpSalesRepository no implementado — use VITE_USE_MOCK_API=true (WM12)');
 }
 

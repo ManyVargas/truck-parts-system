@@ -138,7 +138,10 @@ export function buildPosDraftView(state: AppState, invoice: Invoice): PosDraftVi
     items: sellableItems(state, invoice),
     blockers: blockersFor(state, invoice, lines),
     createdWorkOrderIds: state.workOrders
-      .filter((order) => order.invoiceId === invoice.id)
+      .filter(
+        (order) =>
+          order.invoiceId === invoice.id || Boolean(order.linkedInvoiceIds?.includes(invoice.id)),
+      )
       .map((order) => order.id),
   };
 }

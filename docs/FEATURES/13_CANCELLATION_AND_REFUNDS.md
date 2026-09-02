@@ -76,7 +76,7 @@ Use transaction/version checks for races between cancellation, payment, Work-Ord
 - [x] In-Progress verified stop branch.
 - [x] In-Progress continue-work branch.
 - [x] Completed Desarme branch.
-- [ ] Resale/create-or-reuse interaction.
+- [x] Resale/create-or-reuse interaction.
 - [ ] Concurrency/version tests versus Work-Order completion and payments.
 
 ## Canonical validated requirements

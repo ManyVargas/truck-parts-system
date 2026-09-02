@@ -129,7 +129,10 @@ export function buildInvoiceDetail(state: AppState, invoice: Invoice, actor: Use
     cancelledAt: invoice.cancelledAt,
     cancelReason: invoice.cancelReason,
     linkedWorkOrders: state.workOrders
-      .filter((order) => order.invoiceId === invoice.id)
+      .filter(
+        (order) =>
+          order.invoiceId === invoice.id || Boolean(order.linkedInvoiceIds?.includes(invoice.id)),
+      )
       .map((order) => ({
         id: order.id,
         type: order.type,
@@ -154,5 +157,6 @@ export function buildInvoiceDetail(state: AppState, invoice: Invoice, actor: Use
       canCorrectCurrency: completed && can(actor, 'sales.correctCurrency') && invoice.payments.length === 0 && invoice.paymentState !== 'PAID',
       canViewPdf: numbered && Boolean(invoice.number),
     },
+    deliveredAssemblies: invoice.deliveredAssemblies,
   };
 }

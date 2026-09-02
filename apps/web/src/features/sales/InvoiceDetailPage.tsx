@@ -128,6 +128,27 @@ export function InvoiceDetailPage() {
         <InvoiceLinesTable lines={detail.lines} currency={detail.currency} fiscal={detail.fiscal} />
       </div>
 
+      {detail.deliveredAssemblies && detail.deliveredAssemblies.length > 0 && (
+        <section className="mb-8">
+          <p className="mb-2 text-sm font-medium text-navy">Ensamblajes entregados</p>
+          {detail.deliveredAssemblies.map((assembly) => (
+            <ul key={assembly.rootItemId} className="mb-2 space-y-1 text-sm text-navy-400">
+              {assembly.nodes.map((node) => (
+                <li key={node.itemId}>
+                  <Mono>{node.itemId}</Mono> {node.name}
+                  {node.parentId ? (
+                    <>
+                      {' '}
+                      · padre <Mono>{node.parentId}</Mono>
+                    </>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ))}
+        </section>
+      )}
+
       {detail.linkedWorkOrders.length > 0 && (
         <section className="mb-8">
           <p className="mb-2 text-sm font-medium text-navy">Órdenes de trabajo vinculadas</p>

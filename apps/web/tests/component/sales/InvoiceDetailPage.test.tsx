@@ -74,7 +74,7 @@ describe('InvoiceDetailPage', () => {
     await user.click(screen.getByRole('button', { name: 'Vista previa del documento' }));
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('Número de comprobante fiscal: ______________________')).toBeVisible();
+    expect(within(dialog).getByText('NCF: ______________________')).toBeVisible();
     expect(within(dialog).getAllByText('—').length).toBeGreaterThan(0);
     expect(within(dialog).getByText('RD$0.00')).toBeVisible();
   });

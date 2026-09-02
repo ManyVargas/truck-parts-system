@@ -71,7 +71,7 @@ Advanced AR such as due-date policy, aging buckets, credit limits, interest, col
 - [x] Payment idempotency/retry protection.
 - [x] Same-currency and positive-balance validation.
 - [x] Derived payment state/balance service.
-- [ ] Initial payment at confirmation coordination.
+- [x] Initial payment at confirmation coordination.
 - [x] Additional/partial/mixed-method payment commands.
 
 ### Basic AR read models

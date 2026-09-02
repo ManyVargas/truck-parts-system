@@ -17,6 +17,7 @@ import {
   buildWorkOrderDetail,
   buildWorkOrderList,
   findWorkOrder,
+  isVisibleToMechanic,
   toMechanicWorkOrderView,
 } from '../services/work-order-catalog';
 import {
@@ -77,7 +78,7 @@ export class MockWorkOrderRepository implements WorkOrderRepository {
     }
 
     const order = findWorkOrder(getMockState(), id);
-    if (!order) {
+    if (!order || !isVisibleToMechanic(order, permission.value.id)) {
       return err({ code: 'NOT_FOUND', message: 'Orden de trabajo no encontrada' });
     }
 

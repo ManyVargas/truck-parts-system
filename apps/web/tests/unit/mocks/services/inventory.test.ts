@@ -10,8 +10,10 @@ import {
 } from '../../../../src/mocks/services/inventory-catalog';
 import {
   addInventoryToDraft,
+  adjustQtyStock,
   correctAcquisitionCost,
   createManualWorkOrder,
+  receiveQtyStock,
   registerAssembly,
   registerItem,
   registerQtyProduct,
@@ -30,6 +32,15 @@ const SELLER = {
   username: 'laura',
   password: 'demo1234',
   role: 'SELLER' as const,
+  active: true,
+};
+
+const ADMIN = {
+  id: 'U-ADMIN',
+  name: 'Administrador Demo',
+  username: 'admin',
+  password: 'demo1234',
+  role: 'ADMINISTRATOR' as const,
   active: true,
 };
 
@@ -599,6 +610,23 @@ describe('inventory commands', () => {
     expect(filter?.commercialState).toBe('AVAILABLE');
   });
 
+  it('LINE-001 / COST-003: copies known item acquisitionCostDop onto the new draft ITEM line', () => {
+    const state = createInitialState();
+    const item = state.items.find((entry) => entry.id === 'FLT-001')!;
+    expect(item.acquisitionCostDop).toBe(850);
+
+    const result = addInventoryToDraft(state, SELLER, { itemId: 'FLT-001' });
+    expect(result.ok).toBe(true);
+
+    const line = state.invoices
+      .find((invoice) => invoice.status === 'DRAFT')
+      ?.lines.find((entry) => entry.itemId === 'FLT-001');
+    expect(line).toMatchObject({
+      type: 'ITEM',
+      acquisitionCostDop: 850,
+    });
+  });
+
   it('RES-001: rejects overlapping parent reservation while a descendant is held', () => {
     const state = createInitialState();
     const result = addInventoryToDraft(state, SELLER, { itemId: 'ENG-001' });
@@ -687,6 +715,26 @@ describe('inventory commands', () => {
     const product = state.qtyProducts.find((entry) => entry.id === 'QTY-FIL-AIR');
     expect(product?.reserved).toBe(1);
     expect(availableToReserve(product!.onHand, product!.reserved)).toBe(23);
+  });
+
+  it('LINE-001 / COST-003: copies qty product unitCostDop onto the new draft QTY line', () => {
+    const state = createInitialState();
+    const product = state.qtyProducts.find((entry) => entry.id === 'QTY-FIL-AIR')!;
+    const unitCostDop = product.unitCostDop;
+
+    const result = addInventoryToDraft(state, SELLER, {
+      qtyProductId: 'QTY-FIL-AIR',
+      quantity: 1,
+    });
+    expect(result.ok).toBe(true);
+
+    const line = state.invoices
+      .find((invoice) => invoice.status === 'DRAFT')
+      ?.lines.find((entry) => entry.qtyProductId === 'QTY-FIL-AIR');
+    expect(line).toMatchObject({
+      type: 'QTY',
+      acquisitionCostDop: unitCostDop,
+    });
   });
 
   it('clears cost provenance explicitly and audits its before/after state', () => {
@@ -859,5 +907,112 @@ describe('inventory commands', () => {
           entry.parentId === 'TRK-001' && entry.expectedComponentName === 'Motor auxiliar',
       ),
     ).toBe(false);
+  });
+});
+
+describe('quantity stock receipt and adjustment', () => {
+  function registerAverageSample(state: ReturnType<typeof createInitialState>) {
+    return registerQtyProduct(state, SELLER, {
+      id: 'QTY-AVG-001',
+      name: 'Producto promedio',
+      categoryId: 'CAT-FIL',
+      initialQuantity: 10,
+      unitCostDop: 100,
+    });
+  }
+
+  it('QTY-003: weighted-average receipt of 10 at 200 against 10 at 100 yields 20 at 150', () => {
+    const state = createInitialState();
+    expect(registerAverageSample(state).ok).toBe(true);
+
+    const result = receiveQtyStock(state, SELLER, {
+      qtyProductId: 'QTY-AVG-001',
+      quantity: 10,
+      unitCostDop: 200,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(state.qtyProducts.find((product) => product.id === 'QTY-AVG-001')).toMatchObject({
+      onHand: 20,
+      unitCostDop: 150,
+    });
+    expect(state.events.some((event) => event.type === 'QTY_STOCK_RECEIVED')).toBe(true);
+  });
+
+  it('QTY-001: seller can receive quantity stock', () => {
+    const state = createInitialState();
+    expect(registerAverageSample(state).ok).toBe(true);
+
+    const result = receiveQtyStock(state, SELLER, {
+      qtyProductId: 'QTY-AVG-001',
+      quantity: 5,
+      unitCostDop: 120,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(state.qtyProducts.find((product) => product.id === 'QTY-AVG-001')?.onHand).toBe(15);
+  });
+
+  it('QTY-001: seller cannot adjust quantity stock', () => {
+    const state = createInitialState();
+    expect(registerAverageSample(state).ok).toBe(true);
+
+    const result = adjustQtyStock(state, SELLER, {
+      qtyProductId: 'QTY-AVG-001',
+      difference: 1,
+      reason: 'Corrección de conteo',
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe('FORBIDDEN');
+    }
+    expect(state.qtyProducts.find((product) => product.id === 'QTY-AVG-001')?.onHand).toBe(10);
+  });
+
+  it('QTY-001: administrator can adjust quantity and cannot reduce on-hand below reserved', () => {
+    const state = createInitialState();
+    expect(registerAverageSample(state).ok).toBe(true);
+    const product = state.qtyProducts.find((entry) => entry.id === 'QTY-AVG-001')!;
+    product.reserved = 4;
+    const unitCostBefore = product.unitCostDop;
+
+    const tooLow = adjustQtyStock(state, ADMIN, {
+      qtyProductId: 'QTY-AVG-001',
+      difference: -7,
+      reason: 'Conteo físico',
+    });
+    expect(tooLow.ok).toBe(false);
+    expect(product.onHand).toBe(10);
+
+    const allowed = adjustQtyStock(state, ADMIN, {
+      qtyProductId: 'QTY-AVG-001',
+      difference: -6,
+      reason: 'Conteo físico',
+    });
+    expect(allowed.ok).toBe(true);
+    expect(product.onHand).toBe(4);
+    expect(product.unitCostDop).toBe(unitCostBefore);
+    expect(state.events.some((event) => event.type === 'QTY_STOCK_ADJUSTED')).toBe(true);
+  });
+
+  it('QTY-001: rejects zero or negative receipt quantity', () => {
+    const state = createInitialState();
+    expect(registerAverageSample(state).ok).toBe(true);
+
+    const zero = receiveQtyStock(state, SELLER, {
+      qtyProductId: 'QTY-AVG-001',
+      quantity: 0,
+      unitCostDop: 100,
+    });
+    const negative = receiveQtyStock(state, SELLER, {
+      qtyProductId: 'QTY-AVG-001',
+      quantity: -1,
+      unitCostDop: 100,
+    });
+
+    expect(zero.ok).toBe(false);
+    expect(negative.ok).toBe(false);
+    expect(state.qtyProducts.find((product) => product.id === 'QTY-AVG-001')?.onHand).toBe(10);
   });
 });

@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 
 import type {
   AddToDraftInput,
+  AdjustQtyStockInput,
   BaselineCorrectionInput,
   CostCorrectionInput,
   InventoryDetail,
   ManualWorkOrderInput,
   NoDesarmarInput,
+  ReceiveQtyStockInput,
   ResolveCatalogReviewInput,
 } from '../../api/contracts/inventory';
 import type { AppError, Result } from '../../shared/auth/types';
@@ -135,6 +137,34 @@ export function useInventoryDetail(id: string | undefined) {
     [reload],
   );
 
+  const receiveQtyStock = useCallback(
+    async (input: ReceiveQtyStockInput): Promise<Result<void>> => {
+      setIsMutating(true);
+      const response = await inventoryRepository.receiveQtyStock(input);
+      setIsMutating(false);
+      if (!response.ok) {
+        return response;
+      }
+      reload();
+      return { ok: true, value: undefined };
+    },
+    [reload],
+  );
+
+  const adjustQtyStock = useCallback(
+    async (input: AdjustQtyStockInput): Promise<Result<void>> => {
+      setIsMutating(true);
+      const response = await inventoryRepository.adjustQtyStock(input);
+      setIsMutating(false);
+      if (!response.ok) {
+        return response;
+      }
+      reload();
+      return { ok: true, value: undefined };
+    },
+    [reload],
+  );
+
   return {
     result,
     isMutating,
@@ -144,5 +174,7 @@ export function useInventoryDetail(id: string | undefined) {
     correctBaseline,
     resolveCatalogReview,
     createWorkOrder,
+    receiveQtyStock,
+    adjustQtyStock,
   };
 }

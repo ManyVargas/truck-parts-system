@@ -22,7 +22,7 @@ export function PdfPreviewModal({ open, detail, onClose }: PdfPreviewModalProps)
           </div>
           <div className="text-right">
             <Mono className="text-base font-semibold">{detail.number}</Mono>
-            <p className="mt-1 font-mono text-sm text-navy">Número de comprobante fiscal: ______________________</p>
+            <p className="mt-1 font-mono text-sm text-navy">NCF: ______________________</p>
           </div>
         </header>
 

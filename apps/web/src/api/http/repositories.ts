@@ -12,6 +12,7 @@ import type {
   UserRepository,
   WorkOrderRepository,
 } from '../contracts/repositories';
+import type { ConfirmInvoicePayment } from '../contracts/sales';
 import { ok } from '../../shared/auth/types';
 import { httpNotImplemented } from '../client/http-not-implemented';
 
@@ -116,6 +117,14 @@ export class HttpInventoryRepository implements InventoryRepository {
   async registerQtyProduct() {
     return httpNotImplemented('HttpInventoryRepository', 'registerQtyProduct');
   }
+
+  async receiveQtyStock() {
+    return httpNotImplemented('HttpInventoryRepository', 'receiveQtyStock');
+  }
+
+  async adjustQtyStock() {
+    return httpNotImplemented('HttpInventoryRepository', 'adjustQtyStock');
+  }
 }
 
 export class HttpCustomerRepository implements CustomerRepository {
@@ -181,7 +190,7 @@ export class HttpSalesRepository implements SalesRepository {
     return httpNotImplemented('HttpSalesRepository', 'setDraftMeta');
   }
 
-  async confirmInvoice() {
+  async confirmInvoice(_draftId: string, _payment?: ConfirmInvoicePayment) {
     return httpNotImplemented('HttpSalesRepository', 'confirmInvoice');
   }
 

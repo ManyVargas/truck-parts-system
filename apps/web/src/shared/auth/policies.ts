@@ -37,7 +37,8 @@ export function can(
   const role = user.role;
 
   if (role === 'ADMINISTRATOR') {
-    return true;
+    // Take/complete are Mechanic-only; Admin uses workOrders.manage and recovery instead.
+    return action !== 'workOrders.take' && action !== 'workOrders.complete';
   }
 
   if (role === 'SELLER') {

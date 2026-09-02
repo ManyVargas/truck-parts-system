@@ -274,8 +274,8 @@ export function PosPage() {
             setConfirmError(null);
           }
         }}
-        onConfirm={() => {
-          void pos.confirm().then((response) => {
+        onConfirm={(payment) => {
+          void pos.confirm(payment).then((response) => {
             if (!response.ok) {
               setConfirmError(response.error.message);
               return;

@@ -3,6 +3,7 @@ import type {
   AddDraftLineInput,
   AddPaymentInput,
   CancelInvoiceInput,
+  ConfirmInvoicePayment,
   CorrectCurrencyInput,
   RemoveDraftLineInput,
   SalesListTab,
@@ -177,13 +178,13 @@ export class MockSalesRepository implements SalesRepository {
     return ok(cloneForRead(buildPosDraftView(getMockState(), result.value)));
   }
 
-  async confirmInvoice(draftId: string) {
+  async confirmInvoice(draftId: string, payment?: ConfirmInvoicePayment) {
     const permission = requirePermission('sales.manage');
     if (!permission.ok) {
       return permission;
     }
 
-    const result = confirmInvoice(getMockState(), permission.value, draftId);
+    const result = confirmInvoice(getMockState(), permission.value, draftId, payment);
     if (!result.ok) {
       return result;
     }

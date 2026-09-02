@@ -98,6 +98,21 @@ describe('MockSalesRepository', () => {
     expect(listed.ok && listed.value.some((row) => row.number === 'FAC-000100')).toBe(true);
     expect(detail.ok && detail.value.status).toBe('COMPLETED');
     expect(detail.ok && detail.value.actions.canPay).toBe(true);
+    expect(detail.ok && detail.value.paymentState).toBe('UNPAID');
+  });
+
+  it('confirms the seed draft with a full initial payment', async () => {
+    signInAs('SELLER');
+    const confirmed = await mockSalesRepository.confirmInvoice('INV-DRAFT-01', {
+      amount: 31_600,
+      method: 'CASH',
+    });
+    const detail = await mockSalesRepository.getInvoice('INV-DRAFT-01');
+
+    expect(confirmed.ok && confirmed.value.number).toBe('FAC-000100');
+    expect(detail.ok && detail.value.paymentState).toBe('PAID');
+    expect(detail.ok && detail.value.balance).toBe(0);
+    expect(detail.ok && detail.value.payments).toHaveLength(1);
   });
 
   it('opens a second draft without reusing the seed draft', async () => {

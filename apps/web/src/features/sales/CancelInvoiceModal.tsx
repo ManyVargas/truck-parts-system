@@ -53,7 +53,7 @@ export function CancelInvoiceModal({
     onSubmit({
       reason,
       refundAmount: refundAmount === '' ? undefined : Number(refundAmount),
-      refundMethod: refundAmount === '' ? undefined : refundMethod,
+      refundMethod: paid > 0 || refundAmount !== '' ? refundMethod : undefined,
       inProgressDecision: hasInProgress ? inProgressDecision : undefined,
     });
   }
@@ -104,15 +104,17 @@ export function CancelInvoiceModal({
             <Field
               label="Reembolso"
               htmlFor="cancel-refund"
-              hint={`Pagado ${money(paid, currency)}. Deje vacío si no registra devolución ahora.`}
+              hint={`Pagado ${money(paid, currency)}. El reembolso no puede superar el monto pagado.`}
             >
               <Input
                 id="cancel-refund"
                 type="number"
                 step="0.01"
-                min="0"
+                min="0.01"
+                max={paid}
                 value={refundAmount}
                 onChange={(event) => setRefundAmount(event.target.value)}
+                required
               />
             </Field>
             <Field label="Método de reembolso" htmlFor="cancel-refund-method">
@@ -120,6 +122,7 @@ export function CancelInvoiceModal({
                 id="cancel-refund-method"
                 value={refundMethod}
                 onChange={(event) => setRefundMethod(event.target.value as PaymentMethod)}
+                required
               >
                 {METHODS.map((entry) => (
                   <option key={entry} value={entry}>

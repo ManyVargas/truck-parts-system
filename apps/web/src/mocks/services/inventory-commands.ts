@@ -10,6 +10,8 @@ import type {
   RegisterAssemblyResult,
   RegisterItemInput,
   RegisterQtyProductInput,
+  ReceiveQtyStockInput,
+  AdjustQtyStockInput,
   ResolveCatalogReviewInput,
 } from '../../api/contracts/inventory';
 import type {
@@ -25,6 +27,7 @@ import type {
 } from '../../api/contracts/entities';
 import { err, ok, type Result } from '../../shared/auth/types';
 import { currentDemoTimeIso, DEMO_NOW_ISO } from '../data/demo-clock';
+import { roundMoney } from './invoice-money';
 import {
   availableToReserve,
   collectSubtree,
@@ -447,6 +450,8 @@ function addItemLine(draft: Invoice, item: Item): InvoiceLine {
     unitPrice: 0,
     taxable: true,
     pricePending: true,
+    // Snapshot at reservation so later inventory cost edits do not rewrite the sale.
+    acquisitionCostDop: item.acquisitionCostDop,
   };
   draft.lines.push(line);
   return line;
@@ -556,6 +561,7 @@ export function addInventoryToDraft(
       unitPrice: 0,
       taxable: true,
       pricePending: true,
+      acquisitionCostDop: product.unitCostDop,
     });
   }
 
@@ -953,4 +959,122 @@ export function createManualWorkOrder(
   );
 
   return ok(order);
+}
+
+function qtyProductById(state: AppState, id: string): QtyProduct | undefined {
+  return state.qtyProducts.find((entry) => entry.id === id);
+}
+
+/**
+ * Normal receipt/entry: increases on-hand and recomputes weighted-average unitCostDop in DOP.
+ * Formula: (onHand * unitCostDop + qty * incomingCost) / (onHand + qty), then roundMoney.
+ */
+export function receiveQtyStock(
+  state: AppState,
+  actor: User,
+  input: ReceiveQtyStockInput,
+): Result<QtyProduct> {
+  const product = qtyProductById(state, input.qtyProductId);
+  if (!product) {
+    return err({ code: 'NOT_FOUND', message: 'Producto no encontrado' });
+  }
+
+  if (!Number.isInteger(input.quantity) || input.quantity <= 0) {
+    return err({
+      code: 'VALIDATION',
+      message: 'La cantidad de entrada debe ser un entero mayor que cero',
+    });
+  }
+
+  const costValidation = validateFiniteNonNegative(input.unitCostDop, 'El costo de entrada');
+  if (!costValidation.ok) {
+    return costValidation;
+  }
+
+  const previousOnHand = product.onHand;
+  const previousUnitCostDop = product.unitCostDop;
+  const resultingOnHand = previousOnHand + input.quantity;
+  if (!Number.isSafeInteger(resultingOnHand) || resultingOnHand < 0) {
+    return err({ code: 'VALIDATION', message: 'La existencia resultante no es válida' });
+  }
+
+  const resultingUnitCostDop = roundMoney(
+    (previousOnHand * previousUnitCostDop + input.quantity * input.unitCostDop) / resultingOnHand,
+  );
+  if (!Number.isFinite(resultingUnitCostDop) || resultingUnitCostDop < 0) {
+    return err({ code: 'VALIDATION', message: 'El costo promedio resultante no es válido' });
+  }
+
+  product.onHand = resultingOnHand;
+  product.unitCostDop = resultingUnitCostDop;
+
+  appendEvent(state, 'QTY_STOCK_RECEIVED', `Entrada de ${input.quantity} × ${product.id}`, actor, {
+    qtyProductId: product.id,
+    actorId: actor.id,
+    quantity: input.quantity,
+    incomingUnitCostDop: input.unitCostDop,
+    previousOnHand,
+    resultingOnHand,
+    previousUnitCostDop,
+    resultingUnitCostDop,
+  });
+
+  return ok(product);
+}
+
+/**
+ * Administrator-only audited correction of an already recorded quantity.
+ * Does not change unitCostDop. Resulting on-hand cannot fall below reserved.
+ */
+export function adjustQtyStock(
+  state: AppState,
+  actor: User,
+  input: AdjustQtyStockInput,
+): Result<QtyProduct> {
+  if (actor.role !== 'ADMINISTRATOR') {
+    return err({
+      code: 'FORBIDDEN',
+      message: 'Solo un administrador puede corregir la existencia registrada',
+    });
+  }
+
+  const reason = optionalText(input.reason);
+  if (!reason) {
+    return err({ code: 'VALIDATION', message: 'El ajuste de existencia requiere un motivo' });
+  }
+
+  if (!Number.isInteger(input.difference) || input.difference === 0) {
+    return err({
+      code: 'VALIDATION',
+      message: 'La diferencia debe ser un entero distinto de cero',
+    });
+  }
+
+  const product = qtyProductById(state, input.qtyProductId);
+  if (!product) {
+    return err({ code: 'NOT_FOUND', message: 'Producto no encontrado' });
+  }
+
+  const previousOnHand = product.onHand;
+  const resultingOnHand = previousOnHand + input.difference;
+  if (!Number.isSafeInteger(resultingOnHand) || resultingOnHand < product.reserved) {
+    return err({
+      code: 'VALIDATION',
+      message: 'La existencia no puede quedar por debajo de lo reservado',
+    });
+  }
+
+  product.onHand = resultingOnHand;
+
+  appendEvent(state, 'QTY_STOCK_ADJUSTED', `Existencia de ${product.id} ajustada`, actor, {
+    qtyProductId: product.id,
+    actorId: actor.id,
+    reason,
+    previousOnHand,
+    difference: input.difference,
+    resultingOnHand,
+    unitCostDop: product.unitCostDop,
+  });
+
+  return ok(product);
 }

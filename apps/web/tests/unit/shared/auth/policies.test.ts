@@ -15,7 +15,7 @@ function user(role: Role, active = true): User {
 }
 
 describe('authorization policies', () => {
-  it('grants administrators every declared action', () => {
+  it('grants administrators every declared action except taking and completing work orders', () => {
     const actions: PolicyAction[] = [
       'dashboard.view',
       'inventory.view',
@@ -26,8 +26,6 @@ describe('authorization policies', () => {
       'sales.cancel',
       'sales.correctCurrency',
       'workOrders.manage',
-      'workOrders.take',
-      'workOrders.complete',
       'catalogs.manage',
       'users.manage',
       'profile.update',
@@ -36,6 +34,16 @@ describe('authorization policies', () => {
     ];
 
     expect(actions.every((action) => can(user('ADMINISTRATOR'), action))).toBe(true);
+    expect(can(user('ADMINISTRATOR'), 'workOrders.take')).toBe(false);
+    expect(can(user('ADMINISTRATOR'), 'workOrders.complete')).toBe(false);
+  });
+
+  it('denies administrators taking and completing work orders', () => {
+    const administrator = user('ADMINISTRATOR');
+
+    expect(can(administrator, 'workOrders.take')).toBe(false);
+    expect(can(administrator, 'workOrders.complete')).toBe(false);
+    expect(can(administrator, 'workOrders.manage')).toBe(true);
   });
 
   it('limits sellers to operational inventory, customer and sales actions', () => {

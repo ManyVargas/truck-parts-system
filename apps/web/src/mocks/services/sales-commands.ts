@@ -15,7 +15,12 @@ import type {
 } from '../../api/contracts/entities';
 import { err, ok, type Result } from '../../shared/auth/types';
 import { DEMO_NOW_ISO } from '../data/demo-clock';
-import { itemById, syncDirectParentCompleteness } from './inventory-helpers';
+import {
+  collectSubtree,
+  isAssemblyItem,
+  itemById,
+  syncDirectParentCompleteness,
+} from './inventory-helpers';
 import { applyUsdProfitability } from './usd-profitability';
 import {
   derivePaymentState,
@@ -87,9 +92,13 @@ function parsePositiveMoney(value: number | undefined): Result<number> {
   return ok(rounded);
 }
 
+function workOrderLinkedToInvoice(order: WorkOrder, invoiceId: string): boolean {
+  return order.invoiceId === invoiceId || Boolean(order.linkedInvoiceIds?.includes(invoiceId));
+}
+
 function linkedDismantlingOrders(state: AppState, invoiceId: string): WorkOrder[] {
   return state.workOrders.filter(
-    (order) => order.invoiceId === invoiceId && order.type === 'DISMANTLING',
+    (order) => order.type === 'DISMANTLING' && workOrderLinkedToInvoice(order, invoiceId),
   );
 }
 
@@ -119,6 +128,14 @@ function restoreInventoryForInvoice(state: AppState, invoice: Invoice, woByPiece
       const item = itemById(state.items, line.itemId);
       if (item) {
         restoreSoldItem(state, item, woByPiece.get(item.id)?.status);
+        // SALE-008 / CANCEL-003: confirmInvoice marks assembly descendants Sold without
+        // invoice lines; restore them too. restoreSoldItem is idempotent if a descendant
+        // is also a line of its own.
+        if (isAssemblyItem(item, state.categories)) {
+          for (const descendant of collectSubtree(state.items, item.id)) {
+            restoreSoldItem(state, descendant, woByPiece.get(descendant.id)?.status);
+          }
+        }
       }
       continue;
     }
@@ -242,13 +259,20 @@ export function cancelInvoice(state: AppState, actor: User, input: CancelInvoice
   }
 
   let refund: Payment | undefined;
-  if (input.refundAmount != null && input.refundAmount !== 0) {
+  const paid = invoicePaid(invoice);
+
+  // CANCEL-002: paid/partial invoices must record a refund in the same cancellation.
+  // Staged refunds are out of prototype scope; unpaid invoices still cancel without refund fields.
+  if (paid > 0) {
     const refundAmount = parsePositiveMoney(input.refundAmount);
     if (!refundAmount.ok) {
-      return refundAmount;
+      return err({
+        code: 'VALIDATION',
+        message:
+          'La cancelación de una factura pagada o parcialmente pagada requiere un reembolso mayor que cero',
+      });
     }
 
-    const paid = invoicePaid(invoice);
     if (refundAmount.value > paid) {
       return err({
         code: 'VALIDATION',

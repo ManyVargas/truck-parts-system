@@ -94,7 +94,7 @@ Invoice PDF rendering is secondary to sale validity. Preserve all invoice facts 
 
 ### Release 7 — Hierarchy-linked sales
 - [x] Installed-piece sale + Dismantling create-or-reuse. *(prototipo mock — WM8; completar desarme es WM10)*
-- [x] Complete-assembly subtree validation/snapshot. *(prototipo mock — bloqueo por OT activa; marca Sold)*
+- [x] Complete-assembly subtree validation/snapshot. *(prototipo mock — bloqueo por OT activa; marca Sold; snapshot inmutable `deliveredAssemblies`)*
 - [ ] Race handling versus hierarchy/Work-Order changes.
 
 ### Tests

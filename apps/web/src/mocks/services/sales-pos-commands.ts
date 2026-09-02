@@ -1,5 +1,6 @@
 import type {
   AddDraftLineInput,
+  ConfirmInvoicePayment,
   CreateDraftResult,
   RemoveDraftLineInput,
   SetDraftLinePriceInput,
@@ -8,10 +9,13 @@ import type {
 import type {
   AppEvent,
   AppState,
+  DeliveredAssembly,
   Invoice,
   InvoiceLine,
   Item,
   LineType,
+  Payment,
+  PaymentMethod,
   User,
   WorkOrder,
 } from '../../api/contracts/entities';
@@ -25,7 +29,7 @@ import {
   overlappingReservation,
   protectedAncestor,
 } from './inventory-helpers';
-import { roundMoney } from './invoice-money';
+import { derivePaymentState, invoiceTotal, roundMoney } from './invoice-money';
 import { activeWorkAffectingAssembly, CASH_CUSTOMER_ID, customerQualifiesForFiscal } from './sales-helpers';
 import { applyUsdProfitability } from './usd-profitability';
 
@@ -102,6 +106,25 @@ function parseNonNegativeMoney(value: number | undefined): Result<number> {
     return err({ code: 'VALIDATION', message: 'El precio no puede ser negativo' });
   }
   return ok(rounded);
+}
+
+function parsePositiveMoney(value: number | undefined): Result<number> {
+  if (value == null || !Number.isFinite(value)) {
+    return err({ code: 'VALIDATION', message: 'El monto debe ser un número válido' });
+  }
+
+  const rounded = roundMoney(value);
+  if (rounded <= 0) {
+    return err({ code: 'VALIDATION', message: 'El monto debe ser mayor que cero' });
+  }
+
+  return ok(rounded);
+}
+
+const PAYMENT_METHODS: PaymentMethod[] = ['CASH', 'CARD', 'TRANSFER', 'CHECK'];
+
+function allPaymentIds(state: AppState): string[] {
+  return state.invoices.flatMap((invoice) => invoice.payments.map((payment) => payment.id));
 }
 
 function parsePositiveInteger(value: number | undefined, fallback = 1): Result<number> {
@@ -263,6 +286,7 @@ export function addDraftLine(state: AppState, actor: User, input: AddDraftLineIn
         existingLine.unitPrice = unitPrice;
         existingLine.pricePending = false;
       }
+      // Keep the first unit-cost snapshot; do not blend a later QTY average into this line.
     } else {
       draft.lines.push({
         id: nextLineId(draft),
@@ -273,6 +297,7 @@ export function addDraftLine(state: AppState, actor: User, input: AddDraftLineIn
         unitPrice,
         taxable: true,
         pricePending,
+        acquisitionCostDop: product.unitCostDop,
       });
     }
     product.reserved += quantity.value;
@@ -470,6 +495,52 @@ function markItemSold(item: Item): void {
   delete item.reservedByDraftId;
 }
 
+/**
+ * COST-003: copy live inventory cost onto the line only when the line has none.
+ * A value already stored (POS add, inventory addItemLine, EXTERNAL input) is the sale snapshot.
+ */
+function freezeLineAcquisitionCost(state: AppState, line: InvoiceLine): void {
+  if (line.acquisitionCostDop != null) {
+    return;
+  }
+
+  if (line.type === 'ITEM' && line.itemId) {
+    const item = itemById(state.items, line.itemId);
+    if (item?.acquisitionCostDop != null) {
+      line.acquisitionCostDop = item.acquisitionCostDop;
+    }
+    return;
+  }
+
+  if (line.type === 'QTY' && line.qtyProductId) {
+    const product = state.qtyProducts.find((entry) => entry.id === line.qtyProductId);
+    if (product) {
+      line.acquisitionCostDop = product.unitCostDop;
+    }
+  }
+}
+
+function snapshotDeliveredAssembly(items: Item[], root: Item): DeliveredAssembly {
+  return {
+    rootItemId: root.id,
+    nodes: [root, ...collectSubtree(items, root.id)].map((node) => ({
+      itemId: node.id,
+      parentId: node.parentId,
+      name: node.name,
+    })),
+  };
+}
+
+function uniqueAppendInvoiceIds(existing: string[] | undefined, ...invoiceIds: Array<string | undefined>): string[] {
+  const result = existing ? [...existing] : [];
+  for (const invoiceId of invoiceIds) {
+    if (invoiceId && !result.includes(invoiceId)) {
+      result.push(invoiceId);
+    }
+  }
+  return result;
+}
+
 function ensureDismantlingOrder(
   state: AppState,
   actor: User,
@@ -483,6 +554,12 @@ function ensureDismantlingOrder(
       (order.status === 'PENDING' || order.status === 'IN_PROGRESS'),
   );
   if (existing) {
+    // CANCEL-005 / HIST-002: keep prior commercial invoices when the active WO is reused.
+    existing.linkedInvoiceIds = uniqueAppendInvoiceIds(
+      existing.linkedInvoiceIds,
+      existing.invoiceId,
+      invoice.id,
+    );
     existing.invoiceId = invoice.id;
     return existing;
   }
@@ -498,6 +575,7 @@ function ensureDismantlingOrder(
     pieceId: item.id,
     sourceParentId: item.parentId,
     invoiceId: invoice.id,
+    linkedInvoiceIds: [invoice.id],
     notes: 'Desarme por venta de pieza instalada',
     beforePhotos: [],
     afterPhotos: [],
@@ -518,8 +596,15 @@ function ensureDismantlingOrder(
  * SALE-002: validate the whole draft first, then mutate.
  * A mid-loop failure must not leave inventory sold or a FAC- number consumed.
  * A second call on an already completed invoice is idempotent (no new FAC-).
+ * PAY-001 / SALE-005: optional initial payment is validated here so a bad amount
+ * cannot complete the sale unpaid, then appended after COMPLETED (same ledger rules as addPayment).
  */
-export function confirmInvoice(state: AppState, actor: User, draftId: string): Result<Invoice> {
+export function confirmInvoice(
+  state: AppState,
+  actor: User,
+  draftId: string,
+  payment?: ConfirmInvoicePayment,
+): Result<Invoice> {
   const found = findInvoice(state, draftId);
   if (!found.ok) {
     return found;
@@ -580,7 +665,15 @@ export function confirmInvoice(state: AppState, actor: User, draftId: string): R
             message: `No se puede confirmar este ensamblaje mientras hay trabajo físico activo (${blocking.id})`,
           });
         }
-        const subtreeIds = new Set(collectSubtree(state.items, item.id).map((node) => node.id));
+        const descendants = collectSubtree(state.items, item.id);
+        const soldDescendant = descendants.find((node) => node.commercialState === 'SOLD');
+        if (soldDescendant) {
+          return err({
+            code: 'CONFLICT',
+            message: `No se puede confirmar el ensamblaje mientras el descendiente ${soldDescendant.id} ya está vendido`,
+          });
+        }
+        const subtreeIds = new Set(descendants.map((node) => node.id));
         const conflictingLine = invoice.lines.find(
           (other) => other.itemId && other.id !== line.id && subtreeIds.has(other.itemId),
         );
@@ -607,6 +700,29 @@ export function confirmInvoice(state: AppState, actor: User, draftId: string): R
     }
   }
 
+  let initialPaymentAmount: number | undefined;
+  if (payment) {
+    if (!PAYMENT_METHODS.includes(payment.method)) {
+      return err({ code: 'VALIDATION', message: 'El pago requiere un método' });
+    }
+    const amount = parsePositiveMoney(payment.amount);
+    if (!amount.ok) {
+      return amount;
+    }
+    const total = invoiceTotal(invoice);
+    if (amount.value > total) {
+      return err({
+        code: 'VALIDATION',
+        message: 'El pago no puede superar el saldo pendiente',
+      });
+    }
+    initialPaymentAmount = amount.value;
+  }
+
+  for (const line of invoice.lines) {
+    freezeLineAcquisitionCost(state, line);
+  }
+
   const number = `FAC-${String(state.facSeq).padStart(6, '0')}`;
   state.facSeq += 1;
   invoice.number = number;
@@ -625,6 +741,17 @@ export function confirmInvoice(state: AppState, actor: User, draftId: string): R
         markItemSold(item);
         for (const descendant of collectSubtree(state.items, item.id)) {
           markItemSold(descendant);
+        }
+        // SALE-008: freeze the current tree as a value copy; later inventory edits
+        // and cancellation must not rewrite this snapshot.
+        invoice.deliveredAssemblies = [
+          ...(invoice.deliveredAssemblies ?? []),
+          snapshotDeliveredAssembly(state.items, item),
+        ];
+        // SALE-006: confirming an installed piece still needs a dismantling WO,
+        // even when that piece is an assembly (SALE-008 only skips WO for independent ones).
+        if (item.physicalRelationship === 'INSTALLED') {
+          ensureDismantlingOrder(state, actor, invoice, item);
         }
         continue;
       }
@@ -646,5 +773,37 @@ export function confirmInvoice(state: AppState, actor: User, draftId: string): R
     invoiceId: invoice.id,
     number,
   });
+
+  if (payment && initialPaymentAmount != null) {
+    if (payment.idempotencyKey) {
+      const existing = invoice.payments.find((entry) => entry.idempotencyKey === payment.idempotencyKey);
+      if (existing) {
+        return ok(invoice);
+      }
+    }
+
+    const receipt: Payment = {
+      id: nextNumericId(allPaymentIds(state), 'PAY-', 3),
+      invoiceId: invoice.id,
+      amount: initialPaymentAmount,
+      method: payment.method,
+      createdAt: DEMO_NOW_ISO,
+      kind: 'PAYMENT',
+      actorId: actor.id,
+      reference: payment.reference?.trim() || undefined,
+      idempotencyKey: payment.idempotencyKey,
+    };
+
+    invoice.payments.push(receipt);
+    invoice.paymentState = derivePaymentState(invoice);
+
+    appendEvent(state, 'PAYMENT_RECORDED', `Pago registrado en ${number}`, actor, {
+      invoiceId: invoice.id,
+      paymentId: receipt.id,
+      amount: receipt.amount,
+      method: receipt.method,
+    });
+  }
+
   return ok(invoice);
 }

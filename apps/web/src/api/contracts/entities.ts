@@ -117,6 +117,19 @@ export type LineType =
   | 'SERVICE'
   | 'DELIVERY';
 
+/** Frozen copy of one node in an assembly sold as a unit (SALE-008). */
+export type DeliveredAssemblyNode = {
+  itemId: string;
+  parentId?: string;
+  name: string;
+};
+
+/** Immutable delivered-tree snapshot captured at confirmation (SALE-008). */
+export type DeliveredAssembly = {
+  rootItemId: string;
+  nodes: DeliveredAssemblyNode[];
+};
+
 export type InvoiceLine = {
   id: string;
   type: LineType;
@@ -180,6 +193,11 @@ export type Invoice = {
     name: string;
     rnc?: string;
   };
+  /**
+   * SALE-008: exact hierarchy delivered for each assembly line, frozen at confirm.
+   * Later live parentId/name edits and cancellation must not rewrite this copy.
+   */
+  deliveredAssemblies?: DeliveredAssembly[];
 };
 
 export type WorkOrderType = 'DISMANTLING' | 'INSTALLATION';
@@ -193,7 +211,10 @@ export type WorkOrder = {
   sourceParentId?: string;
   destinationParentId?: string;
   assignedMechanicId?: string;
+  /** Current commercial invoice (latest confirm). */
   invoiceId?: string;
+  /** Additive invoice history so reuse does not erase prior commercial links. */
+  linkedInvoiceIds?: string[];
   notes?: string;
   beforePhotos: string[];
   afterPhotos: string[];
