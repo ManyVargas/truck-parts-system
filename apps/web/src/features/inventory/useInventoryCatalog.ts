@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Category } from '../../api/contracts/entities';
 import type { InventoryListFilters, InventoryListRow } from '../../api/contracts/inventory';
 import type { AppError } from '../../shared/auth/types';
-import { mockCategoryRepository, mockInventoryRepository } from '../../mocks/repositories';
+import { categoryRepository, inventoryRepository } from '../../api/repositories';
 
 type CatalogQuery =
   | { status: 'loading' }
@@ -25,7 +25,7 @@ export function useInventoryCatalog() {
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
-    mockCategoryRepository.list().then((response) => {
+    categoryRepository.list().then((response) => {
       if (response.ok) {
         setCategories(response.value);
       }
@@ -36,7 +36,7 @@ export function useInventoryCatalog() {
     let cancelled = false;
     setResult({ status: 'loading' });
 
-    mockInventoryRepository.listCatalog(filters).then((response) => {
+    inventoryRepository.listCatalog(filters).then((response) => {
       if (cancelled) {
         return;
       }

@@ -32,7 +32,7 @@ describe('CreateWorkOrderModal', () => {
 
     await user.selectOptions(screen.getByLabelText('Pieza'), 'ENG-001');
     await user.type(screen.getByLabelText('Notas'), 'Desarme de patio');
-    await user.click(screen.getByRole('button', { name: 'Crear OT' }));
+    await user.click(screen.getByRole('button', { name: 'Crear orden de trabajo' }));
 
     expect(onSubmit).toHaveBeenCalledWith({
       pieceId: 'ENG-001',
@@ -59,7 +59,7 @@ describe('CreateWorkOrderModal', () => {
     await user.selectOptions(screen.getByLabelText('Tipo'), 'INSTALLATION');
     await user.selectOptions(screen.getByLabelText('Pieza'), 'ALT-010');
     await user.selectOptions(screen.getByLabelText('Padre destino'), 'ENG-002');
-    await user.click(screen.getByRole('button', { name: 'Crear OT' }));
+    await user.click(screen.getByRole('button', { name: 'Crear orden de trabajo' }));
 
     expect(onSubmit).toHaveBeenCalledWith({
       pieceId: 'ALT-010',

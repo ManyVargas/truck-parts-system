@@ -16,3 +16,8 @@ export type MoneyCurrency = 'DOP' | 'USD';
 export function money(amount: number, currency: MoneyCurrency = 'DOP'): string {
   return currency === 'USD' ? USD_FORMATTER.format(amount) : DOP_FORMATTER.format(amount);
 }
+
+/** Human-readable currency name for selects and labels; ISO code stays in parentheses. */
+export function currencyLabel(currency: MoneyCurrency): string {
+  return currency === 'USD' ? 'Dólares (USD)' : 'Pesos (DOP)';
+}

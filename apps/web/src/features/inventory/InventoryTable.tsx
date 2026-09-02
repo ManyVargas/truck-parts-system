@@ -82,7 +82,7 @@ export function InventoryTable({ rows }: InventoryTableProps) {
                 </td>
                 <td className="px-4 py-3 font-mono text-navy-400">
                   {row.kind === 'QTY'
-                    ? `${row.qtyAvailable} disp. / ${row.qtyOnHand} exist.`
+                    ? `${row.qtyAvailable} disponibles / ${row.qtyOnHand} en existencia`
                     : '—'}
                 </td>
               </tr>

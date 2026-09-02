@@ -33,7 +33,7 @@ export function MechanicMinePage() {
       {mine.length === 0 ? (
         <Empty
           title="Aún no tiene órdenes"
-          description="Tome una OT pendiente para que aparezca aquí."
+          description="Tome una orden pendiente para que aparezca aquí."
         />
       ) : (
         <ul className="space-y-3">

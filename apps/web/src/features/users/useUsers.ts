@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import type { ManagedUser, SaveUserInput } from '../../api/contracts/users';
 import type { AppError, Result } from '../../shared/auth/types';
-import { mockUserRepository } from '../../mocks/repositories';
+import { userRepository } from '../../api/repositories';
 
 type UsersQuery =
   | { status: 'loading' }
@@ -22,7 +22,7 @@ export function useUsers() {
     let cancelled = false;
     setResult({ status: 'loading' });
 
-    mockUserRepository.list().then((response) => {
+    userRepository.list().then((response) => {
       if (cancelled) {
         return;
       }
@@ -51,7 +51,7 @@ export function useUsers() {
 
   const save = useCallback(async (input: SaveUserInput): Promise<Result<string>> => {
     setIsSaving(true);
-    const response = await mockUserRepository.save(input);
+    const response = await userRepository.save(input);
     setIsSaving(false);
 
     if (!response.ok) {

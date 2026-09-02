@@ -24,7 +24,7 @@ import type {
   WorkOrder,
 } from '../../api/contracts/entities';
 import { err, ok, type Result } from '../../shared/auth/types';
-import { DEMO_NOW_ISO } from '../data/demo-clock';
+import { currentDemoTimeIso, DEMO_NOW_ISO } from '../data/demo-clock';
 import {
   availableToReserve,
   collectSubtree,
@@ -423,7 +423,7 @@ function openDraft(state: AppState): Invoice {
     lines: [],
     payments: [],
     paymentState: 'UNPAID',
-    createdAt: DEMO_NOW_ISO,
+    createdAt: currentDemoTimeIso(),
   };
   state.invoices.push(draft);
   return draft;
@@ -732,7 +732,7 @@ export function resolveCatalogReview(
   if (!allowed.has(input.decision)) {
     return err({
       code: 'VALIDATION',
-      message: 'La decisión debe ser confirmar NA, marcar falta, registrar presente o reconocer coincidencia',
+      message: 'La decisión debe ser confirmar que no aplica, marcar falta, registrar presente o reconocer coincidencia',
     });
   }
 
@@ -762,7 +762,7 @@ export function resolveCatalogReview(
   if (review.kind === 'PENDING_NA' && input.decision === 'ACKNOWLEDGE') {
     return err({
       code: 'VALIDATION',
-      message: 'Este componente aún no está en el ensamblaje; confirme NA, márquelo falta o regístrelo presente',
+      message: 'Este componente aún no está en el ensamblaje; confirme que no aplica, márquelo falta o regístrelo presente',
     });
   }
 
@@ -921,7 +921,7 @@ export function createManualWorkOrder(
   if (active) {
     return err({
       code: 'CONFLICT',
-      message: `Ya existe una OT activa (${active.id}) para esta pieza`,
+      message: `Ya existe una orden de trabajo activa (${active.id}) para esta pieza`,
     });
   }
 
@@ -947,7 +947,7 @@ export function createManualWorkOrder(
   appendEvent(
     state,
     'WORK_ORDER_CREATED',
-    `OT ${order.id} (${order.type}) creada para ${piece.id}`,
+    `Orden de trabajo ${order.id} (${order.type === 'DISMANTLING' ? 'desarme' : 'instalación'}) creada para ${piece.id}`,
     actor,
     { itemId: piece.id, workOrderId: order.id },
   );

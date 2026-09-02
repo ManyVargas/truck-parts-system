@@ -60,7 +60,7 @@ describe('PosPage', () => {
     await user.click(confirmButtons[confirmButtons.length - 1]);
 
     expect(await screen.findByText('Venta confirmada')).toBeVisible();
-    expect(screen.getByText(/OT de desarme: OD-DEMO-064/)).toBeVisible();
+    expect(screen.getByText(/Orden de desarme: OD-DEMO-064/)).toBeVisible();
   });
 
   it('lists a newly created customer in the selector', async () => {

@@ -8,7 +8,7 @@ import type {
   InvoiceDetailView,
 } from '../../api/contracts/sales';
 import type { AppError, Result } from '../../shared/auth/types';
-import { mockSalesRepository } from '../../mocks/repositories';
+import { salesRepository } from '../../api/repositories';
 
 type DetailQuery =
   | { status: 'loading' }
@@ -30,7 +30,7 @@ export function useInvoiceDetail(id: string | undefined) {
     let cancelled = false;
     setResult({ status: 'loading' });
 
-    mockSalesRepository.getInvoice(id).then((response) => {
+    salesRepository.getInvoice(id).then((response) => {
       if (cancelled) {
         return;
       }
@@ -59,7 +59,7 @@ export function useInvoiceDetail(id: string | undefined) {
 
   const addPayment = useCallback(async (input: AddPaymentInput): Promise<Result<void>> => {
     setIsMutating(true);
-    const response = await mockSalesRepository.addPayment(input);
+    const response = await salesRepository.addPayment(input);
     setIsMutating(false);
     if (!response.ok) {
       return response;
@@ -70,7 +70,7 @@ export function useInvoiceDetail(id: string | undefined) {
 
   const cancelInvoice = useCallback(async (input: CancelInvoiceInput): Promise<Result<void>> => {
     setIsMutating(true);
-    const response = await mockSalesRepository.cancelInvoice(input);
+    const response = await salesRepository.cancelInvoice(input);
     setIsMutating(false);
     if (!response.ok) {
       return response;
@@ -81,7 +81,7 @@ export function useInvoiceDetail(id: string | undefined) {
 
   const correctCurrency = useCallback(async (input: CorrectCurrencyInput): Promise<Result<void>> => {
     setIsMutating(true);
-    const response = await mockSalesRepository.correctCurrency(input);
+    const response = await salesRepository.correctCurrency(input);
     setIsMutating(false);
     if (!response.ok) {
       return response;

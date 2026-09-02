@@ -52,7 +52,7 @@ export function InvoiceDetailPage() {
           <div className="flex flex-wrap gap-2">
             {detail.actions.canViewPdf && (
               <Button variant="secondary" onClick={() => setPdfOpen(true)}>
-                Vista previa PDF
+                Vista previa del documento
               </Button>
             )}
             {detail.actions.canPay && (

@@ -157,7 +157,7 @@ export function CustomerFormModal({
             autoFocus
           />
         </Field>
-        <Field label="RNC / Cédula" htmlFor="customer-rnc" hint="Opcional en ventas no fiscales">
+        <Field label="Identificación fiscal / cédula" htmlFor="customer-rnc" hint="Opcional en ventas no fiscales">
           <Input
             id="customer-rnc"
             value={fields.rnc}

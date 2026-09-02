@@ -33,13 +33,13 @@ export function ConfirmSaleModal({
           para <strong>{draft.customerName}</strong>.
         </p>
         <p>
-          Total {money(draft.totals.gross, draft.currency)} · ITBIS{' '}
+          Total {money(draft.totals.gross, draft.currency)} · Impuesto ITBIS{' '}
           {money(draft.totals.itbis, draft.currency)}
         </p>
         {installed.length > 0 && (
           <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
             Hay {installed.length} pieza(s) instalada(s). Al confirmar quedarán vendidas e instaladas y se
-            abrirá una OT de desarme pendiente.
+            abrirá una orden de desarme pendiente.
           </p>
         )}
         {draft.blockers.length > 0 && (

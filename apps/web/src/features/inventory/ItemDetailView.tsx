@@ -111,7 +111,7 @@ export function ItemDetailViewPanel({
         <Card>
           <SectionTitle title="Órdenes de trabajo" />
           {detail.workOrders.length === 0 ? (
-            <p className="text-sm text-navy-400">Sin OT ligadas a esta pieza.</p>
+            <p className="text-sm text-navy-400">Sin órdenes de trabajo ligadas a esta pieza.</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {detail.workOrders.map((order) => (

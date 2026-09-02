@@ -8,3 +8,5 @@ export { mockSalesRepository } from './MockSalesRepository';
 export { mockServiceRepository } from './MockServiceRepository';
 export { mockUserRepository } from './MockUserRepository';
 export { mockWorkOrderRepository } from './MockWorkOrderRepository';
+export { mockProfitabilityRepository } from './MockProfitabilityRepository';
+export { mockRecoveryRepository } from './MockRecoveryRepository';

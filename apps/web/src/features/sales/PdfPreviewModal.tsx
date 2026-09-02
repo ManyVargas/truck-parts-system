@@ -1,6 +1,6 @@
 import type { InvoiceDetailView } from '../../api/contracts/sales';
 import { APP_NAME } from '../../shared/config/brand';
-import { Button, Modal, money, Mono } from '../../shared/ui';
+import { Button, currencyLabel, Modal, money, Mono } from '../../shared/ui';
 import { InvoiceLinesTable } from './InvoiceLinesTable';
 
 export type PdfPreviewModalProps = {
@@ -22,7 +22,7 @@ export function PdfPreviewModal({ open, detail, onClose }: PdfPreviewModalProps)
           </div>
           <div className="text-right">
             <Mono className="text-base font-semibold">{detail.number}</Mono>
-            <p className="mt-1 font-mono text-sm text-navy">NCF: ______________________</p>
+            <p className="mt-1 font-mono text-sm text-navy">Número de comprobante fiscal: ______________________</p>
           </div>
         </header>
 
@@ -30,16 +30,16 @@ export function PdfPreviewModal({ open, detail, onClose }: PdfPreviewModalProps)
           <p>
             Cliente: <span className="font-medium">{detail.customerName}</span>
           </p>
-          <p>RNC / Cédula: {detail.customerRnc ?? '—'}</p>
-          <p>Moneda: {detail.currency}</p>
-          <p>{detail.fiscal ? 'Factura con comprobante fiscal (ITBIS 18% incluido)' : 'Sin comprobante fiscal'}</p>
+          <p>Identificación fiscal / cédula: {detail.customerRnc ?? '—'}</p>
+          <p>Moneda: {currencyLabel(detail.currency)}</p>
+          <p>{detail.fiscal ? 'Factura con comprobante fiscal (impuesto ITBIS 18% incluido)' : 'Sin comprobante fiscal'}</p>
         </div>
 
         <InvoiceLinesTable lines={detail.lines} currency={detail.currency} fiscal={detail.fiscal} />
 
         <div className="ml-auto max-w-xs space-y-1 text-sm">
           <div className="flex justify-between">
-            <span className="text-navy-400">ITBIS</span>
+            <span className="text-navy-400">Impuesto ITBIS</span>
             <span className="font-mono">
               {detail.fiscal ? money(itbisTotal, detail.currency) : money(0, detail.currency)}
             </span>

@@ -84,11 +84,11 @@ export function EvidencePanel({
     <section className="space-y-4">
       <SectionTitle
         title="Evidencia"
-        subtitle="Completar exige al menos una foto BEFORE y una AFTER"
+        subtitle="Completar exige al menos una foto de antes y una de después"
       />
       <EvidenceField
         kind="BEFORE"
-        label="BEFORE"
+        label="Antes"
         photos={beforePhotos}
         canAdd={canAdd}
         disabled={disabled}
@@ -96,7 +96,7 @@ export function EvidencePanel({
       />
       <EvidenceField
         kind="AFTER"
-        label="AFTER"
+        label="Después"
         photos={afterPhotos}
         canAdd={canAdd}
         disabled={disabled}

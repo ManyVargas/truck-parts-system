@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 
 import type { Currency } from '../../api/contracts/entities';
-import { Button, Field, Info, Modal, Select, Textarea } from '../../shared/ui';
+import { Button, currencyLabel, Field, Info, Modal, Select, Textarea } from '../../shared/ui';
 
 export type CurrencyCorrectionModalProps = {
   open: boolean;
@@ -48,8 +48,8 @@ export function CurrencyCorrectionModal({
             value={currency}
             onChange={(event) => setCurrency(event.target.value as Currency)}
           >
-            <option value="DOP">DOP</option>
-            <option value="USD">USD</option>
+            <option value="DOP">{currencyLabel('DOP')}</option>
+            <option value="USD">{currencyLabel('USD')}</option>
           </Select>
         </Field>
         <Field label="Motivo" htmlFor="currency-reason">

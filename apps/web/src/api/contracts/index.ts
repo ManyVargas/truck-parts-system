@@ -7,4 +7,6 @@ export * from './inventory';
 export * from './sales';
 export * from './work-orders';
 export * from './profile';
+export * from './profitability';
+export * from './recovery';
 export * from './repositories';

@@ -9,9 +9,9 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 
 export const LINE_TYPE_LABELS: Record<LineType, string> = {
   ITEM: 'Artículo',
-  QTY: 'Cantidad',
-  GENERIC: 'Genérica',
-  EXTERNAL: 'Externa',
+  QTY: 'Producto por cantidad',
+  GENERIC: 'Línea genérica',
+  EXTERNAL: 'Compra externa',
   SERVICE: 'Servicio',
   DELIVERY: 'Envío',
 };

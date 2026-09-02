@@ -1,9 +1,12 @@
 import { APP_NAME } from '../../shared/config/brand';
-import { Logo } from '../../shared/ui';
+import { readLastDemoScenarioHint } from '../../shared/config/demo-scenario-hint';
+import { Logo, Mono } from '../../shared/ui';
 import { DemoCredentialsPanel } from './DemoCredentialsPanel';
 import { LoginForm } from './LoginForm';
 
 export function LoginPage() {
+  const hint = readLastDemoScenarioHint();
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-shell px-4 py-10 text-white">
       <div className="w-full max-w-sm space-y-5">
@@ -16,6 +19,17 @@ export function LoginPage() {
             </p>
           </div>
         </header>
+
+        {hint && (
+          <aside className="rounded-lg border border-brand/40 bg-brand/15 px-3 py-2.5 text-xs text-white/90">
+            <p className="font-medium text-white">Escenario: {hint.title}</p>
+            <p className="mt-1">
+              Use <Mono className="text-white">{hint.suggestedUsername}</Mono> /{' '}
+              <Mono className="text-white">{hint.suggestedPassword}</Mono>
+            </p>
+            <p className="mt-1 text-white/70">{hint.nextSteps}</p>
+          </aside>
+        )}
 
         <div className="rounded-xl border border-shell-border bg-white p-6 shadow-lg">
           <LoginForm />

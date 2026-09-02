@@ -1,7 +1,7 @@
 # Plan 001 — Frontend Prototipo Mock: SoloCamiones
 
 **Alcance:** Prototipo frontend funcional con datos dummy (sin backend)  
-**Estado:** WM11 completado — WM12 pendiente
+**Estado:** WM12 completado — prototipo plan 001 cerrado
 **Último milestone planificado:** WM12 — Rentabilidad, recuperación, escenarios demo y preparación API  
 **Referencia de diseño:** [Prototipo Figma Make](https://www.figma.com/make/HzibQNQ88lqtv3rAup56eJ/Follow-prototype-instructions)
 
@@ -275,7 +275,7 @@ El resto del prototipo (inventario, ventas, OT, etc.) permanece mock hasta los r
 | WM9  | Órdenes de trabajo (escritorio)                        | completado  |
 | WM10 | Experiencia Mecánico (móvil)                           | completado  |
 | WM11 | Catálogos y usuarios (admin)                           | completado  |
-| WM12 | Rentabilidad, recuperación, escenarios demo, prep API  | pendiente  |
+| WM12 | Rentabilidad, recuperación, escenarios demo, prep API  | completado |
 
 ### Diagrama de dependencias
 
@@ -730,7 +730,7 @@ Agregaciones sobre `items`, `invoices`, `workOrders`, `events`.
 
 ### Funcionalidades — Rentabilidad
 
-- KPIs utilidad DOP/USD; facturas USD pendientes FX
+- KPI utilidad en pesos (incluye dólares convertidos con su tasa); facturas USD pendientes FX
 - Toggle tasa FX (demo)
 - Tabla por factura + reintentar cálculo
 
@@ -769,12 +769,12 @@ Cada escenario reinicia datos y documenta qué credenciales usar para login.
 
 ### Criterios de aceptación
 
-- [ ] 12 escenarios sin error
-- [ ] FAC-000096 pendiente FX hasta toggle + reintentar
-- [ ] Liberar reserva descarta borrador y libera pieza
-- [ ] `VITE_USE_MOCK_API=false` arranca sin importar mocks en features
-- [ ] Walkthrough Part A/B/C de PROTOTYPE_PLAN reproducible
-- [ ] Checklist endurecimiento completado
+- [x] 12 escenarios sin error
+- [x] FAC-000096 pendiente FX hasta toggle + reintentar
+- [x] Liberar reserva descarta borrador y libera pieza
+- [x] `VITE_USE_MOCK_API=false` arranca sin importar mocks en features
+- [x] Walkthrough Part A/B/C de PROTOTYPE_PLAN reproducible
+- [x] Checklist endurecimiento completado
 
 ---
 
@@ -818,3 +818,4 @@ Cada escenario reinicia datos y documenta qué credenciales usar para login.
 | 2026-09-01 | WM9 completado: listado/detalle de OT de escritorio, creación manual, reasignación y cancelación admin. Completar desarme sigue en WM10. |
 | 2026-09-01 | WM10 completado: app móvil del mecánico, claim atómico, evidencia BEFORE/AFTER y completar desarme/instalación sin datos comerciales. |
 | 2026-09-01 | WM11 completado: catálogos admin (categorías/servicios) y gestión de usuarios en memoria; login de cuentas nuevas y POS sin servicios inactivos. |
+| 2026-09-01 | WM12 completado: rentabilidad USD con toggle FX y reintento, liberación de reservas, 12 escenarios demo y composition root `VITE_USE_MOCK_API`. |

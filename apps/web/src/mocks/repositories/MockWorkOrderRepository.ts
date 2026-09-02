@@ -55,7 +55,7 @@ export class MockWorkOrderRepository implements WorkOrderRepository {
 
     const order = findWorkOrder(getMockState(), id);
     if (!order) {
-      return err({ code: 'NOT_FOUND', message: 'OT no encontrada' });
+      return err({ code: 'NOT_FOUND', message: 'Orden de trabajo no encontrada' });
     }
 
     return ok(cloneForRead(buildWorkOrderDetail(getMockState(), order, permission.value)));
@@ -78,7 +78,7 @@ export class MockWorkOrderRepository implements WorkOrderRepository {
 
     const order = findWorkOrder(getMockState(), id);
     if (!order) {
-      return err({ code: 'NOT_FOUND', message: 'OT no encontrada' });
+      return err({ code: 'NOT_FOUND', message: 'Orden de trabajo no encontrada' });
     }
 
     return ok(cloneForRead(toMechanicWorkOrderView(getMockState(), order, permission.value)));

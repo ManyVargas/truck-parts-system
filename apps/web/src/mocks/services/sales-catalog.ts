@@ -2,12 +2,10 @@ import type { AppState, Invoice, User } from '../../api/contracts/entities';
 import type {
   InvoiceDetailView,
   InvoiceLineView,
-  InvoiceProfitabilityView,
   SalesListRow,
   SalesListTab,
 } from '../../api/contracts/sales';
 import { can } from '../../shared/auth/policies';
-import { invoiceProfitDop } from './gross-profit';
 import {
   invoiceBalance,
   invoicePaid,
@@ -17,6 +15,7 @@ import {
   lineGross,
   lineItbis,
 } from './invoice-money';
+import { profitabilityForInvoice } from './profitability-view';
 
 function customerName(state: AppState, invoice: Invoice): string {
   return (
@@ -97,40 +96,6 @@ function isLinkedInvoiceEvent(event: AppState['events'][number], invoice: Invoic
   return event.description.includes(invoice.id);
 }
 
-function profitabilityFor(
-  state: AppState,
-  invoice: Invoice,
-  actor: User,
-): InvoiceProfitabilityView | undefined {
-  if (!can(actor, 'profit.view')) {
-    return undefined;
-  }
-
-  if (invoice.status === 'DRAFT') {
-    return undefined;
-  }
-
-  if (invoice.currency === 'USD') {
-    return {
-      currency: 'USD',
-      profit: invoice.profitabilityUsd ?? null,
-      pendingFx: invoice.profitabilityPendingFx === true || invoice.profitabilityUsd == null,
-      reason:
-        invoice.profitabilityPendingFx === true || invoice.profitabilityUsd == null
-          ? 'Tasa de cambio no disponible para calcular rentabilidad en USD.'
-          : undefined,
-    };
-  }
-
-  const profit = invoiceProfitDop(invoice, state);
-  return {
-    currency: 'DOP',
-    profit,
-    pendingFx: false,
-    reason: profit == null ? 'Costo de adquisición desconocido en una o más líneas.' : undefined,
-  };
-}
-
 export function buildInvoiceDetail(state: AppState, invoice: Invoice, actor: User): InvoiceDetailView {
   const customer = state.customers.find((entry) => entry.id === invoice.customerId);
   const completed = invoice.status === 'COMPLETED';
@@ -182,7 +147,7 @@ export function buildInvoiceDetail(state: AppState, invoice: Invoice, actor: Use
         createdAt: event.createdAt,
         actorName: state.users.find((user) => user.id === event.actorId)?.name,
       })),
-    profitability: profitabilityFor(state, invoice, actor),
+    profitability: profitabilityForInvoice(state, invoice, actor),
     actions: {
       canPay: completed && can(actor, 'sales.manage') && invoiceBalance(invoice) > 0,
       canCancel: completed && can(actor, 'sales.cancel'),

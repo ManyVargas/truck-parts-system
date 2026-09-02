@@ -93,7 +93,7 @@ export function StatusPanel({ detail }: { detail: ItemDetailView }) {
                         ? ` (${entry.matchedChildName ?? entry.matchedChildId})`
                         : ''
                     }`
-                  : `${entry.expectedComponentName} (NA provisional hasta validar)`}
+                  : `${entry.expectedComponentName} (“no aplica” provisional hasta validar)`}
               </li>
             ))}
           </ul>

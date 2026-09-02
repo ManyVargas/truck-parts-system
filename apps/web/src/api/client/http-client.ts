@@ -1,6 +1,6 @@
 /**
- * HTTP fetch wrapper stub — implemented when VITE_USE_MOCK_API=false (WM12).
- * Features must depend on repository interfaces, not this module directly.
+ * HTTP fetch wrapper used by Http*Repository when VITE_USE_MOCK_API=false.
+ * Features must depend on repository interfaces via `api/repositories.ts`, not this module.
  */
 export type HttpClientOptions = RequestInit & {
   parseJson?: boolean;

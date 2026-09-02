@@ -64,8 +64,8 @@ export function ItemAdminActions({
         <div className="rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm text-navy">
           <p className="font-medium">Validar componentes nuevos del catálogo</p>
           <p className="mt-1 text-navy-400">
-            Si la pieza ya estaba en el ensamblaje, aparece en el árbol. Si no, confirme NA,
-            regístrela presente o márquela falta.
+            Si la pieza ya estaba en el ensamblaje, aparece en el árbol. Si no, confirme que no
+            aplica, regístrela presente o márquela falta.
           </p>
           {reviewError && (
             <div className="mt-2">
@@ -116,7 +116,7 @@ export function ItemAdminActions({
                           setReviewError(message);
                         }}
                       >
-                        Confirmar NA
+                        Confirmar que no aplica
                       </Button>
                       <Button
                         variant="secondary"
@@ -208,7 +208,7 @@ export function ItemAdminActions({
             setWoOpen(true);
           }}
         >
-          OT manual
+          Orden de trabajo manual
         </Button>
         <Button
           variant="secondary"
@@ -388,7 +388,7 @@ function CostForm({
         Costo desconocido
       </label>
       {!unknown && (
-        <Field label="Costo DOP" htmlFor="cost-dop">
+        <Field label="Costo en pesos" htmlFor="cost-dop">
           <Input
             id="cost-dop"
             type="number"
@@ -451,7 +451,7 @@ function BaselineForm({
     >
       <p className="text-sm text-navy-400">
         Marque faltantes de recepción que en realidad no aplican a esta unidad. No registra piezas
-        presentes (eso es WM6) ni sustituye una OT.
+        presentes ni sustituye una orden de trabajo.
       </p>
       {missing.map((name) => (
         <label key={name} className="flex items-center gap-2 text-sm text-navy">
@@ -525,8 +525,8 @@ function WorkOrderForm({
       }}
     >
       <p className="text-sm text-navy-400">
-        La OT queda pendiente. El desarme no mueve la jerarquía hasta que el mecánico la complete
-        (WM10). Pieza: {pieceId}
+        La orden de trabajo queda pendiente. El desarme no mueve la jerarquía hasta que el
+        mecánico la complete. Pieza: {pieceId}
       </p>
       <Field label="Tipo" htmlFor="wo-type">
         <Select
@@ -562,7 +562,7 @@ function WorkOrderForm({
           Cancelar
         </Button>
         <Button type="submit" disabled={disabled}>
-          Crear OT
+          Crear orden de trabajo
         </Button>
       </div>
     </form>

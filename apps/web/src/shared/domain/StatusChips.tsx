@@ -126,7 +126,7 @@ export function PaymentChip({
     return <Chip tone="success">Pagada</Chip>;
   }
   if (state === 'PARTIALLY_PAID') {
-    return <Chip tone="amber">Parcial</Chip>;
+    return <Chip tone="amber">Pago parcial</Chip>;
   }
   return <Chip tone="danger">Sin pagar</Chip>;
 }

@@ -7,7 +7,7 @@ import type {
   WorkOrderDetailView,
 } from '../../api/contracts/work-orders';
 import type { AppError, Result } from '../../shared/auth/types';
-import { mockWorkOrderRepository } from '../../mocks/repositories';
+import { workOrderRepository } from '../../api/repositories';
 
 type DetailQuery =
   | { status: 'loading' }
@@ -32,7 +32,7 @@ export function useWorkOrderDetail(id: string | undefined) {
     let cancelled = false;
     setResult({ status: 'loading' });
 
-    mockWorkOrderRepository.getById(id).then((response) => {
+    workOrderRepository.getById(id).then((response) => {
       if (cancelled) {
         return;
       }
@@ -53,7 +53,7 @@ export function useWorkOrderDetail(id: string | undefined) {
   useEffect(() => {
     let cancelled = false;
 
-    mockWorkOrderRepository.getCreateOptions().then((response) => {
+    workOrderRepository.getCreateOptions().then((response) => {
       if (cancelled || !response.ok) {
         return;
       }
@@ -72,7 +72,7 @@ export function useWorkOrderDetail(id: string | undefined) {
   const reassign = useCallback(
     async (input: ReassignWorkOrderInput): Promise<Result<void>> => {
       setIsMutating(true);
-      const response = await mockWorkOrderRepository.reassign(input);
+      const response = await workOrderRepository.reassign(input);
       setIsMutating(false);
       if (!response.ok) {
         return response;
@@ -86,7 +86,7 @@ export function useWorkOrderDetail(id: string | undefined) {
   const cancel = useCallback(
     async (input: CancelWorkOrderInput): Promise<Result<void>> => {
       setIsMutating(true);
-      const response = await mockWorkOrderRepository.cancel(input);
+      const response = await workOrderRepository.cancel(input);
       setIsMutating(false);
       if (!response.ok) {
         return response;

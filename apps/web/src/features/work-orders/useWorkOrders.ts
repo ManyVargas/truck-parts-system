@@ -7,7 +7,7 @@ import type {
   WorkOrderListTab,
 } from '../../api/contracts/work-orders';
 import type { AppError, Result } from '../../shared/auth/types';
-import { mockWorkOrderRepository } from '../../mocks/repositories';
+import { workOrderRepository } from '../../api/repositories';
 
 type WorkOrdersQuery =
   | { status: 'loading' }
@@ -24,7 +24,7 @@ export function useWorkOrders(tab: WorkOrderListTab) {
     let cancelled = false;
     setResult({ status: 'loading' });
 
-    mockWorkOrderRepository.list(tab).then((response) => {
+    workOrderRepository.list(tab).then((response) => {
       if (cancelled) {
         return;
       }
@@ -45,7 +45,7 @@ export function useWorkOrders(tab: WorkOrderListTab) {
   useEffect(() => {
     let cancelled = false;
 
-    mockWorkOrderRepository.getCreateOptions().then((response) => {
+    workOrderRepository.getCreateOptions().then((response) => {
       if (cancelled || !response.ok) {
         return;
       }
@@ -64,7 +64,7 @@ export function useWorkOrders(tab: WorkOrderListTab) {
   const createManual = useCallback(
     async (input: CreateManualWorkOrderInput): Promise<Result<string>> => {
       setIsMutating(true);
-      const response = await mockWorkOrderRepository.createManual(input);
+      const response = await workOrderRepository.createManual(input);
       setIsMutating(false);
 
       if (!response.ok) {

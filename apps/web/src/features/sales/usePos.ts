@@ -7,7 +7,7 @@ import type {
   SetDraftMetaInput,
 } from '../../api/contracts/sales';
 import type { AppError, Result } from '../../shared/auth/types';
-import { mockSalesRepository } from '../../mocks/repositories';
+import { salesRepository } from '../../api/repositories';
 
 type PosQuery =
   | { status: 'loading' }
@@ -16,7 +16,7 @@ type PosQuery =
 
 export function usePos(draftId: string | undefined) {
   const navigate = useNavigate();
-  const draftCreationRef = useRef<ReturnType<typeof mockSalesRepository.createDraft> | null>(null);
+  const draftCreationRef = useRef<ReturnType<typeof salesRepository.createDraft> | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const [result, setResult] = useState<PosQuery>({ status: 'loading' });
   const [isMutating, setIsMutating] = useState(false);
@@ -37,7 +37,7 @@ export function usePos(draftId: string | undefined) {
     if (draftId === 'new') {
       let cancelled = false;
       setResult({ status: 'loading' });
-      draftCreationRef.current ??= mockSalesRepository.createDraft();
+      draftCreationRef.current ??= salesRepository.createDraft();
       draftCreationRef.current.then((response) => {
         if (cancelled) {
           return;
@@ -57,7 +57,7 @@ export function usePos(draftId: string | undefined) {
 
     let cancelled = false;
     setResult({ status: 'loading' });
-    mockSalesRepository.getDraft(draftId).then((response) => {
+    salesRepository.getDraft(draftId).then((response) => {
       if (cancelled) {
         return;
       }
@@ -87,7 +87,7 @@ export function usePos(draftId: string | undefined) {
         return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
       }
       setIsMutating(true);
-      const response = await mockSalesRepository.addLine({ ...input, draftId });
+      const response = await salesRepository.addLine({ ...input, draftId });
       setIsMutating(false);
       return applyDraftResult(response);
     },
@@ -100,7 +100,7 @@ export function usePos(draftId: string | undefined) {
         return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
       }
       setIsMutating(true);
-      const response = await mockSalesRepository.removeLine({ draftId, lineId });
+      const response = await salesRepository.removeLine({ draftId, lineId });
       setIsMutating(false);
       return applyDraftResult(response);
     },
@@ -113,7 +113,7 @@ export function usePos(draftId: string | undefined) {
         return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
       }
       setIsMutating(true);
-      const response = await mockSalesRepository.setLinePrice({ draftId, lineId, unitPrice });
+      const response = await salesRepository.setLinePrice({ draftId, lineId, unitPrice });
       setIsMutating(false);
       return applyDraftResult(response);
     },
@@ -126,7 +126,7 @@ export function usePos(draftId: string | undefined) {
         return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
       }
       setIsMutating(true);
-      const response = await mockSalesRepository.setDraftMeta({ ...input, draftId });
+      const response = await salesRepository.setDraftMeta({ ...input, draftId });
       setIsMutating(false);
       return applyDraftResult(response);
     },
@@ -138,7 +138,7 @@ export function usePos(draftId: string | undefined) {
       return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
     }
     setIsMutating(true);
-    const response = await mockSalesRepository.confirmInvoice(draftId);
+    const response = await salesRepository.confirmInvoice(draftId);
     setIsMutating(false);
     if (!response.ok) {
       return response;
@@ -152,7 +152,7 @@ export function usePos(draftId: string | undefined) {
       return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
     }
     setIsMutating(true);
-    const response = await mockSalesRepository.discardDraft(draftId);
+    const response = await salesRepository.discardDraft(draftId);
     setIsMutating(false);
     if (!response.ok) {
       return response;

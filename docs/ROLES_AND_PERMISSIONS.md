@@ -40,7 +40,7 @@ Permission statuses have only these meanings:
 | Catalogs | Maintain the mechanical service catalog | ALLOW | DENY | DENY | LINE-004, ADMIN-001. Catalog entries identify service type but do not impose a fixed price. |
 | Cost | View acquisition cost | ALLOW | ALLOW | DENY | COST-001, COST-004. Cost visibility does not grant profit visibility. |
 | Cost | Correct protected acquisition cost through the audited operation | ALLOW | DENY | DENY | INV-005..006, COST-001, HIST-003. Requires reason, actor, timestamp, before/corrected values, and preserved history. |
-| Profit | View gross profit, margins, or profitability statistics | ALLOW | DENY | DENY | COST-002..004. This includes item-, line-, sale-, and aggregate-level profitability, pending `UNAVAILABLE / PENDING FX RATE` results, and preserved rate provenance. |
+| Profit | View gross profit, margins, or profitability statistics | ALLOW | DENY | DENY | COST-002..005. This includes item-, line-, sale-, and aggregate-level profitability, pending `UNAVAILABLE / PENDING FX RATE` results, preserved rate provenance, and Administrator-recorded DOP gross profit when calculation is unavailable. |
 | Customers | Search, register, or edit ordinary customer data | ALLOW | ALLOW | DENY | CUST-001..003. Completed invoices retain their customer snapshot. |
 | Drafts | Create or edit a Draft invoice, including selecting or correcting its DOP/USD currency | ALLOW | ALLOW | DENY | RES-001..003, SALE-001..003. A Draft does not expire automatically. |
 | Reservations | Reserve eligible stock through a Draft, release a line, or discard the Draft | ALLOW | ALLOW | DENY | RES-001..003. Administrative release of another user's abandoned reservation is operational recovery. |

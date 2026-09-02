@@ -64,7 +64,7 @@ export function WorkOrdersPage() {
             }}
             disabled={result.status === 'loading'}
           >
-            Nueva OT
+            Nueva orden de trabajo
           </Button>
         }
       />

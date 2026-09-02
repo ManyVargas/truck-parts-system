@@ -62,14 +62,14 @@ export function CancelInvoiceModal({
     <Modal open={open} title="Cancelar factura" onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <Info tone="warning" title="La cancelación no borra el documento">
-          Se conserva el historial y se restauran existencias elegibles según el estado de las OT de desarme.
+          Se conserva el historial y se restauran existencias elegibles según el estado de las órdenes de desarme.
         </Info>
 
         {workOrders.length > 0 && (
           <ul className="space-y-1 rounded-lg border border-navy-100 bg-navy-50 px-3 py-2 text-sm text-navy">
             {workOrders.map((order) => (
               <li key={order.id}>
-                {order.id} · {order.pieceName} · {order.status === 'PENDING' ? 'Pendiente (se cancela la OT)' : order.status === 'IN_PROGRESS' ? 'En proceso' : order.status === 'COMPLETED' ? 'Completada (queda independiente)' : order.status}
+                {order.id} · {order.pieceName} · {order.status === 'PENDING' ? 'Pendiente (se cancela la orden)' : order.status === 'IN_PROGRESS' ? 'En proceso' : order.status === 'COMPLETED' ? 'Completada (queda independiente)' : order.status}
               </li>
             ))}
           </ul>
@@ -82,7 +82,7 @@ export function CancelInvoiceModal({
               value={inProgressDecision}
               onChange={(event) => setInProgressDecision(event.target.value as InProgressCancelDecision)}
             >
-              <option value="STOP">Detener trabajo y cancelar la OT</option>
+              <option value="STOP">Detener trabajo y cancelar la orden</option>
               <option value="CONTINUE">Cancelar la venta y continuar el desarme</option>
             </Select>
           </Field>

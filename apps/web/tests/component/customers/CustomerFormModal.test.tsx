@@ -24,7 +24,7 @@ describe('CustomerFormModal', () => {
     );
 
     await user.type(screen.getByLabelText('Nombre'), 'Flota Este');
-    await user.type(screen.getByLabelText('RNC / Cédula'), '131000001');
+    await user.type(screen.getByLabelText('Identificación fiscal / cédula'), '131000001');
     await user.type(screen.getByLabelText('Dirección'), 'Santo Domingo');
     await user.type(screen.getByLabelText('Notas'), 'Cliente nuevo');
     await user.click(screen.getByRole('button', { name: 'Guardar' }));

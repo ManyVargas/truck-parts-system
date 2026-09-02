@@ -140,7 +140,7 @@ export function WorkOrderDetailPage() {
       <section className="mb-8">
         <SectionTitle
           title="Evidencia"
-          subtitle="Las fotos las carga el mecánico al completar (WM10). Aquí solo se consulta."
+          subtitle="Las fotos las carga el mecánico al completar. Aquí solo se consulta."
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <Card>

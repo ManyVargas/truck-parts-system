@@ -51,7 +51,7 @@ export function MechanicOrderView() {
       setError(response.error.message);
       return;
     }
-    pushToast(`Foto ${kind} agregada`, 'success');
+    pushToast(`Foto ${kind === 'BEFORE' ? 'de antes' : 'de después'} agregada`, 'success');
   }
 
   async function handleComplete() {
@@ -152,7 +152,7 @@ export function MechanicOrderView() {
       )}
 
       {order.actions.canAddEvidence && !order.actions.canComplete && (
-        <p className="text-xs text-navy-400">Falta evidencia BEFORE o AFTER para completar.</p>
+        <p className="text-xs text-navy-400">Falta evidencia de antes o de después para completar.</p>
       )}
     </div>
   );

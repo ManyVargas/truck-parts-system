@@ -11,7 +11,7 @@ import type {
   ResolveCatalogReviewInput,
 } from '../../api/contracts/inventory';
 import type { AppError, Result } from '../../shared/auth/types';
-import { mockInventoryRepository } from '../../mocks/repositories';
+import { inventoryRepository } from '../../api/repositories';
 
 type DetailQuery =
   | { status: 'loading' }
@@ -33,7 +33,7 @@ export function useInventoryDetail(id: string | undefined) {
     let cancelled = false;
     setResult({ status: 'loading' });
 
-    mockInventoryRepository.getDetail(id).then((response) => {
+    inventoryRepository.getDetail(id).then((response) => {
       if (cancelled) {
         return;
       }
@@ -58,7 +58,7 @@ export function useInventoryDetail(id: string | undefined) {
   const addToDraft = useCallback(
     async (input: AddToDraftInput): Promise<Result<void>> => {
       setIsMutating(true);
-      const response = await mockInventoryRepository.addToDraft(input);
+      const response = await inventoryRepository.addToDraft(input);
       setIsMutating(false);
 
       if (!response.ok) {
@@ -73,7 +73,7 @@ export function useInventoryDetail(id: string | undefined) {
 
   const setNoDesarmar = useCallback(async (input: NoDesarmarInput): Promise<Result<void>> => {
     setIsMutating(true);
-    const response = await mockInventoryRepository.setNoDesarmar(input);
+    const response = await inventoryRepository.setNoDesarmar(input);
     setIsMutating(false);
     if (!response.ok) {
       return response;
@@ -84,7 +84,7 @@ export function useInventoryDetail(id: string | undefined) {
 
   const correctCost = useCallback(async (input: CostCorrectionInput): Promise<Result<void>> => {
     setIsMutating(true);
-    const response = await mockInventoryRepository.correctAcquisitionCost(input);
+    const response = await inventoryRepository.correctAcquisitionCost(input);
     setIsMutating(false);
     if (!response.ok) {
       return response;
@@ -96,7 +96,7 @@ export function useInventoryDetail(id: string | undefined) {
   const correctBaseline = useCallback(
     async (input: BaselineCorrectionInput): Promise<Result<void>> => {
       setIsMutating(true);
-      const response = await mockInventoryRepository.correctReceiptBaseline(input);
+      const response = await inventoryRepository.correctReceiptBaseline(input);
       setIsMutating(false);
       if (!response.ok) {
         return response;
@@ -110,7 +110,7 @@ export function useInventoryDetail(id: string | undefined) {
   const resolveCatalogReview = useCallback(
     async (input: ResolveCatalogReviewInput): Promise<Result<void>> => {
       setIsMutating(true);
-      const response = await mockInventoryRepository.resolveCatalogReview(input);
+      const response = await inventoryRepository.resolveCatalogReview(input);
       setIsMutating(false);
       if (!response.ok) {
         return response;
@@ -124,7 +124,7 @@ export function useInventoryDetail(id: string | undefined) {
   const createWorkOrder = useCallback(
     async (input: ManualWorkOrderInput): Promise<Result<void>> => {
       setIsMutating(true);
-      const response = await mockInventoryRepository.createManualWorkOrder(input);
+      const response = await inventoryRepository.createManualWorkOrder(input);
       setIsMutating(false);
       if (!response.ok) {
         return response;

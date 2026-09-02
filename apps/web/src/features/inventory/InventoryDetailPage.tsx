@@ -127,7 +127,7 @@ export function InventoryDetailPage() {
                 if (!response.ok) {
                   return response.error.message;
                 }
-                pushToast('OT creada', 'success');
+                pushToast('Orden de trabajo creada', 'success');
                 return null;
               }}
             />

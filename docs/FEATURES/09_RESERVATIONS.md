@@ -40,7 +40,7 @@ Reservations are owned by the Draft/sale-preparation workflow and are not invent
 
 Use database uniqueness/conditional constraints to prevent two active reservations for the same unique unit and to protect quantity availability. Assembly reservations must detect parent/descendant overlap as required by the sale model.
 
-Reservations release when a line is removed, the Draft is discarded, or successful confirmation consumes them. Drafts do **not** expire automatically. Abandoned reservations are released only through a named Administrator recovery operation.
+Reservations release when a line is removed, the Draft is discarded, or successful confirmation consumes them. Drafts do **not** expire automatically. For Operational Recovery, a reserved Draft is classified as abandoned once six hours have elapsed since `createdAt`; this only makes it eligible for the named Administrator operation and never releases it automatically.
 
 Confirmation must always reread/revalidate current stock, hierarchy, restrictions, and reservation ownership; possession of a reservation is not proof that confirmation is still safe.
 
@@ -50,7 +50,7 @@ Confirmation must always reread/revalidate current stock, hierarchy, restriction
 - Reservation does not mark inventory Sold.
 - Competing unique/quantity/overlapping assembly reservations produce valid winners only.
 - Line removal/discard/confirmation releases or consumes exactly the owned reservation.
-- Time passage alone never releases a reservation.
+- Time passage alone never releases a reservation; at six hours it only enables Administrator recovery.
 - Administrator can recover an abandoned reservation through an audited named operation.
 - Confirmation revalidates critical state.
 
@@ -63,19 +63,19 @@ Confirmation must always reread/revalidate current stock, hierarchy, restriction
 - [ ] Assembly overlap eligibility checks.
 - [ ] Draft line-change synchronization.
 - [ ] Discard/confirmation release/consume behavior.
-- [ ] Administrator abandoned-reservation recovery.
+- [x] Administrator abandoned-reservation recovery after the six-hour eligibility threshold.
 - [ ] No scheduled expiry job.
 
 ### Frontend
 - [ ] Show reservation conflicts clearly.
 - [ ] Release reservation on line removal/discard.
-- [ ] Administrator recovery view for abandoned Drafts.
+- [x] Administrator recovery view for abandoned Drafts.
 
 ### Tests
 - [ ] Two-Draft unique item race.
 - [ ] Quantity oversubscription race.
 - [x] Parent/descendant overlap cases.
-- [ ] No expiry after simulated time.
+- [x] Six-hour recovery boundary without automatic expiry.
 - [ ] Idempotent release/consume behavior.
 
 ## Canonical validated requirements
@@ -119,10 +119,10 @@ The blocks below are the final reconciled requirements retained from the previou
 **Name:** No automatic Draft expiry  
 **Status:** CONFIRMED  
 **Actors:** Seller, Administrator  
-**Requirement:** A Draft and its reservations must remain open until an eligible business action removes a line, discards or confirms the Draft, or Administrator releases an abandoned Draft/reservation through Operational Recovery.  
-**Business Reason:** Negotiations have no validated timeout, and stock must not be released silently while a Draft remains active.  
-**Main Flow:** Seller or Administrator maintains, discards, or confirms the Draft. If it is abandoned, Administrator reviews it and uses the named recovery release operation with preserved history.  
-**Business Rules:** There is no automatic timeout, inactivity countdown, scheduled expiration, auto-release job, warning-renewal cycle, or browser-loss expiry.  
-**Important Exceptions/Edge Cases:** Recovery must not release a reservation consumed by confirmation, and a race between confirmation and recovery permits only one atomic outcome.  
+**Requirement:** A Draft and its reservations must remain open until an eligible business action removes a line, discards or confirms the Draft, or Administrator releases an abandoned Draft/reservation through Operational Recovery. A reserved Draft becomes eligible for that recovery operation six hours after its `createdAt`.  
+**Business Reason:** Negotiations must not lose stock silently, while sufficiently old reservations need a clear and safe recovery boundary.  
+**Main Flow:** Seller or Administrator maintains, discards, or confirms the Draft. Once six hours have elapsed since creation, Administrator may review it and use the named recovery release operation with preserved history.  
+**Business Rules:** The six-hour threshold classifies recovery eligibility only. There is no automatic expiration, auto-release job, warning-renewal cycle, or browser-loss expiry; the Draft and reservation remain intact until a named action succeeds.  
+**Important Exceptions/Edge Cases:** Recovery rejects a Draft younger than six hours, must not release a reservation consumed by confirmation, and a race between confirmation and recovery permits only one atomic outcome.  
 **Dependencies:** RES-001, RES-002, AUTH-004, ADMIN-002.  
-**Acceptance Notes:** An untouched Draft remains reserved until a named eligible action occurs; no passage of time alone releases it.
+**Acceptance Notes:** At `createdAt + 5:59:59` recovery is rejected; at `createdAt + 6:00:00` it is eligible. In both cases passage of time alone leaves the Draft and reservation unchanged.

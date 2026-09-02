@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import type { SalesListRow, SalesListTab } from '../../api/contracts/sales';
 import type { AppError } from '../../shared/auth/types';
-import { mockSalesRepository } from '../../mocks/repositories';
+import { salesRepository } from '../../api/repositories';
 
 type SalesQuery =
   | { status: 'loading' }
@@ -17,7 +17,7 @@ export function useSalesList(tab: SalesListTab) {
     let cancelled = false;
     setResult({ status: 'loading' });
 
-    mockSalesRepository.listInvoices(tab).then((response) => {
+    salesRepository.listInvoices(tab).then((response) => {
       if (cancelled) {
         return;
       }

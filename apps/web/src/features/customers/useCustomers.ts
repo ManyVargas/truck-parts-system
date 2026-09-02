@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import type { CustomerListRow, SaveCustomerInput } from '../../api/contracts/customers';
 import type { AppError, Result } from '../../shared/auth/types';
-import { mockCustomerRepository } from '../../mocks/repositories';
+import { customerRepository } from '../../api/repositories';
 
 type CustomersQuery =
   | { status: 'loading' }
@@ -23,7 +23,7 @@ export function useCustomers() {
     let cancelled = false;
     setResult({ status: 'loading' });
 
-    mockCustomerRepository.search(query).then((response) => {
+    customerRepository.search(query).then((response) => {
       if (cancelled) {
         return;
       }
@@ -47,7 +47,7 @@ export function useCustomers() {
 
   const save = useCallback(async (input: SaveCustomerInput): Promise<Result<CustomerListRow['id']>> => {
     setIsSaving(true);
-    const response = await mockCustomerRepository.save(input);
+    const response = await customerRepository.save(input);
     setIsSaving(false);
 
     if (!response.ok) {

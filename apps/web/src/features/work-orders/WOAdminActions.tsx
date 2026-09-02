@@ -110,7 +110,7 @@ export function WOAdminActions({
               setCancelOpen(true);
             }}
           >
-            Cancelar OT
+            Cancelar orden
           </Button>
         )}
       </div>
@@ -165,7 +165,7 @@ export function WOAdminActions({
             </Info>
           )}
           <p className="text-sm text-navy-400">
-            Cancelar no completa el trabajo físico ni borra la evidencia. Una OT completada no se
+            Cancelar no completa el trabajo físico ni borra la evidencia. Una orden completada no se
             puede cancelar.
           </p>
           <Field label="Motivo" htmlFor="wo-cancel-reason">

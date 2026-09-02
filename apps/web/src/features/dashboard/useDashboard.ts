@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 
 import type { DashboardSnapshot } from '../../api/contracts/dashboard';
 import type { AppError } from '../../shared/auth/types';
-import { mockDashboardRepository } from '../../mocks/repositories';
+import { dashboardRepository } from '../../api/repositories';
 
 type DashboardQuery =
   | { status: 'loading' }
@@ -22,7 +22,7 @@ export function useDashboard(): DashboardQuery {
     let cancelled = false;
     setQuery({ status: 'loading' });
 
-    mockDashboardRepository.getSnapshot().then((result) => {
+    dashboardRepository.getSnapshot().then((result) => {
       if (cancelled) {
         return;
       }

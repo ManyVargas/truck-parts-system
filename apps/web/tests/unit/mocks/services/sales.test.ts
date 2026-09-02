@@ -13,6 +13,7 @@ import {
   lineBase,
   lineItbis,
 } from '../../../../src/mocks/services/invoice-money';
+import { recordManualGrossProfit } from '../../../../src/mocks/services/profitability-commands';
 
 const admin = createInitialState().users.find((user) => user.id === 'U-ADMIN')!;
 const seller = createInitialState().users.find((user) => user.id === 'U-LAURA')!;
@@ -219,5 +220,35 @@ describe('correctCurrency', () => {
       reason: 'No aplica',
     });
     expect(result.ok).toBe(false);
+  });
+
+  it('invalidates administrator-recorded profit when correcting currency', () => {
+    const state = createInitialState();
+    const invoice = state.invoices.find((entry) => entry.id === 'INV-097')!;
+    invoice.payments = [];
+    invoice.paymentState = 'UNPAID';
+
+    const recorded = recordManualGrossProfit(state, admin, {
+      invoiceId: invoice.id,
+      profitDop: 1_250,
+    });
+    expect(recorded.ok).toBe(true);
+
+    const corrected = correctCurrency(state, admin, {
+      invoiceId: invoice.id,
+      currency: 'USD',
+      reason: 'Moneda elegida por error',
+    });
+
+    expect(corrected.ok).toBe(true);
+    expect(invoice.manualGrossProfitDop).toBeUndefined();
+    expect(invoice.manualGrossProfitAt).toBeUndefined();
+    const event = [...state.events]
+      .reverse()
+      .find((entry) => entry.type === 'INVOICE_CURRENCY_CORRECTED');
+    expect(event?.metadata).toMatchObject({
+      manualGrossProfitDopBefore: 1_250,
+      manualGrossProfitInvalidated: true,
+    });
   });
 });

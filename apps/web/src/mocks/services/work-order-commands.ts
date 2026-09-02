@@ -73,22 +73,22 @@ function requireReason(reason: string | undefined): Result<string> {
 function loadActiveOrder(state: AppState, workOrderId: string): Result<WorkOrder> {
   const order = findWorkOrder(state, workOrderId);
   if (!order) {
-    return err({ code: 'NOT_FOUND', message: 'OT no encontrada' });
+    return err({ code: 'NOT_FOUND', message: 'Orden de trabajo no encontrada' });
   }
 
   if (order.status === 'COMPLETED') {
     return err({
       code: 'CONFLICT',
-      message: 'Una OT completada no se modifica; el reverso requiere una OT opuesta',
+      message: 'Una orden de trabajo completada no se modifica; el reverso requiere una orden opuesta',
     });
   }
 
   if (order.status === 'CANCELLED') {
-    return err({ code: 'CONFLICT', message: 'Esta OT ya está cancelada' });
+    return err({ code: 'CONFLICT', message: 'Esta orden de trabajo ya está cancelada' });
   }
 
   if (!isActiveStatus(order.status)) {
-    return err({ code: 'CONFLICT', message: 'La OT no admite esta acción' });
+    return err({ code: 'CONFLICT', message: 'La orden de trabajo no admite esta acción' });
   }
 
   return ok(order);
@@ -142,7 +142,7 @@ export function reassignOrder(
   if (order.assignedMechanicId === mechanic.id) {
     return err({
       code: 'VALIDATION',
-      message: 'La OT ya está asignada a este mecánico',
+      message: 'La orden de trabajo ya está asignada a este mecánico',
     });
   }
 
@@ -153,7 +153,7 @@ export function reassignOrder(
   appendEvent(
     state,
     'WORK_ORDER_REASSIGNED',
-    `OT ${order.id} reasignada a ${mechanic.name}`,
+    `Orden de trabajo ${order.id} reasignada a ${mechanic.name}`,
     actor,
     {
       workOrderId: order.id,
@@ -186,7 +186,7 @@ export function cancelOrder(
   if (order.status === 'IN_PROGRESS' && !input.physicalVerified) {
     return err({
       code: 'VALIDATION',
-      message: 'Confirme que verificó el estado físico antes de cancelar una OT en proceso',
+      message: 'Confirme que verificó el estado físico antes de cancelar una orden de trabajo en proceso',
     });
   }
 
@@ -199,7 +199,7 @@ export function cancelOrder(
   appendEvent(
     state,
     'WORK_ORDER_CANCELLED',
-    `OT ${order.id} cancelada`,
+    `Orden de trabajo ${order.id} cancelada`,
     actor,
     {
       workOrderId: order.id,
@@ -215,13 +215,13 @@ export function cancelOrder(
 
 function requireAssignedInProgress(order: WorkOrder, actor: User): Result<WorkOrder> {
   if (order.status !== 'IN_PROGRESS') {
-    return err({ code: 'CONFLICT', message: 'La OT debe estar en proceso' });
+    return err({ code: 'CONFLICT', message: 'La orden de trabajo debe estar en proceso' });
   }
 
   if (order.assignedMechanicId !== actor.id) {
     return err({
       code: 'FORBIDDEN',
-      message: 'Solo el mecánico asignado puede modificar esta OT',
+      message: 'Solo el mecánico asignado puede modificar esta orden de trabajo',
     });
   }
 
@@ -232,7 +232,7 @@ function requireEvidence(order: WorkOrder): Result<void> {
   if (order.beforePhotos.length === 0 || order.afterPhotos.length === 0) {
     return err({
       code: 'VALIDATION',
-      message: 'Se requiere al menos una foto BEFORE y una AFTER',
+      message: 'Se requiere al menos una foto de antes y una de después',
     });
   }
   return ok(undefined);
@@ -259,22 +259,22 @@ function matchingKnownMissing(
  */
 export function takeOrder(state: AppState, actor: User, workOrderId: string): Result<WorkOrder> {
   if (actor.role !== 'MECHANIC') {
-    return err({ code: 'FORBIDDEN', message: 'Solo un mecánico puede tomar una OT de la cola' });
+    return err({ code: 'FORBIDDEN', message: 'Solo un mecánico puede tomar una orden de la cola' });
   }
 
   const order = findWorkOrder(state, workOrderId);
   if (!order) {
-    return err({ code: 'NOT_FOUND', message: 'OT no encontrada' });
+    return err({ code: 'NOT_FOUND', message: 'Orden de trabajo no encontrada' });
   }
 
   if (order.status !== 'PENDING' || order.assignedMechanicId) {
-    return err({ code: 'CONFLICT', message: 'Esta OT ya fue tomada' });
+    return err({ code: 'CONFLICT', message: 'Esta orden de trabajo ya fue tomada' });
   }
 
   order.assignedMechanicId = actor.id;
   order.status = 'IN_PROGRESS';
 
-  appendEvent(state, 'WORK_ORDER_CLAIMED', `OT ${order.id} tomada por ${actor.name}`, actor, {
+  appendEvent(state, 'WORK_ORDER_CLAIMED', `Orden de trabajo ${order.id} tomada por ${actor.name}`, actor, {
     workOrderId: order.id,
     assignedMechanicId: actor.id,
   });
@@ -289,7 +289,7 @@ export function addPhoto(
 ): Result<WorkOrder> {
   const order = findWorkOrder(state, input.workOrderId);
   if (!order) {
-    return err({ code: 'NOT_FOUND', message: 'OT no encontrada' });
+    return err({ code: 'NOT_FOUND', message: 'Orden de trabajo no encontrada' });
   }
 
   const owned = requireAssignedInProgress(order, actor);
@@ -311,7 +311,7 @@ export function addPhoto(
   appendEvent(
     state,
     'WORK_ORDER_EVIDENCE_ADDED',
-    `Evidencia ${input.kind} agregada a ${order.id}`,
+    `Evidencia de ${input.kind === 'BEFORE' ? 'antes' : 'después'} agregada a ${order.id}`,
     actor,
     { workOrderId: order.id, kind: input.kind, fileName },
   );
@@ -326,11 +326,11 @@ export function completeDesarme(
 ): Result<WorkOrder> {
   const order = findWorkOrder(state, input.workOrderId);
   if (!order) {
-    return err({ code: 'NOT_FOUND', message: 'OT no encontrada' });
+    return err({ code: 'NOT_FOUND', message: 'Orden de trabajo no encontrada' });
   }
 
   if (order.type !== 'DISMANTLING') {
-    return err({ code: 'VALIDATION', message: 'Esta OT no es de desarme' });
+    return err({ code: 'VALIDATION', message: 'Esta orden de trabajo no es de desarme' });
   }
 
   const owned = requireAssignedInProgress(order, actor);
@@ -364,7 +364,7 @@ export function completeDesarme(
   ) {
     return err({
       code: 'CONFLICT',
-      message: 'La relación física ya no coincide con esta OT; no se aplica el desarme',
+      message: 'La relación física ya no coincide con esta orden de trabajo; no se aplica el desarme',
     });
   }
 
@@ -417,11 +417,11 @@ export function completeInstalacion(
 ): Result<WorkOrder> {
   const order = findWorkOrder(state, input.workOrderId);
   if (!order) {
-    return err({ code: 'NOT_FOUND', message: 'OT no encontrada' });
+    return err({ code: 'NOT_FOUND', message: 'Orden de trabajo no encontrada' });
   }
 
   if (order.type !== 'INSTALLATION') {
-    return err({ code: 'VALIDATION', message: 'Esta OT no es de instalación' });
+    return err({ code: 'VALIDATION', message: 'Esta orden de trabajo no es de instalación' });
   }
 
   const owned = requireAssignedInProgress(order, actor);
@@ -448,7 +448,7 @@ export function completeInstalacion(
 
   const destinationId = order.destinationParentId;
   if (!destinationId) {
-    return err({ code: 'CONFLICT', message: 'La OT no tiene destino' });
+    return err({ code: 'CONFLICT', message: 'La orden de trabajo no tiene destino' });
   }
 
   const destination = itemById(state.items, destinationId);

@@ -38,7 +38,7 @@ describe('InventoryDetailPage', () => {
     expect(screen.getAllByText('Incompleto').length).toBeGreaterThan(0);
     expect(screen.getByText(/Turbo \(en recepción\)/)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Corregir baseline' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'OT manual' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Orden de trabajo manual' })).toBeVisible();
   });
 
   it('hides administrator actions from sellers', async () => {
@@ -51,7 +51,7 @@ describe('InventoryDetailPage', () => {
     expect(await screen.findByRole('heading', { name: 'Filtro de aceite HD' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Agregar a borrador' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Corregir costo' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'OT manual' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Orden de trabajo manual' })).not.toBeInTheDocument();
   });
 
   it('renders quantity stock separately from individual item state', async () => {

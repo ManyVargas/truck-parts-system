@@ -25,7 +25,7 @@ describe('CustomersPage', () => {
     renderWithProviders(<CustomersPage />, { route: '/customers' });
 
     expect(await screen.findByText('Transportes del Caribe SRL')).toBeVisible();
-    await user.type(screen.getByLabelText('Buscar por nombre o RNC'), '101-98765');
+    await user.type(screen.getByLabelText('Buscar por nombre o identificación fiscal'), '101-98765');
 
     expect(await screen.findByText('Logística Norte SA')).toBeVisible();
     expect(screen.queryByText('Transportes del Caribe SRL')).not.toBeInTheDocument();

@@ -16,7 +16,7 @@ import type {
   WorkOrder,
 } from '../../api/contracts/entities';
 import { err, ok, type Result } from '../../shared/auth/types';
-import { DEMO_NOW_ISO } from '../data/demo-clock';
+import { currentDemoTimeIso, DEMO_NOW_ISO } from '../data/demo-clock';
 import {
   availableToReserve,
   collectSubtree,
@@ -27,6 +27,7 @@ import {
 } from './inventory-helpers';
 import { roundMoney } from './invoice-money';
 import { activeWorkAffectingAssembly, CASH_CUSTOMER_ID, customerQualifiesForFiscal } from './sales-helpers';
+import { applyUsdProfitability } from './usd-profitability';
 
 function nextNumericId(ids: string[], prefix: string, pad: number): string {
   let max = 0;
@@ -183,7 +184,7 @@ export function createDraft(state: AppState, actor: User): Result<CreateDraftRes
     lines: [],
     payments: [],
     paymentState: 'UNPAID',
-    createdAt: DEMO_NOW_ISO,
+    createdAt: currentDemoTimeIso(),
   };
   state.invoices.push(draft);
   appendEvent(state, 'DRAFT_CREATED', `Borrador ${draft.id} creado`, actor, { draftId: draft.id });
@@ -506,7 +507,7 @@ function ensureDismantlingOrder(
   appendEvent(
     state,
     'WORK_ORDER_CREATED',
-    `OT ${order.id} (DISMANTLING) creada para ${item.id}`,
+    `Orden de trabajo ${order.id} (desarme) creada para ${item.id}`,
     actor,
     { itemId: item.id, workOrderId: order.id, invoiceId: invoice.id },
   );
@@ -614,8 +615,7 @@ export function confirmInvoice(state: AppState, actor: User, draftId: string): R
   invoice.paymentState = 'UNPAID';
   invoice.customerSnapshot = { name: customer.name, rnc: customer.rnc };
   if (invoice.currency === 'USD') {
-    invoice.profitabilityUsd = null;
-    invoice.profitabilityPendingFx = true;
+    applyUsdProfitability(state, invoice);
   }
 
   for (const line of invoice.lines) {

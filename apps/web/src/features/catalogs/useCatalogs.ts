@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { SaveCategoryInput, SaveServiceInput } from '../../api/contracts/catalogs';
 import type { Category, Service } from '../../api/contracts/entities';
 import type { AppError, Result } from '../../shared/auth/types';
-import { mockCategoryRepository, mockServiceRepository } from '../../mocks/repositories';
+import { categoryRepository, serviceRepository } from '../../api/repositories';
 
 type CatalogTab = 'categories' | 'services';
 
@@ -32,7 +32,7 @@ export function useCatalogs() {
     setCategories({ status: 'loading' });
     setServices({ status: 'loading' });
 
-    Promise.all([mockCategoryRepository.list(), mockServiceRepository.list()]).then(
+    Promise.all([categoryRepository.list(), serviceRepository.list()]).then(
       ([categoryResponse, serviceResponse]) => {
         if (cancelled) {
           return;
@@ -63,7 +63,7 @@ export function useCatalogs() {
 
   const saveCategory = useCallback(async (input: SaveCategoryInput): Promise<Result<string>> => {
     setIsSaving(true);
-    const response = await mockCategoryRepository.save(input);
+    const response = await categoryRepository.save(input);
     setIsSaving(false);
 
     if (!response.ok) {
@@ -76,7 +76,7 @@ export function useCatalogs() {
 
   const saveService = useCallback(async (input: SaveServiceInput): Promise<Result<string>> => {
     setIsSaving(true);
-    const response = await mockServiceRepository.save(input);
+    const response = await serviceRepository.save(input);
     setIsSaving(false);
 
     if (!response.ok) {

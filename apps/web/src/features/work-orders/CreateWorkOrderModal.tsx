@@ -55,13 +55,13 @@ export function CreateWorkOrderModal({
     <Modal open={open} title="Crear orden de trabajo" onClose={onClose}>
       <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
         {error && (
-          <Info tone="error" title="No se pudo crear la OT">
+          <Info tone="error" title="No se pudo crear la orden de trabajo">
             {error}
           </Info>
         )}
         <p className="text-sm text-navy-400">
-          La creación deja la OT pendiente. El desarme no mueve la jerarquía hasta que el mecánico
-          complete el trabajo (WM10).
+          La creación deja la orden pendiente. El desarme no mueve la jerarquía hasta que el
+          mecánico complete el trabajo.
         </p>
         <Field label="Tipo" htmlFor="create-wo-type">
           <Select
@@ -122,7 +122,7 @@ export function CreateWorkOrderModal({
             Cancelar
           </Button>
           <Button type="submit" disabled={isSaving || !options}>
-            Crear OT
+            Crear orden de trabajo
           </Button>
         </div>
       </form>

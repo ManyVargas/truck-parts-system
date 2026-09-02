@@ -49,7 +49,7 @@ export function MechanicPendingPage() {
       {pending.length === 0 ? (
         <Empty
           title="No hay órdenes pendientes"
-          description="Las nuevas OT de desarme o instalación aparecerán aquí."
+          description="Las nuevas órdenes de desarme o instalación aparecerán aquí."
         />
       ) : (
         <ul className="space-y-3">

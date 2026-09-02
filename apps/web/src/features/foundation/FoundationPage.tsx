@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import {
-  mockCustomerRepository,
-  mockInventoryRepository,
-  mockSalesRepository,
-  mockUserRepository,
-  mockWorkOrderRepository,
-} from '../../mocks/repositories';
+  customerRepository,
+  inventoryRepository,
+  salesRepository,
+  userRepository,
+  workOrderRepository,
+} from '../../api/repositories';
 import { APP_NAME } from '../../shared/config/brand';
 import { AppLayout } from '../../shared/layout/AppLayout';
 import {
@@ -30,12 +30,12 @@ type SeedSummary = {
 
 async function loadSeedSummary(): Promise<SeedSummary> {
   const [users, items, qtyProducts, customers, invoices, workOrders] = await Promise.all([
-    mockUserRepository.list(),
-    mockInventoryRepository.listItems(),
-    mockInventoryRepository.listQtyProducts(),
-    mockCustomerRepository.list(),
-    mockSalesRepository.listInvoices(),
-    mockWorkOrderRepository.list(),
+    userRepository.list(),
+    inventoryRepository.listItems(),
+    inventoryRepository.listQtyProducts(),
+    customerRepository.list(),
+    salesRepository.listInvoices(),
+    workOrderRepository.list(),
   ]);
 
   if (

@@ -113,7 +113,7 @@ export function AddLineModal({
               >
                 {draft.qtyProducts.map((product) => (
                   <option key={product.id} value={product.id}>
-                    {product.name} ({product.available} disp.)
+                    {product.name} ({product.available} disponibles)
                   </option>
                 ))}
               </Select>
@@ -172,7 +172,7 @@ export function AddLineModal({
         )}
 
         {type === 'EXTERNAL' && (
-          <Field htmlFor="line-cost" label="Costo de adquisición DOP (opcional)">
+          <Field htmlFor="line-cost" label="Costo de adquisición en pesos (opcional)">
             <Input
               id="line-cost"
               type="number"

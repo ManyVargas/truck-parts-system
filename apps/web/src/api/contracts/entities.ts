@@ -164,6 +164,17 @@ export type Invoice = {
   cancelReason?: string;
   profitabilityUsd?: number | null;
   profitabilityPendingFx?: boolean;
+  /**
+   * Administrator-entered gross profit in pesos when the system cannot calculate it
+   * (unknown cost). Never treated as a calculated cost (COST-005).
+   */
+  manualGrossProfitDop?: number;
+  manualGrossProfitAt?: string;
+  /** Normalized DOP per 1 USD used for a completed USD profit result (COST-003). */
+  fxRateDopPerUsd?: number;
+  fxSource?: string;
+  fxRateAt?: string;
+  fxCalculatedAt?: string;
   /** Frozen at confirmation so later customer edits cannot rewrite issued documents (CUST-003). */
   customerSnapshot?: {
     name: string;

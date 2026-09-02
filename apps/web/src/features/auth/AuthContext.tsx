@@ -2,15 +2,15 @@ import type { Session } from '../../api/contracts/entities';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { mockAuthRepository } from '../../mocks/repositories';
+import { authRepository } from '../../api/repositories';
 import { AuthContext, type AuthUser } from './auth-context';
 
 export type { AuthUser } from './auth-context';
 
 async function loadAuthUser(): Promise<{ user: AuthUser | null; session: Session | null }> {
   const [sessionResult, userResult] = await Promise.all([
-    mockAuthRepository.getSession(),
-    mockAuthRepository.getCurrentUser(),
+    authRepository.getSession(),
+    authRepository.getCurrentUser(),
   ]);
 
   if (!sessionResult.ok) {
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (username: string, password: string) => {
-      const result = await mockAuthRepository.login(username, password);
+      const result = await authRepository.login(username, password);
 
       if (result.ok) {
         await refresh();
@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    await mockAuthRepository.logout();
+    await authRepository.logout();
     setUser(null);
     setSession(null);
   }, []);

@@ -16,6 +16,7 @@ import type {
 import { err, ok, type Result } from '../../shared/auth/types';
 import { DEMO_NOW_ISO } from '../data/demo-clock';
 import { itemById, syncDirectParentCompleteness } from './inventory-helpers';
+import { applyUsdProfitability } from './usd-profitability';
 import {
   derivePaymentState,
   hasRecordedReceipts,
@@ -337,15 +338,21 @@ export function correctCurrency(
   }
 
   const previous = invoice.currency;
+  const manualGrossProfitDopBefore = invoice.manualGrossProfitDop ?? null;
   invoice.currency = input.currency;
+  delete invoice.manualGrossProfitDop;
+  delete invoice.manualGrossProfitAt;
 
-  // Amounts are not converted (INV-006). USD profit needs FX; without a rate it stays pending.
+  // Amounts are not converted (INV-006). Profitability is re-derived under the corrected currency.
   if (input.currency === 'USD') {
-    invoice.profitabilityUsd = null;
-    invoice.profitabilityPendingFx = true;
+    applyUsdProfitability(state, invoice);
   } else {
     invoice.profitabilityPendingFx = false;
     invoice.profitabilityUsd = null;
+    delete invoice.fxRateDopPerUsd;
+    delete invoice.fxSource;
+    delete invoice.fxRateAt;
+    delete invoice.fxCalculatedAt;
   }
 
   const number = invoice.number ?? invoice.id;
@@ -359,6 +366,8 @@ export function correctCurrency(
       reason,
       currencyBefore: previous,
       currencyAfter: input.currency,
+      manualGrossProfitDopBefore,
+      manualGrossProfitInvalidated: manualGrossProfitDopBefore != null,
     },
   );
 
@@ -375,4 +384,3 @@ export {
   setDraftLinePrice,
   setDraftMeta,
 } from './sales-pos-commands';
-

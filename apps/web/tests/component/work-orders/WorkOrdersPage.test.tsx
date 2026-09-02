@@ -74,11 +74,11 @@ describe('WorkOrdersPage', () => {
     });
 
     expect(await screen.findByRole('heading', { name: 'Órdenes de Trabajo' })).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Nueva OT' }));
+    await user.click(screen.getByRole('button', { name: 'Nueva orden de trabajo' }));
 
     const dialog = await screen.findByRole('dialog');
     await user.selectOptions(within(dialog).getByLabelText('Pieza'), 'ENG-001');
-    await user.click(within(dialog).getByRole('button', { name: 'Crear OT' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Crear orden de trabajo' }));
 
     expect(await screen.findByRole('heading', { name: 'OD-DEMO-064' })).toBeVisible();
     expect(screen.getByText(/Detroit DD15 Completo/)).toBeVisible();
@@ -104,14 +104,14 @@ describe('WorkOrderDetailPage', () => {
     });
 
     expect(await screen.findByRole('heading', { name: 'OD-DEMO-062' })).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Cancelar OT' }));
+    await user.click(screen.getByRole('button', { name: 'Cancelar orden' }));
     const dialog = await screen.findByRole('dialog');
     await user.type(within(dialog).getByLabelText('Motivo'), 'Cambio de plan');
     await user.click(within(dialog).getByRole('button', { name: 'Confirmar cancelación' }));
 
     expect(await screen.findByText('Cancelada')).toBeVisible();
     expect(screen.getByText('Cambio de plan')).toBeVisible();
-    expect(screen.getByText(/OT OD-DEMO-062 cancelada/)).toBeVisible();
+    expect(screen.getByText(/Orden de trabajo OD-DEMO-062 cancelada/)).toBeVisible();
   });
 
   it('hides admin actions on a completed order', async () => {
@@ -123,7 +123,7 @@ describe('WorkOrderDetailPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'OD-DEMO-063' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Reasignar' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Cancelar OT' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancelar orden' })).not.toBeInTheDocument();
     expect(screen.getByText('before-alt.jpg')).toBeVisible();
     expect(screen.getByText('after-alt.jpg')).toBeVisible();
   });

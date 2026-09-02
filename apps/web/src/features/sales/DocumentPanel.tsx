@@ -1,4 +1,4 @@
-import { Field, Info, Select } from '../../shared/ui';
+import { currencyLabel, Field, Info, Select } from '../../shared/ui';
 import type { Currency } from '../../api/contracts/entities';
 import type { PosDraftView } from '../../api/contracts/sales';
 
@@ -53,8 +53,8 @@ export function DocumentPanel({
           disabled={readOnly || isMutating}
           onChange={(event) => onCurrencyChange(event.target.value as Currency)}
         >
-          <option value="DOP">DOP</option>
-          <option value="USD">USD</option>
+          <option value="DOP">{currencyLabel('DOP')}</option>
+          <option value="USD">{currencyLabel('USD')}</option>
         </Select>
       </Field>
       <label className="flex items-start gap-2 text-sm text-navy">
@@ -69,7 +69,7 @@ export function DocumentPanel({
         <span>
           <span className="font-medium">Factura con comprobante fiscal</span>
           <span className="mt-0.5 block text-xs text-navy-400">
-            Activa ITBIS 18% incluido en líneas gravadas. Requiere cliente con RNC o cédula.
+            Activa el impuesto ITBIS (18% incluido) en las líneas gravadas. Requiere cliente con RNC o cédula.
           </span>
         </span>
       </label>

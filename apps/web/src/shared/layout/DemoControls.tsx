@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/useAuth';
 import { resetDemoData } from '../../mocks/demo-controls';
 import { Button, useToast } from '../ui';
+import { ScenarioRunner } from './ScenarioRunner';
 
 /**
  * Dev-only controls to reset mock data. Never bypasses login — session is cleared on reset.
@@ -20,6 +21,12 @@ export function DemoControls() {
     return null;
   }
 
+  async function finishReset(message: string) {
+    await logout();
+    pushToast(message, 'success');
+    navigate('/login', { replace: true });
+  }
+
   async function handleReset() {
     setIsResetting(true);
     const result = resetDemoData();
@@ -30,15 +37,22 @@ export function DemoControls() {
       return;
     }
 
-    await logout();
-    pushToast('Datos demo restaurados. Inicie sesión nuevamente.', 'success');
-    navigate('/login', { replace: true });
+    await finishReset('Datos demo restaurados. Inicie sesión nuevamente.');
     setIsResetting(false);
   }
 
   return (
-    <Button variant="secondary" size="sm" onClick={handleReset} disabled={isResetting}>
-      {isResetting ? 'Reiniciando…' : 'Reiniciar datos demo'}
-    </Button>
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <ScenarioRunner
+        disabled={isResetting}
+        onError={(message) => pushToast(message, 'error')}
+        onRun={async (message) => {
+          await finishReset(message);
+        }}
+      />
+      <Button variant="secondary" size="sm" onClick={() => void handleReset()} disabled={isResetting}>
+        {isResetting ? 'Reiniciando…' : 'Reiniciar datos demo'}
+      </Button>
+    </div>
   );
 }

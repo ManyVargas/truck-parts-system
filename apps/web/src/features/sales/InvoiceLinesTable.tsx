@@ -17,10 +17,10 @@ export function InvoiceLinesTable({ lines, currency, fiscal }: InvoiceLinesTable
           <tr>
             <th className="px-4 py-3 font-medium">Línea</th>
             <th className="px-4 py-3 font-medium">Tipo</th>
-            <th className="px-4 py-3 font-medium text-right">Cant.</th>
+            <th className="px-4 py-3 font-medium text-right">Cantidad</th>
             <th className="px-4 py-3 font-medium text-right">Precio final</th>
             <th className="px-4 py-3 font-medium text-right">Base</th>
-            <th className="px-4 py-3 font-medium text-right">ITBIS</th>
+            <th className="px-4 py-3 font-medium text-right">Impuesto ITBIS</th>
             <th className="px-4 py-3 font-medium text-right">Total</th>
           </tr>
         </thead>

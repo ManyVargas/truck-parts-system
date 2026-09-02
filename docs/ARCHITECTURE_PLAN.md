@@ -122,7 +122,7 @@ Requirement ranges below refer to the stable IDs preserved inside the correspond
 | Reservations | Draft-linked holds, conflicts, eligible release, and abandoned-Draft recovery without automatic expiry | `RES-001–RES-003` |
 | Sales | Draft/completed/cancelled invoice lifecycle, one DOP/USD currency, internal numbering, and totals | `SALE-001–SALE-008` |
 | Sale Lines | Unique items, quantity products, catalog-selected services, shipping, and descriptive lines | `LINE-001–LINE-006` |
-| Costs and Profitability | `DOP` acquisition cost, invoice-currency gross profit, FX enrichment for `USD` invoices, finance visibility | `COST-001–COST-004` |
+| Costs and Profitability | `DOP` acquisition cost, invoice-currency gross profit, FX enrichment for `USD` invoices, administrator-recorded profit when cost is unknown, finance visibility | `COST-001–COST-005` |
 | Payments | Same-invoice-currency cash/credit, partial and mixed-method records, balances, and refunds | `PAY-001–PAY-005` |
 | Cancellation and Refunds | Cancellation reason, inventory outcome, refund records, and linked physical-work branches | `CANCEL-001–CANCEL-005` |
 | Work Orders | One-piece Dismantling and Installation operations, lifecycle, assignment, claim, and recovery | `WO-001–WO-010` |

@@ -7,9 +7,9 @@ import type {
 } from '../../api/contracts/dashboard';
 import type { AppState } from '../../api/contracts/entities';
 import { DEMO_NOW_ISO } from '../data/demo-clock';
-import { invoiceProfitDop } from './gross-profit';
+import { reportedInvoiceProfitDop } from './profitability-view';
 import { isComplete } from './inventory-helpers';
-import { invoiceBalance, invoiceTotal, utcCalendarDate } from './invoice-money';
+import { invoiceBalance, invoiceTotal, roundMoney, utcCalendarDate } from './invoice-money';
 
 const RECENT_INVOICE_LIMIT = 5;
 const ACTIVITY_LIMIT = 8;
@@ -61,14 +61,14 @@ function profitDopTotal(state: AppState): number {
   let total = 0;
 
   for (const invoice of state.invoices) {
-    const profit = invoiceProfitDop(invoice, state);
+    const profit = reportedInvoiceProfitDop(invoice, state);
     if (profit == null) {
       continue;
     }
     total += profit;
   }
 
-  return total;
+  return roundMoney(total);
 }
 
 function incompleteAssemblyCount(state: AppState): number {

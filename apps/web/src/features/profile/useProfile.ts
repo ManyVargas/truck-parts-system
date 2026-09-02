@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import type { UpdateOwnProfileInput, UpdateOwnProfileResult } from '../../api/contracts/profile';
-import { mockAuthRepository } from '../../mocks/repositories';
+import { authRepository } from '../../api/repositories';
 import type { Result } from '../../shared/auth/types';
 import { useAuth } from '../auth/useAuth';
 
@@ -16,7 +16,7 @@ export function useProfile() {
   const save = useCallback(
     async (input: UpdateOwnProfileInput): Promise<Result<UpdateOwnProfileResult>> => {
       setIsSaving(true);
-      const response = await mockAuthRepository.updateOwnProfile(input);
+      const response = await authRepository.updateOwnProfile(input);
       setIsSaving(false);
 
       if (response.ok) {

@@ -47,7 +47,7 @@ describe('InvoiceDetailPage', () => {
     await user.type(screen.getByLabelText('Monto'), '5000');
     await user.click(screen.getByRole('button', { name: 'Confirmar pago' }));
 
-    expect(await screen.findByText('Parcial')).toBeVisible();
+    expect(await screen.findByText('Pago parcial')).toBeVisible();
   });
 
   it('shows ITBIS breakdown for fiscal invoices and em dash for non-fiscal', async () => {
@@ -71,10 +71,10 @@ describe('InvoiceDetailPage', () => {
     });
 
     expect(await screen.findByRole('heading', { name: 'FAC-000099' })).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Vista previa PDF' }));
+    await user.click(screen.getByRole('button', { name: 'Vista previa del documento' }));
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('NCF: ______________________')).toBeVisible();
+    expect(within(dialog).getByText('Número de comprobante fiscal: ______________________')).toBeVisible();
     expect(within(dialog).getAllByText('—').length).toBeGreaterThan(0);
     expect(within(dialog).getByText('RD$0.00')).toBeVisible();
   });

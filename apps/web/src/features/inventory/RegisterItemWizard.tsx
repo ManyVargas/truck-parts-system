@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 
 import type { Category, ItemCondition } from '../../api/contracts/entities';
 import type { AssemblyBaselineEntry, RegisterItemInput } from '../../api/contracts/inventory';
-import { mockInventoryRepository } from '../../mocks/repositories';
+import { inventoryRepository } from '../../api/repositories';
 import { Button, Field, Info, Input, Modal, Select, Textarea } from '../../shared/ui';
 import { BaselineChecklist } from './BaselineChecklist';
 import { PhotoEditor } from './PhotoEditor';
@@ -83,7 +83,7 @@ export function RegisterItemWizard({
     const normalizedItem = { ...item, attributes: parseAttributes(attributesText) };
     const result =
       mode === 'QUANTITY'
-        ? await mockInventoryRepository.registerQtyProduct({
+        ? await inventoryRepository.registerQtyProduct({
             id: item.id,
             name: item.name,
             categoryId: item.categoryId,
@@ -93,8 +93,8 @@ export function RegisterItemWizard({
             unitCostDop: Number(unitCostDop),
           })
         : selectedCategory?.isAssembly
-          ? await mockInventoryRepository.registerAssembly({ parent: normalizedItem, baseline })
-          : await mockInventoryRepository.registerItem(normalizedItem);
+          ? await inventoryRepository.registerAssembly({ parent: normalizedItem, baseline })
+          : await inventoryRepository.registerItem(normalizedItem);
     setSaving(false);
     if (!result.ok) {
       setError(result.error.message);
@@ -234,7 +234,7 @@ export function RegisterItemWizard({
                     </Select>
                   </Field>
                   <Field
-                    label="Costo DOP (opcional)"
+                    label="Costo en pesos (opcional)"
                     htmlFor="register-cost"
                     hint="Déjelo vacío si se desconoce."
                   >
@@ -274,7 +274,7 @@ export function RegisterItemWizard({
                       required
                     />
                   </Field>
-                  <Field label="Costo unitario DOP" htmlFor="register-unit-cost">
+                  <Field label="Costo unitario en pesos" htmlFor="register-unit-cost">
                     <Input
                       id="register-unit-cost"
                       type="number"

@@ -27,7 +27,7 @@ export function CustomerTable({ rows, onEdit }: CustomerTableProps) {
         <thead className="border-b border-navy-100 bg-navy-50 text-navy-400">
           <tr>
             <th className="px-4 py-3 font-medium">Nombre</th>
-            <th className="px-4 py-3 font-medium">RNC / Cédula</th>
+            <th className="px-4 py-3 font-medium">Identificación fiscal / cédula</th>
             <th className="px-4 py-3 font-medium">Teléfono</th>
             <th className="px-4 py-3 font-medium">Facturas</th>
             <th className="px-4 py-3 font-medium">

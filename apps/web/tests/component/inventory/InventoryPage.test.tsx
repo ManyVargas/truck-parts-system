@@ -82,11 +82,11 @@ describe('InventoryPage', () => {
     await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-FIL');
     await user.clear(within(dialog).getByLabelText('Existencia inicial'));
     await user.type(within(dialog).getByLabelText('Existencia inicial'), '8');
-    await user.type(within(dialog).getByLabelText('Costo unitario DOP'), '300');
+    await user.type(within(dialog).getByLabelText('Costo unitario en pesos'), '300');
     await user.click(within(dialog).getByRole('button', { name: 'Registrar' }));
 
     expect(await screen.findByText('Filtro por caja')).toBeVisible();
-    expect(screen.getByText('8 disp. / 8 exist.')).toBeVisible();
+    expect(screen.getByText('8 disponibles / 8 en existencia')).toBeVisible();
   });
 
   it('captures a truck, a present engine and the engine baseline in one wizard', async () => {

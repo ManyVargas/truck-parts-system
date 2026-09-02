@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { MechanicWorkOrderView, WorkOrderType } from '../../api/contracts/entities';
 import type { AddWorkOrderPhotoInput, CompleteWorkOrderInput } from '../../api/contracts/work-orders';
 import type { AppError, Result } from '../../shared/auth/types';
-import { mockWorkOrderRepository } from '../../mocks/repositories';
+import { workOrderRepository } from '../../api/repositories';
 
 type Query =
   | { status: 'loading' }
@@ -19,7 +19,7 @@ export function useMechanicOrders() {
     let cancelled = false;
     setResult({ status: 'loading' });
 
-    mockWorkOrderRepository.listForMechanic().then((response) => {
+    workOrderRepository.listForMechanic().then((response) => {
       if (cancelled) {
         return;
       }
@@ -44,7 +44,7 @@ export function useMechanicOrders() {
   const takeOrder = useCallback(
     async (workOrderId: string): Promise<Result<MechanicWorkOrderView>> => {
       setIsMutating(true);
-      const response = await mockWorkOrderRepository.takeOrder(workOrderId);
+      const response = await workOrderRepository.takeOrder(workOrderId);
       setIsMutating(false);
       if (response.ok || response.error.code === 'CONFLICT') {
         reload();
@@ -86,7 +86,7 @@ export function useMechanicOrder(id: string | undefined) {
 
     let cancelled = false;
 
-    mockWorkOrderRepository.getForMechanic(id).then((response) => {
+    workOrderRepository.getForMechanic(id).then((response) => {
       if (cancelled) {
         return;
       }
@@ -111,7 +111,7 @@ export function useMechanicOrder(id: string | undefined) {
   const addPhoto = useCallback(
     async (input: AddWorkOrderPhotoInput): Promise<Result<MechanicWorkOrderView>> => {
       setIsMutating(true);
-      const response = await mockWorkOrderRepository.addPhoto(input);
+      const response = await workOrderRepository.addPhoto(input);
       setIsMutating(false);
       if (response.ok) {
         setResult({ status: 'ready', order: response.value });
@@ -129,8 +129,8 @@ export function useMechanicOrder(id: string | undefined) {
       setIsMutating(true);
       const response =
         type === 'INSTALLATION'
-          ? await mockWorkOrderRepository.completeInstalacion(input)
-          : await mockWorkOrderRepository.completeDesarme(input);
+          ? await workOrderRepository.completeInstalacion(input)
+          : await workOrderRepository.completeDesarme(input);
       setIsMutating(false);
       if (response.ok) {
         setResult({ status: 'ready', order: response.value });

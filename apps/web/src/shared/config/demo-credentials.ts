@@ -28,7 +28,7 @@ export const DEMO_CREDENTIALS: readonly DemoCredential[] = [
     password: 'demo1234',
     role: 'SELLER',
     active: true,
-    note: 'Dashboard, Inventario, Ventas, Clientes',
+    note: 'Inicio, Inventario, Ventas, Clientes',
   },
   {
     id: 'U-CARLOS',
@@ -46,6 +46,6 @@ export const DEMO_CREDENTIALS: readonly DemoCredential[] = [
     password: 'demo1234',
     role: 'MECHANIC',
     active: true,
-    note: 'OT seed OD-DEMO-060 asignada',
+    note: 'Orden de trabajo de demostración OD-DEMO-060 asignada',
   },
 ] as const;

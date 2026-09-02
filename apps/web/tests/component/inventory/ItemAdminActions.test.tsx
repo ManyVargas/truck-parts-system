@@ -78,7 +78,7 @@ describe('ItemAdminActions', () => {
 
     expect(screen.getByText('Bomba de aceite')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Registrar presente' })).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Confirmar NA' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmar que no aplica' }));
     expect(callbacks.onResolveCatalogReview).toHaveBeenCalledWith({
       expectedComponentName: 'Bomba de aceite',
       decision: 'NOT_APPLICABLE',

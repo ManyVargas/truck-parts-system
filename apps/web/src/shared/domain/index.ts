@@ -11,3 +11,4 @@ export {
   WOStatusChip,
   WOTypeChip,
 } from './StatusChips';
+export { FxStatusChip } from './FxStatusChip';

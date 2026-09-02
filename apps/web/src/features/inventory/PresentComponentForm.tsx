@@ -91,7 +91,7 @@ export function PresentComponentForm({
           onChange={(event) => patch({ partNumber: event.target.value })}
         />
       </Field>
-      <Field label="Costo DOP (opcional)" htmlFor={`${prefix}-cost`}>
+      <Field label="Costo en pesos (opcional)" htmlFor={`${prefix}-cost`}>
         <Input
           id={`${prefix}-cost`}
           type="number"

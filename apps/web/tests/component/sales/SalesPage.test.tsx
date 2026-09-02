@@ -29,7 +29,7 @@ describe('SalesPage', () => {
     const unpaidRow = screen.getByText('FAC-000098').closest('tr');
     const partialRow = screen.getByText('FAC-000099').closest('tr');
     expect(unpaidRow && within(unpaidRow).getByText('Sin pagar')).toBeTruthy();
-    expect(partialRow && within(partialRow).getByText('Parcial')).toBeTruthy();
+    expect(partialRow && within(partialRow).getByText('Pago parcial')).toBeTruthy();
   });
 
   it('filters drafts in the Borrador tab', async () => {

@@ -72,8 +72,8 @@ export function CustomersPage() {
       <div className="mb-6 max-w-md">
         <SearchInput
           id="customer-search"
-          label="Buscar por nombre o RNC"
-          placeholder="Nombre o RNC / Cédula"
+          label="Buscar por nombre o identificación fiscal"
+          placeholder="Nombre o identificación fiscal / cédula"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />

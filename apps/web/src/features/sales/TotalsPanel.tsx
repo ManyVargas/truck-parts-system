@@ -20,7 +20,7 @@ export function TotalsPanel({ totals, currency, fiscal }: TotalsPanelProps) {
         <dd className="font-medium text-navy">{money(totals.taxableBase, currency)}</dd>
       </div>
       <div className="flex justify-between">
-        <dt className="text-navy-400">ITBIS {fiscal ? '18% incluido' : ''}</dt>
+        <dt className="text-navy-400">Impuesto ITBIS {fiscal ? '18% incluido' : ''}</dt>
         <dd className="font-medium text-navy" data-testid="pos-itbis">
           {money(totals.itbis, currency)}
         </dd>

@@ -23,9 +23,9 @@ describe('DashboardPage', () => {
     signInAs('ADMINISTRATOR');
     renderWithProviders(<DashboardPage />);
 
-    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    expect(screen.getByText('Utilidad DOP')).toBeVisible();
-    expect(screen.getByText('FX pendiente')).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Inicio' })).toBeVisible();
+    expect(screen.getByText('Ganancia bruta en pesos')).toBeVisible();
+    expect(screen.getByText('Tasa de cambio pendiente')).toBeVisible();
     expect(screen.getByText('RD$8,900.00')).toBeVisible();
   });
 
@@ -34,8 +34,8 @@ describe('DashboardPage', () => {
     renderWithProviders(<DashboardPage />);
 
     expect(await screen.findByText('Borradores')).toBeVisible();
-    expect(screen.queryByText('Utilidad DOP')).not.toBeInTheDocument();
-    expect(screen.queryByText('FX pendiente')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ganancia bruta en pesos')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tasa de cambio pendiente')).not.toBeInTheDocument();
     expect(
       screen.queryByText('Catálogo: ensamblajes afectados por un componente nuevo'),
     ).not.toBeInTheDocument();
@@ -65,7 +65,7 @@ describe('DashboardPage', () => {
     signInAs('MECHANIC');
     renderWithProviders(<DashboardPage />);
 
-    expect(await screen.findByText('No se pudo cargar el dashboard')).toBeVisible();
+    expect(await screen.findByText('No se pudo cargar el inicio')).toBeVisible();
     expect(screen.getByText('No tiene permiso para realizar esta acción')).toBeVisible();
   });
 });

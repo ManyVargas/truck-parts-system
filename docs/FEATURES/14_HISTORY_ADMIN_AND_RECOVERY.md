@@ -82,11 +82,11 @@ Diagnostics should surface affected business records and safe next-action contex
 - [ ] All corrections require reason and additive history.
 
 ### Recovery
-- [ ] Abandoned reservation release.
-- [ ] Work-Order release/reassign/cancel.
+- [x] Abandoned reservation release.
+- [x] Work-Order release/reassign/cancel.
 - [ ] PDF regeneration.
 - [ ] Evidence recovery where safe.
-- [ ] Pending USD profitability retry.
+- [x] Pending USD profitability retry.
 
 ### Diagnostics
 - [ ] Negative/invalid quantity states.
@@ -95,7 +95,7 @@ Diagnostics should surface affected business records and safe next-action contex
 - [ ] Duplicate active physical operations.
 - [ ] Impossible Work-Order assignment/evidence state.
 - [ ] Impossible invoice/payment/refund balances.
-- [ ] Pending FX profitability.
+- [x] Pending FX profitability.
 - [ ] Metadata/object mismatches for PDF/evidence/photos where applicable.
 - [ ] Tests prove diagnostics do not mutate records.
 
@@ -138,7 +138,7 @@ The blocks below are the final reconciled requirements retained from the previou
 **Name:** Never silently rewrite evidence  
 **Status:** CONFIRMED  
 **Actors:** Administrator  
-**Requirement:** Administrative corrections, including protected initial-baseline, acquisition-cost, and completed/no-payment invoice-currency corrections, invoice or Work Order cancellation, refund, restoration, reassignment, release, and recovery must append reasons and corrective events rather than remove original evidence.  
+**Requirement:** Administrative corrections, including protected initial-baseline, acquisition-cost, and completed/no-payment invoice-currency corrections, invoice or Work Order cancellation, refund, restoration, reassignment, release, and recovery must append reasons and corrective events rather than remove original evidence. Administrator-recorded unavailable gross profit appends an additive event with actor, timestamp, and before/after amounts and does not require a typed reason.  
 **Business Reason:** Business disputes and mistakes require an understandable before-and-after record.  
 **Preconditions:** The actor is authorized for the correction or reversal.  
 **Main Flow:** User supplies the required reason; the system records actor, timestamp, before state, corrected state, and the approved additive correction event.  
@@ -154,7 +154,7 @@ The blocks below are the final reconciled requirements retained from the previou
 **Name:** Essential protected business operations  
 **Status:** CONFIRMED  
 **Actors:** Administrator  
-**Requirement:** Administrator may manage users; maintain inventory categories, expected-component definitions, mechanical service catalog, and small controlled options; apply or remove `No desarmar`; create manual Work Orders; cancel confirmed invoices and register refunds; perform protected corrections including acquisition cost, initial receipt baseline, and completed/no-payment invoice currency; use recovery; and view profitability.  
+**Requirement:** Administrator may manage users; maintain inventory categories, expected-component definitions, mechanical service catalog, and small controlled options; apply or remove `No desarmar`; create manual Work Orders; cancel confirmed invoices and register refunds; perform protected corrections including acquisition cost, initial receipt baseline, and completed/no-payment invoice currency; record judged gross profit when calculation is unavailable; use recovery; and view profitability.  
 **Business Reason:** Sensitive configuration and financial controls need one clear authority level.  
 **Main Flow:** Administrator opens the relevant administrative function and performs an authorized, validated action.  
 **Business Rules:** Seller may perform normal commercial and inventory operations and view acquisition cost but not these protected operations; Mechanic remains limited to Work Orders; this does not introduce configurable enterprise permissions.  
@@ -171,8 +171,8 @@ The blocks below are the final reconciled requirements retained from the previou
 **Actors:** Administrator  
 **Requirement:** The MVP must provide small named administrative operations to inspect/release abandoned reservations, inspect/release/reassign/cancel eligible Work Orders, regenerate a failed invoice PDF, retry/recover failed evidence uploads where practical, retry a pending `USD` profitability calculation, and inspect critical consistency diagnostics.  
 **Business Reason:** Common operational failures must be recoverable without direct data manipulation or loss of valid commercial history.  
-**Preconditions:** Administrator selects an eligible named operation and supplies a reason where appropriate.  
-**Main Flow:** The system validates the requested recovery, shows relevant current context, applies only the named business operation, and records actor, time, reason, and before/after state.  
+**Preconditions:** Administrator selects an eligible named operation and supplies a reason where appropriate. An abandoned-Draft release additionally requires at least six hours since the Draft's `createdAt`.  
+**Main Flow:** The system validates the requested recovery, including the six-hour boundary for an abandoned Draft, shows relevant current context, applies only the named business operation, and records actor, time, reason, and before/after state. Crossing the boundary never releases inventory without this explicit action.  
 **Business Rules:** This is not a SQL console, raw database editor, arbitrary status selector, or domain-rule bypass; regenerating a PDF does not roll back a valid sale, and recovery cannot waive evidence or invent physical completion. Retrying a pending profitability calculation is a secondary enrichment only: it may not rerun the sale, resell inventory, modify payments, reconfirm the PDF as a sale, invent a rate, or present an unrelated later live rate as the sale-time rate, and a successfully calculated result is preserved with its rate provenance under COST-003.  
 **Important Exceptions/Edge Cases:** Diagnostics must identify negative stock, stuck/orphan reservations, multiple current parents, hierarchy cycles, duplicate active physical operations, impossible invoice/payment balances, unresolved `UNAVAILABLE / PENDING FX RATE` profitability results, inconsistent critical state, and a requested baseline correction that conflicts with later immutable events without silently auto-correcting them.  
 **Dependencies:** AUTH-005, COST-003, RES-003, SALE-004, WO-005, WO-010, HIST-003.  

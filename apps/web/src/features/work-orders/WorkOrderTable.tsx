@@ -15,7 +15,7 @@ export function WorkOrderTable({ rows }: WorkOrderTableProps) {
     return (
       <Empty
         title="No hay órdenes en esta vista"
-        description="Cambie de filtro o cree una OT manual de desarme o instalación."
+        description="Cambie de filtro o cree una orden de trabajo manual de desarme o instalación."
       />
     );
   }
@@ -25,7 +25,7 @@ export function WorkOrderTable({ rows }: WorkOrderTableProps) {
       <table className="min-w-full text-left text-sm">
         <thead className="border-b border-navy-100 bg-navy-50 text-navy-400">
           <tr>
-            <th className="px-4 py-3 font-medium">OT</th>
+            <th className="px-4 py-3 font-medium">Orden</th>
             <th className="px-4 py-3 font-medium">Tipo</th>
             <th className="px-4 py-3 font-medium">Pieza</th>
             <th className="px-4 py-3 font-medium">Origen / destino</th>

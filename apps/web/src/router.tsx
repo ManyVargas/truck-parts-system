@@ -13,7 +13,8 @@ import { MechanicOrderView } from './features/mechanic/MechanicOrderView';
 import { MechanicPendingPage } from './features/mechanic/MechanicPendingPage';
 import { CatalogsPage } from './features/catalogs/CatalogsPage';
 import { UsersPage } from './features/users/UsersPage';
-import { PlaceholderPage } from './features/placeholder/PlaceholderPage';
+import { ProfitabilityPage } from './features/profitability/ProfitabilityPage';
+import { AdminRecoveryPage } from './features/admin-recovery/AdminRecoveryPage';
 import { NotFoundPage } from './features/placeholder/NotFoundPage';
 import { PosPage } from './features/sales/PosPage';
 import { SalesPage } from './features/sales/SalesPage';
@@ -72,11 +73,11 @@ const desktopChildRoutes = [
   },
   {
     path: '/profitability',
-    element: <PlaceholderPage title="Rentabilidad" milestone="WM12" />,
+    element: <ProfitabilityPage />,
   },
   {
     path: '/recovery',
-    element: <PlaceholderPage title="Administración y Recuperación" milestone="WM12" />,
+    element: <AdminRecoveryPage />,
   },
   {
     path: '/profile',

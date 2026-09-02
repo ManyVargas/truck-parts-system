@@ -34,8 +34,8 @@ function CatalogReviewBanner({ reviews }: { reviews: CatalogReviewAlert[] }) {
               <>
                 {' '}
                 ya estaba registrado y ahora {review.categoryName.toLowerCase()} espera{' '}
-                {review.expectedComponentName}. Sigue completo con NA provisional hasta confirmar
-                NA, registrar la pieza presente o marcar falta.
+                {review.expectedComponentName}. Sigue completo con “no aplica” provisional hasta
+                confirmar que no aplica, registrar la pieza presente o marcar falta.
               </>
             )}
           </li>
@@ -49,9 +49,9 @@ function PrimaryKpiRow({ kpis }: { kpis: DashboardKpis }) {
   const fourth =
     kpis.profitDop != null
       ? {
-          label: 'Utilidad DOP',
+          label: 'Ganancia bruta en pesos',
           value: money(kpis.profitDop, 'DOP'),
-          hint: 'Solo administrador · costo desconocido excluido',
+          hint: 'Solo administrador · dólares convertidos a pesos con su tasa',
           tone: 'brand' as const,
         }
       : {
@@ -63,7 +63,7 @@ function PrimaryKpiRow({ kpis }: { kpis: DashboardKpis }) {
 
   const outstandingHint =
     kpis.outstandingUsd > 0
-      ? `USD pendiente: ${money(kpis.outstandingUsd, 'USD')}`
+      ? `Dólares pendientes: ${money(kpis.outstandingUsd, 'USD')}`
       : 'Facturas completadas sin saldar';
 
   return (
@@ -99,7 +99,7 @@ function SecondaryKpiRow({ kpis }: { kpis: DashboardKpis }) {
     {
       label: 'Desarmes pendientes',
       value: formatCount(kpis.pendingDismantling),
-      hint: 'OT de desarme sin asignar',
+      hint: 'Órdenes de desarme sin asignar',
     },
     {
       label: 'Orden de Trabajo en proceso',
@@ -117,16 +117,16 @@ function SecondaryKpiRow({ kpis }: { kpis: DashboardKpis }) {
     cards.push({
       label: 'Componentes por validar',
       value: formatCount(kpis.pendingCatalogValidations),
-      hint: 'Esperados nuevos aún en NA provisional',
+      hint: 'Componentes esperados aún en “no aplica” provisional',
       tone: kpis.pendingCatalogValidations > 0 ? ('amber' as const) : ('default' as const),
     });
   }
 
   if (kpis.pendingFx != null) {
     cards.push({
-      label: 'FX pendiente',
+      label: 'Tasa de cambio pendiente',
       value: formatCount(kpis.pendingFx),
-      hint: 'Rentabilidad USD sin tasa',
+      hint: 'Rentabilidad en dólares sin tasa de cambio',
       tone: 'default' as const,
     });
   }
@@ -149,14 +149,14 @@ export function DashboardPage() {
   if (query.status === 'loading') {
     return (
       <p className="text-sm text-navy-400" aria-live="polite">
-        Cargando dashboard…
+        Cargando inicio…
       </p>
     );
   }
 
   if (query.status === 'error') {
     return (
-      <Info tone="error" title="No se pudo cargar el dashboard">
+      <Info tone="error" title="No se pudo cargar el inicio">
         {query.error.message}
       </Info>
     );
@@ -168,7 +168,7 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader
-        title="Dashboard"
+        title="Inicio"
         description={
           isAdmin
             ? 'Resumen operativo y comercial del inventario, ventas y órdenes.'

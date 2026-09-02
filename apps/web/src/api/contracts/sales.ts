@@ -66,11 +66,18 @@ export type InvoiceHistoryEntry = {
   actorName?: string;
 };
 
+export type ProfitabilitySource = 'CALCULATED' | 'MANUAL';
+
 export type InvoiceProfitabilityView = {
-  currency: Currency;
+  /** Reporting currency is always pesos; USD sales are converted with the stored FX rate. */
+  currency: 'DOP';
   profit: number | null;
   pendingFx: boolean;
+  /** Present when profit is a number: system math vs administrator judgment. */
+  source?: ProfitabilitySource;
   reason?: string;
+  rateDopPerUsd?: number;
+  rateSource?: string;
 };
 
 export type InvoiceDetailActions = {

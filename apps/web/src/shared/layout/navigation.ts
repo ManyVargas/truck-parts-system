@@ -11,7 +11,7 @@ export type NavItem = {
 export const DESKTOP_NAV_ITEMS: NavItem[] = [
   {
     id: 'dashboard',
-    label: 'Dashboard',
+    label: 'Inicio',
     path: '/dashboard',
     roles: ['ADMINISTRATOR', 'SELLER'],
   },

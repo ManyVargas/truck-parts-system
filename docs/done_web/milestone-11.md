@@ -7,7 +7,7 @@
 | **Fecha**      | 2026-09-01                                                      |
 | **Referencia** | [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM11 |
 | **Alcance**    | Categorías (ensamblaje + componentes esperados), servicios mecánicos, CRUD de usuarios |
-| **Siguiente**  | WM12 — Rentabilidad, recuperación, escenarios demo y preparación API |
+| **Siguiente**  | — (plan 001 frontend cerrado) |
 
 ---
 

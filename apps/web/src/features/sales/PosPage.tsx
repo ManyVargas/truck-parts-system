@@ -60,7 +60,7 @@ export function PosPage() {
         title="Punto de venta"
         description={
           readOnly
-            ? `Factura ${draft.number ?? draft.id} confirmada. Pagos y PDF están en el detalle.`
+            ? `Factura ${draft.number ?? draft.id} confirmada. Pagos y vista previa del documento están en el detalle.`
             : 'Edite el borrador, asigne precios y confirme. El inventario se reserva hasta confirmar o descartar.'
         }
         actions={
@@ -109,7 +109,7 @@ export function PosPage() {
           <Info tone="success" title={`Factura ${draft.number} confirmada`}>
             Cliente {draft.customerName}. Total {money(draft.totals.gross, draft.currency)}.
             {draft.createdWorkOrderIds.length > 0
-              ? ` OT de desarme: ${draft.createdWorkOrderIds.join(', ')}.`
+              ? ` Orden de desarme: ${draft.createdWorkOrderIds.join(', ')}.`
               : ''}{' '}
             <Link to={`/sales/${draft.id}`} className="font-medium text-brand hover:underline">
               Ver detalle
@@ -135,9 +135,9 @@ export function PosPage() {
                     <tr className="border-b border-navy-100 text-navy-400">
                       <th className="py-2 pr-3 font-medium">Descripción</th>
                       <th className="py-2 pr-3 font-medium">Tipo</th>
-                      <th className="py-2 pr-3 font-medium">Cant.</th>
+                      <th className="py-2 pr-3 font-medium">Cantidad</th>
                       <th className="py-2 pr-3 font-medium">Precio</th>
-                      <th className="py-2 pr-3 font-medium">ITBIS</th>
+                      <th className="py-2 pr-3 font-medium">Impuesto ITBIS</th>
                       <th className="py-2 pr-3 font-medium">Total</th>
                       {!readOnly && <th className="py-2 font-medium"> </th>}
                     </tr>

@@ -366,7 +366,7 @@ export function createInitialState(): AppState {
       ],
       payments: [],
       paymentState: 'UNPAID' as const,
-      createdAt: ISO('2026-08-26T10:00:00.000Z'),
+      createdAt: ISO('2026-08-25T09:00:00.000Z'),
     },
     {
       id: 'INV-096',
@@ -536,14 +536,14 @@ export function createInitialState(): AppState {
     {
       id: 'EV-001',
       type: 'INVOICE_CONFIRMED',
-      description: 'Factura FAC-000096 confirmada (USD)',
+      description: 'Factura FAC-000096 confirmada (dólares)',
       actorId: 'U-LAURA',
       createdAt: ISO('2026-08-20T14:35:00.000Z'),
     },
     {
       id: 'EV-002',
       type: 'WORK_ORDER_CLAIMED',
-      description: 'OT OD-DEMO-060 tomada por Pedro Santana',
+      description: 'Orden de trabajo OD-DEMO-060 tomada por Pedro Santana',
       actorId: 'U-PEDRO',
       createdAt: ISO('2026-08-20T15:00:00.000Z'),
     },

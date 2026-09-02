@@ -55,7 +55,7 @@ describe('MechanicPendingPage', () => {
 
     await user.click(screen.getAllByRole('button', { name: 'Tomar orden' })[1]!);
 
-    expect(await screen.findByText('Esta OT ya fue tomada')).toBeVisible();
+    expect(await screen.findByText('Esta orden de trabajo ya fue tomada')).toBeVisible();
     await waitFor(() => expect(screen.queryByText('OD-DEMO-062')).not.toBeInTheDocument());
 
     await user.click(screen.getAllByRole('button', { name: 'Tomar orden' })[0]!);
@@ -100,9 +100,9 @@ describe('MechanicMinePage and MechanicOrderView', () => {
     expect(await screen.findByText('Turbo Garrett')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Completar desarme' })).toBeDisabled();
 
-    await user.upload(screen.getByLabelText('AFTER'), file);
+    await user.upload(screen.getByLabelText('Después'), file);
 
-    expect(await screen.findByText('Foto AFTER agregada')).toBeVisible();
+    expect(await screen.findByText('Foto de después agregada')).toBeVisible();
     const complete = await screen.findByRole('button', { name: 'Completar desarme' });
     expect(complete).toBeEnabled();
     await user.click(complete);

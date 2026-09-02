@@ -21,6 +21,13 @@ import type {
   RegisterQtyProductInput,
 } from './inventory';
 import type {
+  ProfitabilitySnapshot,
+  RecordManualGrossProfitInput,
+  RetryUsdProfitabilityInput,
+  SetFxAvailableInput,
+} from './profitability';
+import type { ReleaseReservationInput, RecoverySnapshot, ReleaseReservationResult } from './recovery';
+import type {
   AddDraftLineInput,
   AddPaymentInput,
   CancelInvoiceInput,
@@ -144,4 +151,17 @@ export type EventRepository = {
 
 export type DashboardRepository = {
   getSnapshot(): Promise<Result<DashboardSnapshot>>;
+};
+
+export type ProfitabilityRepository = {
+  getSnapshot(): Promise<Result<ProfitabilitySnapshot>>;
+  setFxAvailable(input: SetFxAvailableInput): Promise<Result<ProfitabilitySnapshot>>;
+  retryUsd(input: RetryUsdProfitabilityInput): Promise<Result<ProfitabilitySnapshot>>;
+  recordManualGrossProfit(input: RecordManualGrossProfitInput): Promise<Result<ProfitabilitySnapshot>>;
+};
+
+export type RecoveryRepository = {
+  getSnapshot(): Promise<Result<RecoverySnapshot>>;
+  releaseReservation(input: ReleaseReservationInput): Promise<Result<ReleaseReservationResult>>;
+  retryUsdProfitability(input: RetryUsdProfitabilityInput): Promise<Result<RecoverySnapshot>>;
 };
