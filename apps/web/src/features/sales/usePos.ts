@@ -82,17 +82,34 @@ export function usePos(draftId: string | undefined) {
     return { ok: true, value: undefined };
   }, []);
 
+  const mutationLock = useRef(false);
+
+  const runExclusive = useCallback(async (work: () => Promise<Result<void>>): Promise<Result<void>> => {
+    if (mutationLock.current) {
+      return {
+        ok: false,
+        error: { code: 'VALIDATION', message: 'Hay otra operación en curso. Espere un momento.' },
+      };
+    }
+
+    mutationLock.current = true;
+    setIsMutating(true);
+    try {
+      return await work();
+    } finally {
+      mutationLock.current = false;
+      setIsMutating(false);
+    }
+  }, []);
+
   const addLine = useCallback(
     async (input: Omit<AddDraftLineInput, 'draftId'>): Promise<Result<void>> => {
       if (!draftId || draftId === 'new') {
         return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
       }
-      setIsMutating(true);
-      const response = await salesRepository.addLine({ ...input, draftId });
-      setIsMutating(false);
-      return applyDraftResult(response);
+      return runExclusive(async () => applyDraftResult(await salesRepository.addLine({ ...input, draftId })));
     },
-    [applyDraftResult, draftId],
+    [applyDraftResult, draftId, runExclusive],
   );
 
   const removeLine = useCallback(
@@ -100,12 +117,11 @@ export function usePos(draftId: string | undefined) {
       if (!draftId || draftId === 'new') {
         return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
       }
-      setIsMutating(true);
-      const response = await salesRepository.removeLine({ draftId, lineId });
-      setIsMutating(false);
-      return applyDraftResult(response);
+      return runExclusive(async () =>
+        applyDraftResult(await salesRepository.removeLine({ draftId, lineId })),
+      );
     },
-    [applyDraftResult, draftId],
+    [applyDraftResult, draftId, runExclusive],
   );
 
   const setLinePrice = useCallback(
@@ -113,12 +129,11 @@ export function usePos(draftId: string | undefined) {
       if (!draftId || draftId === 'new') {
         return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
       }
-      setIsMutating(true);
-      const response = await salesRepository.setLinePrice({ draftId, lineId, unitPrice });
-      setIsMutating(false);
-      return applyDraftResult(response);
+      return runExclusive(async () =>
+        applyDraftResult(await salesRepository.setLinePrice({ draftId, lineId, unitPrice })),
+      );
     },
-    [applyDraftResult, draftId],
+    [applyDraftResult, draftId, runExclusive],
   );
 
   const setMeta = useCallback(
@@ -126,41 +141,43 @@ export function usePos(draftId: string | undefined) {
       if (!draftId || draftId === 'new') {
         return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
       }
-      setIsMutating(true);
-      const response = await salesRepository.setDraftMeta({ ...input, draftId });
-      setIsMutating(false);
-      return applyDraftResult(response);
+      return runExclusive(async () =>
+        applyDraftResult(await salesRepository.setDraftMeta({ ...input, draftId })),
+      );
     },
-    [applyDraftResult, draftId],
+    [applyDraftResult, draftId, runExclusive],
   );
 
-  const confirm = useCallback(async (payment?: ConfirmInvoicePayment): Promise<Result<void>> => {
-    if (!draftId || draftId === 'new') {
-      return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
-    }
-    setIsMutating(true);
-    const response = await salesRepository.confirmInvoice(draftId, payment);
-    setIsMutating(false);
-    if (!response.ok) {
-      return response;
-    }
-    reload();
-    return { ok: true, value: undefined };
-  }, [draftId, reload]);
+  const confirm = useCallback(
+    async (payment?: ConfirmInvoicePayment): Promise<Result<void>> => {
+      if (!draftId || draftId === 'new') {
+        return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
+      }
+      return runExclusive(async () => {
+        const response = await salesRepository.confirmInvoice(draftId, payment);
+        if (!response.ok) {
+          return response;
+        }
+        reload();
+        return { ok: true, value: undefined };
+      });
+    },
+    [draftId, reload, runExclusive],
+  );
 
   const discard = useCallback(async (): Promise<Result<void>> => {
     if (!draftId || draftId === 'new') {
       return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
     }
-    setIsMutating(true);
-    const response = await salesRepository.discardDraft(draftId);
-    setIsMutating(false);
-    if (!response.ok) {
-      return response;
-    }
-    navigate('/inventory');
-    return { ok: true, value: undefined };
-  }, [draftId, navigate]);
+    return runExclusive(async () => {
+      const response = await salesRepository.discardDraft(draftId);
+      if (!response.ok) {
+        return response;
+      }
+      navigate('/sales');
+      return { ok: true, value: undefined };
+    });
+  }, [draftId, navigate, runExclusive]);
 
   return {
     result,

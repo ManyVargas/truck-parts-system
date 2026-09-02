@@ -2,18 +2,18 @@
 
 ## Resultado de la verificación
 
-Última ejecución: **2 de septiembre de 2026**, mediante `npm run test:unit -w @truck-parts/web` y `npm run test:component -w @truck-parts/web`. La integración frontend/backend no se reejecutó en este corte (persistencia del mock al recargar el POS).
+Última ejecución: **2 de septiembre de 2026**, mediante `npm run test:unit -w @truck-parts/web` y `npm run test:component -w @truck-parts/web`. La integración frontend/backend no se reejecutó en este corte (POS UX-5).
 
 | Aplicación            | Tipo        | Archivos | Pruebas declaradas | Resultado obtenido |
 | --------------------- | ----------- | -------: | -----------------: | ------------------ |
-| Frontend              | Unitarias   |       21 |                207 | 207 aprobadas      |
+| Frontend              | Unitarias   |       22 |                210 | 210 aprobadas      |
 | Frontend              | Integración |       10 |                 67 | 67 (no reejecutadas) |
-| Frontend              | Componentes |       24 |                 82 | 82 aprobadas       |
-| **Subtotal frontend** |             |   **55** |            **356** | **356**            |
+| Frontend              | Componentes |       24 |                 84 | 84 aprobadas       |
+| **Subtotal frontend** |             |   **56** |            **361** | **361**            |
 | Backend               | Unitarias   |        2 |                 11 | 11 (no reejecutadas) |
 | Backend               | Integración |        1 |                  2 | 2 (no reejecutadas) |
 | **Subtotal backend**  |             |    **3** |             **13** | **13**             |
-| **Total**             |             |   **58** |            **369** | **369**            |
+| **Total**             |             |   **59** |            **374** | **374**            |
 
 > Las dos integraciones del backend usan `describe.skipIf(!integrationDatabaseReady)`. En esta ejecución PostgreSQL estuvo disponible y ambas fueron aprobadas; en un entorno sin base de pruebas se reportan como omitidas.
 
@@ -21,11 +21,12 @@
 
 ### Pruebas unitarias
 
-Validan funciones, reglas y proyecciones aisladas, sin renderizar React ni depender de estado compartido. Hay **207 pruebas en 21 archivos**.
+Validan funciones, reglas y proyecciones aisladas, sin renderizar React ni depender de estado compartido. Hay **210 pruebas en 22 archivos**.
 
 | Archivo                                          | Cantidad | Pruebas realizadas                                                                                                                                                                                                                                                | Resultado esperado                                                                                                                                                                                                                                                                         |
 | ------------------------------------------------ | -------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `unit/shared/domain/status-hierarchy.test.ts` | 3 | Disponibilidad como capa principal; `Instalado en [padre]` como contexto; omisión de Independiente/Completo. | `AVAILABLE` es primary; `SOLD`/`UNAVAILABLE` son excepción; `INDEPENDENT` no etiqueta; solo `complete === false` es excepción. |
+| `unit/features/sales/pos-copy.test.ts` | 3 | Copy de reserva según Release 2 vs 5; hint solo en ITEM/QTY; conflictos de stock sin código HTTP. | Release 2 no menciona reserva; ITEM/QTY sí; `409` y `ya está vendido` piden quitar o cambiar la línea. |
 | `unit/features/inventory/registration-enrichment.test.ts` | 5 | Mínimo práctico vs enriquecimiento; omisión de campos ya capturados; producto por cantidad; parseo de atributos; fusión del checklist al volver al paso 2. | Un alta mínima lista marca/ubicación/modelo/serial/parte/costo/atributos/notas/fotos; cantidad solo marca y ubicación; `mergeBaselineEntries` conserva un componente PRESENT. |
 | `unit/shared/config/capabilities.test.ts`        |        9 | Presets Release 1–8 y prototipo: acceso; billing; pagos; inventario base; venta de stock; jerarquía/OT/recuperación; cola mecánica; demo en producción. | Cada preset es acumulativo según `DEVELOPMENT_PLAN.md`; Release 2 no vende stock ni cobra; Release 4 no tiene jerarquía ni ITEM/QTY; prototipo deja 9 secciones; `/mechanic/pending` se bloquea sin `workOrders`. |
 | `unit/shared/ui/money.test.ts`                   |        2 | Formato predeterminado de DOP; formato independiente de USD.                                                                                                                                                                                                      | `1250` incluye `1,250.00` y el símbolo/código DOP; `19.5 USD` produce `$19.50`.                                                                                                                                                                                                            |
@@ -73,7 +74,7 @@ Validan repositorios mock, sesión, permisos y mutaciones del estado compartido 
 
 ### Pruebas de componentes
 
-Renderizan React en jsdom con Testing Library y validan comportamiento visible. Hay **82 pruebas en 24 archivos**.
+Renderizan React en jsdom con Testing Library y validan comportamiento visible. Hay **84 pruebas en 24 archivos**.
 
 | Archivo                                            | Cantidad | Pruebas realizadas                                                                                                                                    | Resultado esperado                                                                                                                                                                                               |
 | -------------------------------------------------- | -------: | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -88,7 +89,7 @@ Renderizan React en jsdom con Testing Library y validan comportamiento visible. 
 | `component/layout/RoleNav.test.tsx`                |        4 | Grupos del Administrador y `aria-current`; menú plano del Vendedor; encabezados ocultos sin capability; sidebar sin recuento de secciones. | Admin ve Operación / Administración / Finanzas y control; Vendedor no ve encabezados ni Usuarios; Release 1 no muestra Finanzas ni Inventario; el shell no renderiza `N secciones`. |
 | `component/sales/SalesPage.test.tsx`               |        3 | Seed sin pagar/parcial; filtro Borrador; botón Nuevo borrador.                                                                                       | FAC-000098/099 visibles con chips correctos y enlace de documento; Borrador muestra `INV-DRAFT-01` y oculta facturas numeradas; la acción de nuevo borrador está disponible.                                                           |
 | `component/sales/InvoiceDetailPage.test.tsx`       |        4 | Pago de Vendedor; ITBIS fiscal; PDF no fiscal; cancelación admin.                                                                                     | El chip pasa a Parcial; el Vendedor no ve cancelar/moneda/rentabilidad; el PDF muestra NCF en blanco e ITBIS `—` / `RD$0.00`; el admin cancela con motivo.                                                       |
-| `component/sales/PosPage.test.tsx`                 |        6 | Seed no fiscal; toggle fiscal; confirmar venta; cliente nuevo en selector; servicios inactivos; recarga de borrador nuevo.                                                                               | ITBIS `RD$0.00` sin comprobante; al activar fiscal el ITBIS deja de ser cero; aparece `FAC-000100` y `OD-DEMO-064`; un cliente creado en `/customers` sale en el selector; Diagnóstico electrónico no se ofrece; un borrador nuevo no muestra “Borrador no encontrado” tras recarga simulada. |
+| `component/sales/PosPage.test.tsx`                 |        8 | Seed no fiscal; toggle fiscal; confirmar venta; cliente nuevo; servicios inactivos; recarga de borrador; confirmación al descartar; Release 2 sin ITEM/QTY ni pago inicial.                                                                               | ITBIS `RD$0.00` sin comprobante; al activar fiscal el ITBIS deja de ser cero; aparece `FAC-000100` y `OD-DEMO-064`; un cliente nuevo sale en el selector; Diagnóstico electrónico no se ofrece; un borrador nuevo sobrevive recarga; descartar con líneas abre diálogo y Cancelar conserva el borrador; Release 2 no ofrece inventario ni pago inicial. |
 | `component/work-orders/WorkOrdersPage.test.tsx`    |        5 | Seed de OT; filtro En proceso; alta de desarme; cancelación con historial; OT completada sin acciones admin.                                          | Aparecen 060–063 con enlace de orden; En proceso deja solo 060; crear ENG-001 abre `OD-DEMO-064`; cancelar 062 muestra motivo; 063 no ofrece Reasignar/Cancelar.                                                                      |
 | `component/work-orders/CreateWorkOrderModal.test.tsx` |     2 | Alta de desarme; alta de instalación con destino.                                                                                                     | `onSubmit` recibe tipo, pieza y destino cuando aplica.                                                                                                                                                           |
 | `component/mechanic/MechanicPages.test.tsx`        |        3 | Cola pendiente sin FAC; mis órdenes de Pedro; completar desarme con foto AFTER.                                                                         | 061/062 en pendientes; 060 en mis órdenes; AFTER habilita Completar y deja la OT Completada.                                                                                                                      |

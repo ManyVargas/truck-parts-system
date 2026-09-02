@@ -3,12 +3,14 @@ import { Link, useParams } from 'react-router-dom';
 
 import { PageHeader } from '../../shared/layout/PageHeader';
 import { AssemblyKindChip, RelationChip } from '../../shared/domain';
-import { Button, Card, Chip, Info, money, useToast } from '../../shared/ui';
+import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
+import { Button, Card, Chip, Info, Modal, money, useToast } from '../../shared/ui';
 import { AddLineModal } from './AddLineModal';
 import { AssemblyTree } from './AssemblyTree';
 import { ConfirmSaleModal } from './ConfirmSaleModal';
 import { DocumentPanel } from './DocumentPanel';
 import { LINE_TYPE_LABELS } from './labels';
+import { posDraftDescription, posEmptyLinesMessage, toPosUserMessage } from './pos-copy';
 import { PriceCell } from './PriceCell';
 import { TotalsPanel } from './TotalsPanel';
 import { usePos } from './usePos';
@@ -16,9 +18,11 @@ import { usePos } from './usePos';
 export function PosPage() {
   const { id } = useParams();
   const pos = usePos(id);
+  const capabilities = useAppCapabilities();
   const { pushToast } = useToast();
   const [addOpen, setAddOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [metaError, setMetaError] = useState<string | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -47,7 +51,7 @@ export function PosPage() {
     setAddError(null);
     const response = await pos.addLine(input);
     if (!response.ok) {
-      setAddError(response.error.message);
+      setAddError(toPosUserMessage(response.error));
       return;
     }
     setAddOpen(false);
@@ -60,43 +64,55 @@ export function PosPage() {
         title="Punto de venta"
         description={
           readOnly
-            ? `Factura ${draft.number ?? draft.id} confirmada. Pagos y vista previa del documento están en el detalle.`
-            : 'Edite el borrador, asigne precios y confirme. El inventario se reserva hasta confirmar o descartar.'
+            ? `Factura ${draft.number ?? draft.id} confirmada. ${
+                capabilities.payments
+                  ? 'Pagos y vista previa del documento están en el detalle.'
+                  : 'La vista previa del documento está en el detalle.'
+              }`
+            : posDraftDescription(capabilities)
         }
         actions={
           !readOnly && (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col items-stretch gap-3 sm:items-end">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={pos.isMutating}
+                  onClick={() => setAddOpen(true)}
+                >
+                  Agregar línea
+                </Button>
+                <Button
+                  size="lg"
+                  disabled={pos.isMutating || draft.blockers.length > 0}
+                  onClick={() => {
+                    setConfirmError(null);
+                    setConfirmOpen(true);
+                  }}
+                >
+                  Confirmar venta
+                </Button>
+              </div>
               <Button
-                variant="secondary"
+                variant="ghost"
                 size="sm"
+                className="self-end text-red-700 hover:bg-red-50"
                 disabled={pos.isMutating}
-                onClick={() => setAddOpen(true)}
-              >
-                Agregar línea
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                disabled={pos.isMutating}
-                onClick={async () => {
+                onClick={() => {
                   setDiscardError(null);
-                  const response = await pos.discard();
-                  if (!response.ok) {
-                    setDiscardError(response.error.message);
+                  if (draft.lines.length === 0) {
+                    void pos.discard().then((response) => {
+                      if (!response.ok) {
+                        setDiscardError(toPosUserMessage(response.error));
+                      }
+                    });
+                    return;
                   }
+                  setDiscardOpen(true);
                 }}
               >
                 Descartar borrador
-              </Button>
-              <Button
-                size="lg"
-                disabled={pos.isMutating || draft.blockers.length > 0}
-                onClick={() => {
-                  setConfirmError(null);
-                  setConfirmOpen(true);
-                }}
-              >
-                Confirmar venta
               </Button>
             </div>
           )
@@ -115,7 +131,7 @@ export function PosPage() {
         <div className="mb-6">
           <Info tone="success" title={`Factura ${draft.number} confirmada`}>
             Cliente {draft.customerName}. Total {money(draft.totals.gross, draft.currency)}.
-            {draft.createdWorkOrderIds.length > 0
+            {draft.createdWorkOrderIds.length > 0 && capabilities.workOrders
               ? ` Orden de desarme: ${draft.createdWorkOrderIds.join(', ')}.`
               : ''}{' '}
             <Link to={`/sales/${draft.id}`} className="font-medium text-brand hover:underline">
@@ -134,7 +150,7 @@ export function PosPage() {
               {draft.fiscal ? <Chip tone="brand">Fiscal</Chip> : <Chip>Sin comprobante fiscal</Chip>}
             </div>
             {draft.lines.length === 0 ? (
-              <p className="text-sm text-navy-400">No hay líneas. Agregue inventario o una línea libre.</p>
+              <p className="text-sm text-navy-400">{posEmptyLinesMessage(capabilities)}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
@@ -227,7 +243,7 @@ export function PosPage() {
                 setMetaError(null);
                 void pos.setMeta({ customerId }).then((response) => {
                   if (!response.ok) {
-                    setMetaError(response.error.message);
+                    setMetaError(toPosUserMessage(response.error));
                   }
                 });
               }}
@@ -235,7 +251,7 @@ export function PosPage() {
                 setMetaError(null);
                 void pos.setMeta({ currency }).then((response) => {
                   if (!response.ok) {
-                    setMetaError(response.error.message);
+                    setMetaError(toPosUserMessage(response.error));
                   }
                 });
               }}
@@ -243,7 +259,7 @@ export function PosPage() {
                 setMetaError(null);
                 void pos.setMeta({ fiscal }).then((response) => {
                   if (!response.ok) {
-                    setMetaError(response.error.message);
+                    setMetaError(toPosUserMessage(response.error));
                   }
                 });
               }}
@@ -251,6 +267,17 @@ export function PosPage() {
           </Card>
           <Card>
             <h2 className="mb-4 text-lg font-semibold text-navy">Totales</h2>
+            {draft.blockers.length > 0 && !readOnly && (
+              <div className="mb-4">
+                <Info tone="warning" title="No se puede confirmar todavía">
+                  <ul className="list-disc space-y-1 pl-5">
+                    {draft.blockers.map((blocker) => (
+                      <li key={blocker}>{blocker}</li>
+                    ))}
+                  </ul>
+                </Info>
+              </div>
+            )}
             <TotalsPanel totals={draft.totals} currency={draft.currency} fiscal={draft.fiscal} />
           </Card>
         </div>
@@ -284,7 +311,7 @@ export function PosPage() {
         onConfirm={(payment) => {
           void pos.confirm(payment).then((response) => {
             if (!response.ok) {
-              setConfirmError(response.error.message);
+              setConfirmError(toPosUserMessage(response.error));
               return;
             }
             setConfirmOpen(false);
@@ -292,6 +319,48 @@ export function PosPage() {
           });
         }}
       />
+
+      <Modal
+        open={discardOpen}
+        title="Descartar borrador"
+        onClose={() => {
+          if (!pos.isMutating) {
+            setDiscardOpen(false);
+          }
+        }}
+      >
+        <div className="flex flex-col gap-4 text-sm text-navy">
+          <p>
+            Se perderán las líneas de este borrador. Esta acción no se puede deshacer desde el punto de
+            venta.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              disabled={pos.isMutating}
+              onClick={() => setDiscardOpen(false)}
+            >
+              Seguir editando
+            </Button>
+            <Button
+              variant="danger"
+              disabled={pos.isMutating}
+              onClick={() => {
+                void pos.discard().then((response) => {
+                  if (!response.ok) {
+                    setDiscardOpen(false);
+                    setDiscardError(toPosUserMessage(response.error));
+                    return;
+                  }
+                  setDiscardOpen(false);
+                });
+              }}
+            >
+              {pos.isMutating ? 'Descartando…' : 'Sí, descartar'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

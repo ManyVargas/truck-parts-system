@@ -5,6 +5,7 @@ import type { PosDraftView } from '../../api/contracts/sales';
 import { enabledPosLineTypes } from '../../shared/config/capabilities';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
 import { Button, Field, Input, Modal, Select } from '../../shared/ui';
+import { posAddLineReservationHint } from './pos-copy';
 
 type AddLineModalProps = {
   open: boolean;
@@ -54,8 +55,13 @@ export function AddLineModal({
     }
   }, [lineTypes, type]);
 
+  const reservationHint = posAddLineReservationHint(type);
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (isSaving || lineTypes.length === 0) {
+      return;
+    }
     await onSubmit({
       type,
       itemId: type === 'ITEM' ? itemId : undefined,
@@ -80,6 +86,7 @@ export function AddLineModal({
           <Select
             id="line-type"
             value={type}
+            disabled={lineTypes.length === 0}
             onChange={(event) => setType(event.target.value as LineType)}
           >
             {lineTypes.map((entry) => (
@@ -89,6 +96,7 @@ export function AddLineModal({
             ))}
           </Select>
         </Field>
+        {reservationHint && <p className="text-xs text-navy-400">{reservationHint}</p>}
 
         {type === 'ITEM' && (
           <Field htmlFor="line-item" label="Ítem">
@@ -201,7 +209,7 @@ export function AddLineModal({
           <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={isSaving}>
+          <Button type="submit" disabled={isSaving || lineTypes.length === 0}>
             {isSaving ? 'Agregando…' : 'Agregar'}
           </Button>
         </div>

@@ -776,6 +776,8 @@ Si se decide que toda la fila debe ser interactiva, debe existir comportamiento 
 
 # Milestone UX-5 — Ventas / POS: prevención de errores y claridad
 
+**Registro de implementación:** [`docs/done_web/UX_FRONTEND_HARDENING/ux-5.md`](../done_web/UX_FRONTEND_HARDENING/ux-5.md)
+
 ## Problema
 
 El POS contiene acciones de consecuencias muy diferentes en proximidad:
@@ -850,18 +852,18 @@ La UI no debe prometer sincronización o reserva de inventario si el release act
 
 ## Tareas
 
-- [ ] Reordenar jerarquía de acciones del POS.
-- [ ] Separar acción destructiva.
-- [ ] Revisar confirmaciones realmente necesarias.
-- [ ] Evitar confirmaciones excesivas.
-- [ ] Aplicar capabilities a tipos de línea.
-- [ ] Revisar microcopy relacionado con reserva de inventario.
-- [ ] Revisar estados de loading al confirmar.
-- [ ] Deshabilitar doble submit.
-- [ ] Asegurar que el usuario vea claramente subtotal/total.
-- [ ] Revisar errores de validación.
-- [ ] Revisar qué ocurre si una línea deja de estar disponible antes de confirmar.
-- [ ] Mantener borrador hasta que la operación sea confirmada correctamente.
+- [x] Reordenar jerarquía de acciones del POS.
+- [x] Separar acción destructiva.
+- [x] Revisar confirmaciones realmente necesarias.
+- [x] Evitar confirmaciones excesivas.
+- [x] Aplicar capabilities a tipos de línea.
+- [x] Revisar microcopy relacionado con reserva de inventario.
+- [x] Revisar estados de loading al confirmar.
+- [x] Deshabilitar doble submit.
+- [x] Asegurar que el usuario vea claramente subtotal/total.
+- [x] Revisar errores de validación.
+- [x] Revisar qué ocurre si una línea deja de estar disponible antes de confirmar.
+- [x] Mantener borrador hasta que la operación sea confirmada correctamente.
 
 ---
 
@@ -1302,7 +1304,7 @@ El plan completo puede considerarse terminado cuando:
 - [x] registro de inventario utiliza progressive disclosure;
 - [x] estados de inventario tienen jerarquía visual;
 - [x] tablas siguen una interacción consistente;
-- [ ] POS previene errores comunes;
+- [x] POS previene errores comunes;
 - [ ] mecánico conserva una experiencia simple y mobile-first;
 - [ ] Admin/Seller funcionan correctamente en laptops;
 - [ ] los escenarios principales han sido probados manualmente;
