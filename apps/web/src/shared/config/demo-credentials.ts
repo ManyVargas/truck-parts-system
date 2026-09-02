@@ -19,7 +19,7 @@ export const DEMO_CREDENTIALS: readonly DemoCredential[] = [
     password: 'demo1234',
     role: 'ADMINISTRATOR',
     active: true,
-    note: '9 secciones en sidebar',
+    note: 'Menú comercial completo',
   },
   {
     id: 'U-LAURA',

@@ -7,7 +7,9 @@ import {
   isNavItemActive,
   isRouteAllowedForRole,
   layoutAccessDecision,
+  navGroupsForRole,
   navItemsForRole,
+  shouldShowNavGroupHeadings,
 } from '../../../../src/shared/layout/navigation';
 import { CAPABILITY_PRESETS } from '../../../../src/shared/config/capabilities';
 
@@ -23,6 +25,36 @@ describe('role navigation', () => {
       'customers',
     ]);
     expect(navItemsForRole('MECHANIC', prototype)).toEqual([]);
+  });
+
+  it('groups administrator items by work intent and omits empty groups', () => {
+    const adminGroups = navGroupsForRole('ADMINISTRATOR', prototype);
+
+    expect(adminGroups.map((group) => group.id)).toEqual([
+      'operation',
+      'administration',
+      'finance',
+    ]);
+    expect(adminGroups[0]?.items.map((item) => item.id)).toEqual([
+      'dashboard',
+      'inventory',
+      'sales',
+      'customers',
+      'work-orders',
+    ]);
+    expect(shouldShowNavGroupHeadings(adminGroups)).toBe(true);
+
+    const sellerGroups = navGroupsForRole('SELLER', prototype);
+    expect(sellerGroups.map((group) => group.id)).toEqual(['operation']);
+    expect(shouldShowNavGroupHeadings(sellerGroups)).toBe(false);
+    expect(navGroupsForRole('MECHANIC', prototype)).toEqual([]);
+
+    const releaseOneAdmin = navGroupsForRole('ADMINISTRATOR', CAPABILITY_PRESETS['release-1']);
+    expect(releaseOneAdmin.map((group) => group.id)).toEqual(['operation', 'administration']);
+    expect(releaseOneAdmin.flatMap((group) => group.items.map((item) => item.id))).toEqual([
+      'dashboard',
+      'users',
+    ]);
   });
 
   it('maps every role to its correct home', () => {

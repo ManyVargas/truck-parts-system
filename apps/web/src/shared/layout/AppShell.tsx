@@ -7,7 +7,6 @@ import { Logo } from '../ui';
 import { DemoControls } from './DemoControls';
 import { RoleNav } from './RoleNav';
 import { UserMenu } from './UserMenu';
-import { navItemsForRole } from './navigation';
 
 /**
  * Desktop shell for Administrator and Seller — sidebar + header + content outlet.
@@ -20,8 +19,6 @@ export function AppShell() {
     return null;
   }
 
-  const sectionCount = navItemsForRole(user.role, capabilities).length;
-
   return (
     <div className="flex h-screen overflow-hidden">
       <aside className="flex h-full w-64 shrink-0 flex-col bg-shell text-white">
@@ -30,10 +27,6 @@ export function AppShell() {
         </div>
 
         <RoleNav role={user.role} />
-
-        <p className="border-t border-shell-border px-4 py-3 text-xs text-white/50">
-          {sectionCount} {sectionCount === 1 ? 'sección' : 'secciones'}
-        </p>
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface text-navy">

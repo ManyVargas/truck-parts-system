@@ -424,6 +424,8 @@ También ejecutar herramientas automáticas de accesibilidad si ya existen en el
 
 # Milestone UX-2 — Navegación y arquitectura de información
 
+**Registro de implementación:** [`docs/done_web/UX_FRONTEND_HARDENING/ux-2.md`](../done_web/UX_FRONTEND_HARDENING/ux-2.md)
+
 ## Problema
 
 El administrador tiene acceso a muchas secciones principales.
@@ -481,15 +483,15 @@ No convertir la navegación en un árbol complejo.
 
 ## Tareas
 
-- [ ] Revisar navegación de Admin.
-- [ ] Revisar navegación de Seller.
-- [ ] Mantener navegación específica del mecánico independiente.
-- [ ] Introducir agrupaciones visuales si mejoran la escaneabilidad.
-- [ ] Eliminar información de poco valor como `9 secciones`.
-- [ ] Mantener `aria-current="page"`.
-- [ ] Revisar nombres de secciones para que utilicen lenguaje del negocio.
-- [ ] Evitar duplicar funciones en múltiples zonas del menú.
-- [ ] Mantener la navegación condicionada por capabilities.
+- [x] Revisar navegación de Admin.
+- [x] Revisar navegación de Seller.
+- [x] Mantener navegación específica del mecánico independiente.
+- [x] Introducir agrupaciones visuales si mejoran la escaneabilidad.
+- [x] Eliminar información de poco valor como `9 secciones`.
+- [x] Mantener `aria-current="page"`.
+- [x] Revisar nombres de secciones para que utilicen lenguaje del negocio.
+- [x] Evitar duplicar funciones en múltiples zonas del menú.
+- [x] Mantener la navegación condicionada por capabilities.
 
 ---
 

@@ -5,13 +5,29 @@ import {
   type AppCapability,
 } from '../config/capabilities';
 
+/** Work-intent groupings for the commercial sidebar — not nested menus. */
+export const NAV_GROUPS = [
+  { id: 'operation', label: 'Operación' },
+  { id: 'administration', label: 'Administración' },
+  { id: 'finance', label: 'Finanzas y control' },
+] as const;
+
+export type NavGroupId = (typeof NAV_GROUPS)[number]['id'];
+
 export type NavItem = {
   id: string;
   label: string;
   path: string;
   roles: Role[];
+  group: NavGroupId;
   /** When set, the item is hidden and its URLs are blocked unless the capability is on. */
   capability?: AppCapability;
+};
+
+export type NavGroup = {
+  id: NavGroupId;
+  label: string;
+  items: NavItem[];
 };
 
 /** Desktop sidebar entries — Admin sees 9, Seller sees the first 4 when all capabilities are on. */
@@ -21,12 +37,14 @@ export const DESKTOP_NAV_ITEMS: NavItem[] = [
     label: 'Inicio',
     path: '/dashboard',
     roles: ['ADMINISTRATOR', 'SELLER'],
+    group: 'operation',
   },
   {
     id: 'inventory',
     label: 'Inventario',
     path: '/inventory',
     roles: ['ADMINISTRATOR', 'SELLER'],
+    group: 'operation',
     capability: 'inventory',
   },
   {
@@ -34,6 +52,7 @@ export const DESKTOP_NAV_ITEMS: NavItem[] = [
     label: 'Ventas y Facturas',
     path: '/sales',
     roles: ['ADMINISTRATOR', 'SELLER'],
+    group: 'operation',
     capability: 'sales',
   },
   {
@@ -41,6 +60,7 @@ export const DESKTOP_NAV_ITEMS: NavItem[] = [
     label: 'Clientes',
     path: '/customers',
     roles: ['ADMINISTRATOR', 'SELLER'],
+    group: 'operation',
     capability: 'customers',
   },
   {
@@ -48,6 +68,7 @@ export const DESKTOP_NAV_ITEMS: NavItem[] = [
     label: 'Órdenes de Trabajo',
     path: '/work-orders',
     roles: ['ADMINISTRATOR'],
+    group: 'operation',
     capability: 'workOrders',
   },
   {
@@ -55,6 +76,7 @@ export const DESKTOP_NAV_ITEMS: NavItem[] = [
     label: 'Catálogos',
     path: '/catalogs',
     roles: ['ADMINISTRATOR'],
+    group: 'administration',
     capability: 'catalogs',
   },
   {
@@ -62,6 +84,7 @@ export const DESKTOP_NAV_ITEMS: NavItem[] = [
     label: 'Usuarios',
     path: '/users',
     roles: ['ADMINISTRATOR'],
+    group: 'administration',
     capability: 'users',
   },
   {
@@ -69,6 +92,7 @@ export const DESKTOP_NAV_ITEMS: NavItem[] = [
     label: 'Rentabilidad',
     path: '/profitability',
     roles: ['ADMINISTRATOR'],
+    group: 'finance',
     capability: 'profitability',
   },
   {
@@ -76,6 +100,7 @@ export const DESKTOP_NAV_ITEMS: NavItem[] = [
     label: 'Administración y Recuperación',
     path: '/recovery',
     roles: ['ADMINISTRATOR'],
+    group: 'finance',
     capability: 'recovery',
   },
 ];
@@ -91,6 +116,25 @@ export function navItemsForRole(
   return DESKTOP_NAV_ITEMS.filter(
     (item) => item.roles.includes(role) && isNavItemEnabled(item, capabilities),
   );
+}
+
+/** Visible groups only — empty groups stay out of the sidebar when capabilities hide their items. */
+export function navGroupsForRole(
+  role: Role,
+  capabilities: AppCapabilities = getAppCapabilities(),
+): NavGroup[] {
+  const items = navItemsForRole(role, capabilities);
+
+  return NAV_GROUPS.map((group) => ({
+    id: group.id,
+    label: group.label,
+    items: items.filter((item) => item.group === group.id),
+  })).filter((group) => group.items.length > 0);
+}
+
+/** A single group (typical Seller menu) does not need a heading of its own. */
+export function shouldShowNavGroupHeadings(groups: NavGroup[]): boolean {
+  return groups.length > 1;
 }
 
 /** Registered desktop routes — unknown paths should 404, not unauthorized. */
