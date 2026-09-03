@@ -73,7 +73,7 @@ Mechanic endpoints and UI must never return customer, invoice, price, cost, paym
 - [x] Prevent duplicate active physical operations.
 
 ### Frontend
-- [x] Desktop administrator list, detail, manual create, reassign and cancel (WM9).
+- [x] Desktop administrator list, detail, manual create, reassign and cancel (WM9). Seller does not see the WO queue (nav, dashboard KPIs, inventory WO list); prototype mock 2.0-M1.2.
 - [x] Mobile-first Pending queue.
 - [x] Take-order action with conflict refresh.
 - [x] Assigned-order detail with technical notes.
