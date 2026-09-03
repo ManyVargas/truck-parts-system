@@ -1,19 +1,19 @@
 # Milestone UX-3 — Registro de inventario simplificado
 
-| Campo | Valor |
-|---|---|
-| **ID plan** | UX-3 |
-| **Estado** | Completado |
-| **Fecha** | 2026-09-02 |
+| Campo          | Valor                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------ |
+| **ID plan**    | UX-3                                                                                                   |
+| **Estado**     | Completado                                                                                             |
+| **Fecha**      | 2026-09-02                                                                                             |
 | **Referencia** | [`docs/plans_web/UX_FRONTEND_HARDENING_PLAN.md`](../../plans_web/UX_FRONTEND_HARDENING_PLAN.md) § UX-3 |
-| **Alcance** | Solo frontend (`apps/web`). No cambia reglas de negocio ni el backend. |
-| **Siguiente** | UX-4 — Inventario: jerarquía visual e interacción |
+| **Alcance**    | Solo frontend (`apps/web`). No cambia reglas de negocio ni el backend.                                 |
+| **Siguiente**  | UX-4 — Inventario: jerarquía visual e interacción                                                      |
 
 ---
 
 ## 1. Objetivo
 
-Aplicar *progressive disclosure* al alta: el operador registra el **mínimo práctico** (INV-002) y deja el resto para enriquecer después. Los ensamblajes anuncian *Paso 1 de 2* / *Paso 2 de 2* **antes** de Continuar.
+Aplicar _progressive disclosure_ al alta: el operador registra el **mínimo práctico** (INV-002) y deja el resto para enriquecer después. Los ensamblajes anuncian _Paso 1 de 2_ / _Paso 2 de 2_ **antes** de Continuar.
 
 El corte de negocio sigue siendo **Release 1 ACTIVE**. Inventario sigue siendo Release 4 y jerarquía Release 6; la UI de prototipo permanece detrás de capabilities (`inventory`, `hierarchy`).
 
@@ -23,11 +23,11 @@ El corte de negocio sigue siendo **Release 1 ACTIVE**. Inventario sigue siendo R
 
 La lista obligatoria sigue las specs, no el ejemplo del plan UX (la ubicación es opcional: LOC-001 / INV-002).
 
-| Tipo | Visible de inmediato | Información adicional |
-|---|---|---|
-| Pieza individual | ID, nombre, categoría, condición, costo DOP (opcional) | Marca, modelo, serial, número de parte, procedencia del costo, ubicación, atributos, notas, fotos |
-| Producto por cantidad | ID, nombre, categoría, existencia inicial, costo unitario DOP | Marca, ubicación |
-| Componente presente | ID, nombre, condición, costo DOP (opcional) | Marca, serial, número de parte |
+| Tipo                  | Visible de inmediato                                          | Información adicional                                                                             |
+| --------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Pieza individual      | ID, nombre, categoría, condición, costo DOP (opcional)        | Marca, modelo, serial, número de parte, procedencia del costo, ubicación, atributos, notas, fotos |
+| Producto por cantidad | ID, nombre, categoría, existencia inicial, costo unitario DOP | Marca, ubicación                                                                                  |
+| Componente presente   | ID, nombre, condición, costo DOP (opcional)                   | Marca, serial, número de parte                                                                    |
 
 ### Stepper y persistencia
 
@@ -35,7 +35,10 @@ El stepper solo aparece si hay un segundo paso real (categoría de ensamblaje + 
 
 ### Post-registro
 
-Tras un alta válida el modal no se cierra con un toast genérico. informa que el artículo quedó registrado, qué datos siguen pendientes y ofrece **Ver artículo** o **Volver al listado**.
+Tras un alta válida el modal no se cierra con un toast genérico. Informa que la pieza o el producto quedó registrado, qué datos siguen pendientes y ofrece **Ver pieza**, **Ver producto** o **Volver al listado**, según corresponda.
+
+Una corrección posterior protege la captura sin guardar: las salidas implícitas y **Cancelar** piden
+confirmación cuando hay cambios, y todas las vías de cierre quedan bloqueadas durante el guardado.
 
 ## 3. Archivos principales
 

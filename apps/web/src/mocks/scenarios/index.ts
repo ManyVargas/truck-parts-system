@@ -18,7 +18,7 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
     id: 1,
     slug: 'installed-piece-sale',
     title: 'Venta de pieza instalada',
-    description: 'Confirmar venta con pieza instalada y orden de desarme automática.',
+    description: 'Confirmar venta con pieza instalada y orden de desmonte automática.',
     suggestedUsername: 'laura',
     suggestedPassword: 'demo1234',
     nextPath: '/sales/draft/INV-DRAFT-01',
@@ -28,13 +28,13 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
   {
     id: 2,
     slug: 'manual-dismantling',
-    title: 'Desarme manual',
-    description: 'Crear orden de desarme sin venta (admin).',
+    title: 'Desmonte manual',
+    description: 'Crear orden de desmonte sin venta (admin).',
     suggestedUsername: 'admin',
     suggestedPassword: 'demo1234',
     nextPath: '/work-orders',
     nextSteps:
-      'Inicie sesión como admin. Cree una orden de desarme manual sobre una pieza instalada.',
+      'Inicie sesión como admin. Cree una orden de desmonte manual sobre una pieza instalada.',
   },
   {
     id: 3,
@@ -50,12 +50,12 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
     id: 4,
     slug: 'initial-motor-registration',
     title: 'Registro inicial de motor',
-    description: 'Alta de ensamblaje con baseline de componentes.',
+    description: 'Alta de ensamblaje con registro inicial de componentes.',
     suggestedUsername: 'admin',
     suggestedPassword: 'demo1234',
     nextPath: '/inventory',
     nextSteps:
-      'Inicie sesión como admin. Inventario → Registrar ensamblaje con checklist baseline.',
+      'Inicie sesión como admin. Inventario → Registrar ensamblaje con el registro inicial de componentes.',
   },
   {
     id: 5,
@@ -113,13 +113,13 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
   {
     id: 10,
     slug: 'cancel-after-dismantling',
-    title: 'Cancelación después de desarme completado',
-    description: 'Rama de cancelación post-desarme.',
+    title: 'Cancelación después de desmonte completado',
+    description: 'Rama de cancelación posterior al desmonte.',
     suggestedUsername: 'admin',
     suggestedPassword: 'demo1234',
     nextPath: '/work-orders/OD-DEMO-063',
     nextSteps:
-      'Inicie sesión como admin. OD-DEMO-063 ya está Completada; use una factura con desarme hecho.',
+      'Inicie sesión como admin. OD-DEMO-063 ya está Completada; use una factura con el desmonte realizado.',
   },
   {
     id: 11,

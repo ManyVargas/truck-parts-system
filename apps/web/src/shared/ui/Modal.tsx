@@ -12,6 +12,8 @@ export type ModalProps = {
   size?: 'md' | 'lg';
   /** Sticky actions; the body remains the only scroll region. */
   footer?: ReactNode;
+  /** Prevent Escape, backdrop, and close-button dismissal during a protected operation. */
+  dismissible?: boolean;
 };
 
 const sizeClasses = {
@@ -19,13 +21,27 @@ const sizeClasses = {
   lg: 'max-w-3xl',
 };
 
-export function Modal({ open, title, children, footer, onClose, size = 'md' }: ModalProps) {
+export function Modal({
+  open,
+  title,
+  children,
+  footer,
+  onClose,
+  size = 'md',
+  dismissible = true,
+}: ModalProps) {
   if (!open) {
     return null;
   }
 
   return (
-    <ModalDialog title={title} size={size} footer={footer} onClose={onClose}>
+    <ModalDialog
+      title={title}
+      size={size}
+      footer={footer}
+      onClose={onClose}
+      dismissible={dismissible}
+    >
       {children}
     </ModalDialog>
   );
@@ -40,6 +56,7 @@ function ModalDialog({
   children,
   footer,
   onClose,
+  dismissible = true,
   size = 'md',
 }: Omit<ModalProps, 'open'>) {
   const titleId = useId();
@@ -47,10 +64,13 @@ function ModalDialog({
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
+  const dismissibleRef = useRef(dismissible);
   onCloseRef.current = onClose;
+  dismissibleRef.current = dismissible;
 
   useLayoutEffect(() => {
-    previouslyFocused.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    previouslyFocused.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     const overlay = overlayRef.current;
     const panel = panelRef.current;
@@ -69,7 +89,9 @@ function ModalDialog({
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
-        onCloseRef.current();
+        if (dismissibleRef.current) {
+          onCloseRef.current();
+        }
         return;
       }
 
@@ -87,7 +109,7 @@ function ModalDialog({
   }, []);
 
   function handleOverlayMouseDown(event: MouseEvent<HTMLDivElement>) {
-    if (event.target === event.currentTarget) {
+    if (dismissible && event.target === event.currentTarget) {
       onClose();
     }
   }
@@ -110,7 +132,14 @@ function ModalDialog({
           <h2 id={titleId} className="min-w-0 text-lg font-semibold text-navy">
             {title}
           </h2>
-          <Button variant="ghost" size="icon" className="shrink-0" onClick={onClose} aria-label="Cerrar">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            onClick={onClose}
+            aria-label="Cerrar"
+            disabled={!dismissible}
+          >
             ✕
           </Button>
         </div>

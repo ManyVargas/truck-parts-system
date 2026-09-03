@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 
 import type { HierarchyNode } from '../../api/contracts/inventory';
+import { UX_TERMS } from '../../shared/copy/glossary';
 import { InventoryStatusCluster, PhysicalWorkChip } from '../../shared/domain';
 import { Mono } from '../../shared/ui';
 
@@ -12,7 +13,9 @@ function MissingSlotRow({
   depth: number;
 }) {
   const originLabel =
-    slot.origin === 'MISSING_AT_RECEIPT' ? 'Faltante en recepción' : 'Retirado tras desarme';
+    slot.origin === 'MISSING_AT_RECEIPT'
+      ? 'Faltante en recepción'
+      : `Retirado tras ${UX_TERMS.dismantling.toLowerCase()}`;
 
   return (
     <li>
@@ -90,13 +93,7 @@ function TreeNode({
   );
 }
 
-export function HierarchyTree({
-  tree,
-  currentId,
-}: {
-  tree: HierarchyNode;
-  currentId: string;
-}) {
+export function HierarchyTree({ tree, currentId }: { tree: HierarchyNode; currentId: string }) {
   return (
     <ul className="text-sm">
       <TreeNode node={tree} currentId={currentId} depth={0} />

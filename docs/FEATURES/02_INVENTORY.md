@@ -67,6 +67,7 @@ Acquisition cost is entered in DOP when known or estimated; unknown is a real st
 ## Implementation checklist
 
 ### Domain / persistence
+
 - [ ] Define tracked-item identity and immutable internal ID rule.
 - [ ] Define shared practical base fields and category attribute hook.
 - [ ] Represent known/estimated/unknown DOP acquisition-cost input without defaulting unknown to zero.
@@ -76,13 +77,15 @@ Acquisition cost is entered in DOP when known or estimated; unknown is a real st
 - [x] Prevent generic request-body mass assignment.
 
 ### Frontend
-- [ ] Registration form driven by category minimums.
+
+- [ ] Production registration validation driven by category minimums. The prototype already renders category attributes, but dynamic production minimums remain pending.
 - [x] Prototype mock assigns the public item code at save from the category prefix; the operator does not type it (wizard, assembly checklist, catalog-present child). Quantity SKU remains operator-entered.
 - [x] Detail/edit screen for ordinary fields.
 - [x] Clear visual separation of availability, condition, relationship, completeness, and reservation.
 - [x] Administrator-only protected correction flow.
 
 ### Tests
+
 - [ ] Duplicate/reused public-code rejection and failed create consuming no sequence number.
 - [x] Partial registration and later enrichment.
 - [ ] Missing serial/part number allowed when category minimums pass.

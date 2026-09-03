@@ -52,7 +52,6 @@ function normalizePhotos(photos: string[] | undefined): string[] {
   return [...new Set((photos ?? []).map((photo) => photo.trim()).filter(Boolean))];
 }
 
-
 function assignOptionalText<T extends object>(
   target: T,
   key: keyof T,
@@ -309,7 +308,7 @@ export function updateItemDetails(
 ): Result<Item> {
   const item = itemById(state.items, input.itemId);
   if (!item) {
-    return err({ code: 'NOT_FOUND', message: 'Ítem no encontrado' });
+    return err({ code: 'NOT_FOUND', message: 'Pieza no encontrada' });
   }
 
   const name = normalizeText(input.name);
@@ -663,7 +662,7 @@ export function addInventoryToDraft(
   if (input.itemId) {
     const item = itemById(state.items, input.itemId);
     if (!item) {
-      return err({ code: 'NOT_FOUND', message: 'Ítem no encontrado' });
+      return err({ code: 'NOT_FOUND', message: 'Pieza no encontrada' });
     }
 
     if (item.commercialState === 'SOLD') {
@@ -761,7 +760,7 @@ export function addInventoryToDraft(
 export function setNoDesarmar(state: AppState, actor: User, input: NoDesarmarInput): Result<Item> {
   const item = itemById(state.items, input.itemId);
   if (!item) {
-    return err({ code: 'NOT_FOUND', message: 'Ítem no encontrado' });
+    return err({ code: 'NOT_FOUND', message: 'Pieza no encontrada' });
   }
 
   if (!isAssemblyItem(item, state.categories)) {
@@ -795,7 +794,7 @@ export function correctAcquisitionCost(
 
   const item = itemById(state.items, input.itemId);
   if (!item) {
-    return err({ code: 'NOT_FOUND', message: 'Ítem no encontrado' });
+    return err({ code: 'NOT_FOUND', message: 'Pieza no encontrada' });
   }
 
   if (
@@ -850,7 +849,7 @@ export function correctReceiptBaseline(
 
   const item = itemById(state.items, input.itemId);
   if (!item) {
-    return err({ code: 'NOT_FOUND', message: 'Ítem no encontrado' });
+    return err({ code: 'NOT_FOUND', message: 'Pieza no encontrada' });
   }
 
   const names = input.markNotApplicable.map((name) => name.trim()).filter(Boolean);
@@ -919,18 +918,18 @@ export function resolveCatalogReview(
   if (!allowed.has(input.decision)) {
     return err({
       code: 'VALIDATION',
-      message: 'La decisión debe ser confirmar que no aplica, marcar falta, registrar presente o reconocer coincidencia',
+      message:
+        'La decisión debe ser confirmar que no aplica, marcar falta, registrar presente o reconocer coincidencia',
     });
   }
 
   const item = itemById(state.items, input.itemId);
   if (!item) {
-    return err({ code: 'NOT_FOUND', message: 'Ítem no encontrado' });
+    return err({ code: 'NOT_FOUND', message: 'Pieza no encontrada' });
   }
 
   const reviewIndex = state.pendingCatalogReviews.findIndex(
-    (entry) =>
-      entry.parentId === item.id && entry.expectedComponentName === expectedComponentName,
+    (entry) => entry.parentId === item.id && entry.expectedComponentName === expectedComponentName,
   );
   if (reviewIndex < 0) {
     return err({
@@ -949,7 +948,8 @@ export function resolveCatalogReview(
   if (review.kind === 'PENDING_NA' && input.decision === 'ACKNOWLEDGE') {
     return err({
       code: 'VALIDATION',
-      message: 'Este componente aún no está en el ensamblaje; confirme que no aplica, márquelo falta o regístrelo presente',
+      message:
+        'Este componente aún no está en el ensamblaje; confirme que no aplica, márquelo falta o regístrelo presente',
     });
   }
 
@@ -987,7 +987,14 @@ export function resolveCatalogReview(
       registered.value.parent.location = undefined;
       childId = registered.value.parent.id;
     } else {
-      const built = buildRegisteredItem(state, state.itemCodeSeq, [], input.item, 'INSTALLED', item.id);
+      const built = buildRegisteredItem(
+        state,
+        state.itemCodeSeq,
+        [],
+        input.item,
+        'INSTALLED',
+        item.id,
+      );
       if (!built.ok) {
         return built;
       }
@@ -1043,7 +1050,7 @@ export function createManualWorkOrder(
 ): Result<WorkOrder> {
   const piece = itemById(state.items, input.pieceId);
   if (!piece) {
-    return err({ code: 'NOT_FOUND', message: 'Ítem no encontrado' });
+    return err({ code: 'NOT_FOUND', message: 'Pieza no encontrada' });
   }
 
   if (input.type === 'DISMANTLING') {

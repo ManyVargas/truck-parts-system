@@ -4,6 +4,7 @@ import type {
   CreateManualWorkOrderInput,
   WorkOrderCreateOptions,
 } from '../../api/contracts/work-orders';
+import { UX_TERMS } from '../../shared/copy/glossary';
 import { WORK_ORDER_TYPE_LABELS } from './labels';
 import { Button, Field, Info, Modal, Select, Textarea } from '../../shared/ui';
 
@@ -60,8 +61,8 @@ export function CreateWorkOrderModal({
           </Info>
         )}
         <p className="text-sm text-navy-400">
-          La creación deja la orden pendiente. El desarme no mueve la jerarquía hasta que el
-          mecánico complete el trabajo.
+          La creación deja la orden pendiente. El {UX_TERMS.dismantling.toLowerCase()} no mueve la
+          jerarquía hasta que el mecánico complete el trabajo.
         </p>
         <Field label="Tipo" htmlFor="create-wo-type">
           <Select

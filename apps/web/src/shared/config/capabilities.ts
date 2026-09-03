@@ -1,4 +1,5 @@
 import type { LineType } from '../../api/contracts/entities';
+import { UX_TERMS } from '../copy/glossary';
 
 /**
  * Frontend visibility follows `docs/DEVELOPMENT_PLAN.md`.
@@ -121,8 +122,8 @@ const POS_LINE_TYPE_CAPABILITY: Record<LineType, AppCapability> = {
 };
 
 export const POS_LINE_TYPE_OPTIONS: { value: LineType; label: string }[] = [
-  { value: 'ITEM', label: 'Artículo de inventario' },
-  { value: 'QTY', label: 'Producto por cantidad' },
+  { value: 'ITEM', label: UX_TERMS.piece },
+  { value: 'QTY', label: UX_TERMS.quantityItem },
   { value: 'GENERIC', label: 'Mercancía genérica' },
   { value: 'EXTERNAL', label: 'Reventa externa' },
   { value: 'SERVICE', label: 'Servicio mecánico' },

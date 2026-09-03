@@ -1,4 +1,5 @@
 import type { WorkOrderListRow } from '../../api/contracts/work-orders';
+import { UX_TERMS } from '../../shared/copy/glossary';
 import { WOStatusChip, WOTypeChip } from '../../shared/domain';
 import { Empty, EntityLink, HoverRow, Mono, TableShell } from '../../shared/ui';
 
@@ -11,7 +12,7 @@ export function WorkOrderTable({ rows }: WorkOrderTableProps) {
     return (
       <Empty
         title="No hay órdenes de trabajo en esta vista"
-        description="Cambie de filtro o cree una orden de trabajo manual de desarme o instalación."
+        description={`Cambie de filtro o cree una orden de trabajo manual de ${UX_TERMS.dismantling.toLowerCase()} o instalación.`}
       />
     );
   }

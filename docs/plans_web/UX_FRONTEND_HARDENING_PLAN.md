@@ -105,17 +105,17 @@ Antes de crear un nuevo componente:
 
 # 3. Orden recomendado
 
-| Milestone | Tema | Prioridad |
-|---|---|---|
-| UX-0 | Capabilities y separación Prototype/Production | Crítica |
-| UX-1 | Accesibilidad de componentes base | Alta |
-| UX-2 | Navegación y arquitectura de información | Alta |
-| UX-3 | Registro de inventario simplificado | Alta |
-| UX-4 | Inventario: jerarquía visual e interacción | Alta |
-| UX-5 | Ventas/POS: prevención de errores y claridad | Alta |
-| UX-6 | Experiencia del mecánico | Media |
-| UX-7 | Responsive y comportamiento en distintos tamaños | Media |
-| UX-8 | Validación final de usabilidad y consistencia | Alta |
+| Milestone | Tema                                             | Prioridad |
+| --------- | ------------------------------------------------ | --------- |
+| UX-0      | Capabilities y separación Prototype/Production   | Crítica   |
+| UX-1      | Accesibilidad de componentes base                | Alta      |
+| UX-2      | Navegación y arquitectura de información         | Alta      |
+| UX-3      | Registro de inventario simplificado              | Alta      |
+| UX-4      | Inventario: jerarquía visual e interacción       | Alta      |
+| UX-5      | Ventas/POS: prevención de errores y claridad     | Alta      |
+| UX-6      | Experiencia del mecánico                         | Media     |
+| UX-7      | Responsive y comportamiento en distintos tamaños | Media     |
+| UX-8      | Validación final de usabilidad y consistencia    | Alta      |
 
 ---
 
@@ -523,7 +523,7 @@ Utilizarlo solo si existe una agrupación real con suficiente contenido.
 
 La pantalla de registro de inventario puede presentar demasiados campos simultáneamente.
 
-Dependiendo del tipo de artículo, el usuario puede enfrentarse a:
+Dependiendo del tipo de pieza o producto por cantidad, el usuario puede enfrentarse a:
 
 - ID;
 - nombre;
@@ -634,9 +634,11 @@ Evitar sorprender al usuario con un segundo paso inesperado después de pulsar C
 - [x] Mostrar claramente qué campos son opcionales.
 - [x] Revisar labels y ejemplos.
 - [x] Evitar campos técnicos que el usuario operativo no comprenda.
-- [x] Mantener los flows diferentes para artículos individuales y productos por cantidad.
+- [x] Mantener los flujos diferentes para piezas individuales y productos por cantidad.
 - [x] Revisar comportamiento de errores.
 - [x] Mantener datos ingresados al cambiar entre pasos.
+- [x] Pedir confirmación antes de descartar un registro con datos sin guardar.
+- [x] Bloquear todas las vías de cierre mientras el registro se está guardando.
 
 ---
 
@@ -644,10 +646,10 @@ Evitar sorprender al usuario con un segundo paso inesperado después de pulsar C
 
 Después del registro exitoso, comunicar:
 
-- que el artículo fue registrado;
+- que la pieza o el producto fue registrado;
 - qué información quedó pendiente;
 - que puede completarse posteriormente;
-- acción para ver el artículo.
+- acción para ver la pieza o el producto.
 
 Evitar mensajes genéricos como simplemente:
 
@@ -661,6 +663,7 @@ Evitar mensajes genéricos como simplemente:
 - Los campos opcionales siguen disponibles.
 - Los ensamblajes indican claramente el número de pasos.
 - Cambiar de paso no elimina información introducida.
+- Un cierre accidental no descarta información sin confirmación.
 - El flujo no cambia reglas de negocio.
 - La pantalla inicial se percibe considerablemente menos densa.
 
@@ -840,7 +843,7 @@ Ejemplo:
 
 Si `inventorySales` es falso:
 
-- no mostrar Artículo de inventario.
+- no mostrar Pieza.
 
 Si `quantitySales` es falso:
 
@@ -1316,4 +1319,3 @@ El plan completo puede considerarse terminado cuando:
 - [x] los escenarios principales han sido probados manualmente;
 - [x] no se alteraron reglas de negocio fuera del alcance;
 - [x] la documentación relevante continúa alineada con el comportamiento del frontend.
-

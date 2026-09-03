@@ -39,7 +39,7 @@ export function InventoryTable({ rows }: InventoryTableProps) {
       {/* INV-003: availability, physical relation, and restriction alerts stay in separate columns. */}
       <thead className="border-b border-navy-100 bg-navy-50 text-navy-400">
         <tr>
-          <th className="px-4 py-3 font-medium">Pieza</th>
+          <th className="px-4 py-3 font-medium">{UX_TERMS.piece}</th>
           <th className="px-4 py-3 font-medium">Categoría</th>
           <th className="px-4 py-3 font-medium">Ubicación</th>
           <th className="px-4 py-3 font-medium">{UX_TERMS.availability}</th>
@@ -86,7 +86,11 @@ export function InventoryTable({ rows }: InventoryTableProps) {
               </td>
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-1">
-                  <ReservationChip reserved={row.reserved} draftId={row.reservedByDraftId} compact />
+                  <ReservationChip
+                    reserved={row.reserved}
+                    draftId={row.reservedByDraftId}
+                    compact
+                  />
                   <NoDesarmarChip active={row.noDesarmar} rootId={row.protectedRootId} compact />
                   <CompleteChip complete={row.complete} />
                 </div>
