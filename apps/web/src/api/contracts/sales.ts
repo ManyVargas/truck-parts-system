@@ -49,6 +49,7 @@ export type PaymentView = {
   method: PaymentMethod;
   createdAt: string;
   reference?: string;
+  actorName?: string;
 };
 
 export type LinkedWorkOrderView = {

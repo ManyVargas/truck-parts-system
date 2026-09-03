@@ -69,7 +69,7 @@ Photo bytes live in private S3-compatible object storage; PostgreSQL stores meta
 - [x] Inventory search/results.
 - [x] Installed/independent/quantity state display.
 - [x] Historical filter/view.
-- [ ] Free-text location edit/display.
+- [x] Free-text location edit/display.
 - [ ] Photo gallery, upload, primary selection, edit/remove rules.
 
 ### Tests

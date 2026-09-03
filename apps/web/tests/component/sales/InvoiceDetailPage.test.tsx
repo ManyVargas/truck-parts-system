@@ -48,6 +48,7 @@ describe('InvoiceDetailPage', () => {
     await user.click(screen.getByRole('button', { name: 'Confirmar pago' }));
 
     expect(await screen.findByText('Pago parcial')).toBeVisible();
+    expect(screen.getAllByText(/por Laura Pérez/).length).toBeGreaterThan(0);
   });
 
   it('shows ITBIS breakdown for fiscal invoices and em dash for non-fiscal', async () => {

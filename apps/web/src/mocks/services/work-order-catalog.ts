@@ -13,6 +13,7 @@ import type {
   WorkOrderPieceOption,
 } from '../../api/contracts/work-orders';
 import { can } from '../../shared/auth/policies';
+import { toHistoryEventView } from './history-view';
 import { effectiveLocation, isAssemblyItem, itemById, protectedAncestor } from './inventory-helpers';
 
 function itemName(state: AppState, id: string | undefined): string | undefined {
@@ -115,13 +116,7 @@ export function buildWorkOrderDetail(
     history: state.events
       .filter((event) => isLinkedWorkOrderEvent(event, order))
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-      .map((event) => ({
-        id: event.id,
-        type: event.type,
-        description: event.description,
-        createdAt: event.createdAt,
-        actorName: state.users.find((user) => user.id === event.actorId)?.name,
-      })),
+      .map((event) => toHistoryEventView(event, state.users)),
     actions: {
       canReassign: active && can(actor, 'workOrders.manage'),
       canCancel: active && can(actor, 'workOrders.manage'),

@@ -239,6 +239,15 @@ export type AppEvent = {
   metadata?: Record<string, unknown>;
 };
 
+/** Read model for timelines — actor name stays even if the account is later deactivated (HIST-002). */
+export type HistoryEventView = {
+  id: string;
+  type: string;
+  description: string;
+  createdAt: string;
+  actorName?: string;
+};
+
 /** In-memory application state with sessionStorage backup in the mock until HTTP repositories. */
 export type AppState = {
   users: User[];

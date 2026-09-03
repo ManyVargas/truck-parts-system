@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 import type { ItemDetailView } from '../../api/contracts/inventory';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
-import { Card, Mono, SectionTitle, money } from '../../shared/ui';
+import { Card, EventTimeline, Mono, SectionTitle, money } from '../../shared/ui';
 import { HierarchyTree } from './HierarchyTree';
 import { PhotoGrid } from './PhotoGrid';
 import { StatusPanel } from './StatusPanel';
@@ -132,20 +132,12 @@ export function ItemDetailViewPanel({
       </div>
 
       <Card>
-        <SectionTitle title="Historial" subtitle="Eventos auditados de esta pieza." />
-        {detail.events.length === 0 ? (
-          <p className="text-sm text-navy-400">Aún no hay eventos con esta pieza.</p>
-        ) : (
-          <ol className="space-y-2 text-sm">
-            {detail.events.map((event) => (
-              <li key={event.id}>
-                <span className="text-navy-400">{event.createdAt.slice(0, 10)}</span>
-                {' · '}
-                {event.description}
-              </li>
-            ))}
-          </ol>
-        )}
+        <EventTimeline
+          title="Historial"
+          subtitle="Quién realizó cada cambio auditado de esta pieza."
+          emptyTitle="Aún no hay eventos con esta pieza."
+          events={detail.events}
+        />
       </Card>
     </div>
   );

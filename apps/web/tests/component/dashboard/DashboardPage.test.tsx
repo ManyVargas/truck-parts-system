@@ -27,6 +27,7 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Ganancia bruta en pesos')).toBeVisible();
     expect(screen.getByText('Tasa de cambio pendiente')).toBeVisible();
     expect(screen.getByText('RD$8,900.00')).toBeVisible();
+    expect(screen.getAllByText(/por Laura Pérez/).length).toBeGreaterThan(0);
   });
 
   it('shows draft count instead of profitability to sellers', async () => {

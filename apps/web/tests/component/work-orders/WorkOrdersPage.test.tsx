@@ -115,6 +115,7 @@ describe('WorkOrderDetailPage', () => {
     expect(await screen.findByText('Cancelada')).toBeVisible();
     expect(screen.getByText('Cambio de plan')).toBeVisible();
     expect(screen.getByText(/Orden de trabajo OD-DEMO-062 cancelada/)).toBeVisible();
+    expect(screen.getByText(/por Administrador Demo/)).toBeVisible();
   });
 
   it('hides admin actions on a completed order', async () => {
@@ -129,5 +130,6 @@ describe('WorkOrderDetailPage', () => {
     expect(screen.queryByRole('button', { name: 'Cancelar orden' })).not.toBeInTheDocument();
     expect(screen.getByText('before-alt.jpg')).toBeVisible();
     expect(screen.getByText('after-alt.jpg')).toBeVisible();
+    expect(screen.getByText(/por Carlos Méndez/)).toBeVisible();
   });
 });

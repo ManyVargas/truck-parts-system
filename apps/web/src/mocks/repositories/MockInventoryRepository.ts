@@ -18,6 +18,8 @@ import {
   adjustQtyStock,
   resolveCatalogReview,
   setNoDesarmar,
+  updateItemDetails,
+  updateQtyProductDetails,
 } from '../services/inventory-commands';
 import { requirePermission } from '../services/require-permission';
 import { cloneForRead, getMockState } from '../state';
@@ -171,6 +173,13 @@ export class MockInventoryRepository implements InventoryRepository {
     return result.ok ? ok(cloneForRead(result.value)) : result;
   }
 
+  async updateItemDetails(input: Parameters<InventoryRepository['updateItemDetails']>[0]) {
+    const permission = requirePermission('inventory.register');
+    if (!permission.ok) return permission;
+    const result = updateItemDetails(getMockState(), permission.value, input);
+    return result.ok ? ok(cloneForRead(result.value)) : result;
+  }
+
   async registerAssembly(input: Parameters<InventoryRepository['registerAssembly']>[0]) {
     const permission = requirePermission('inventory.register');
     if (!permission.ok) return permission;
@@ -182,6 +191,15 @@ export class MockInventoryRepository implements InventoryRepository {
     const permission = requirePermission('inventory.register');
     if (!permission.ok) return permission;
     const result = registerQtyProduct(getMockState(), permission.value, input);
+    return result.ok ? ok(cloneForRead(result.value)) : result;
+  }
+
+  async updateQtyProductDetails(
+    input: Parameters<InventoryRepository['updateQtyProductDetails']>[0],
+  ) {
+    const permission = requirePermission('inventory.register');
+    if (!permission.ok) return permission;
+    const result = updateQtyProductDetails(getMockState(), permission.value, input);
     return result.ok ? ok(cloneForRead(result.value)) : result;
   }
 

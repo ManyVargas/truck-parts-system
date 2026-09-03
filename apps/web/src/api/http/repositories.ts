@@ -110,12 +110,20 @@ export class HttpInventoryRepository implements InventoryRepository {
     return httpNotImplemented('HttpInventoryRepository', 'registerItem');
   }
 
+  async updateItemDetails() {
+    return httpNotImplemented('HttpInventoryRepository', 'updateItemDetails');
+  }
+
   async registerAssembly() {
     return httpNotImplemented('HttpInventoryRepository', 'registerAssembly');
   }
 
   async registerQtyProduct() {
     return httpNotImplemented('HttpInventoryRepository', 'registerQtyProduct');
+  }
+
+  async updateQtyProductDetails() {
+    return httpNotImplemented('HttpInventoryRepository', 'updateQtyProductDetails');
   }
 
   async receiveQtyStock() {

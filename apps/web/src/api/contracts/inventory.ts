@@ -1,7 +1,7 @@
 import type {
-  AppEvent,
   Category,
   CommercialState,
+  HistoryEventView,
   Item,
   ItemCondition,
   KnownMissingComponent,
@@ -124,7 +124,7 @@ export type ItemDetailView = {
   ancestors: { id: string; name: string }[];
   tree: HierarchyNode;
   workOrders: WorkOrder[];
-  events: AppEvent[];
+  events: HistoryEventView[];
   draftEligibility: DraftEligibility;
 };
 
@@ -143,6 +143,7 @@ export type QtyProductDetailView = {
   availableToReserve: number;
   commercialState: CommercialState | 'UNAVAILABLE';
   draftEligibility: DraftEligibility;
+  events: HistoryEventView[];
 };
 
 export type InventoryDetail = ItemDetailView | QtyProductDetailView;
@@ -208,6 +209,32 @@ export type RegisterItemInput = {
   attributes?: Record<string, string>;
   notes?: string;
   photos?: string[];
+};
+
+/**
+ * Ordinary INV-005 maintenance. Identity, category, cost, parent, and commercial
+ * state are intentionally absent so they cannot be mass-assigned.
+ */
+export type UpdateItemDetailsInput = {
+  itemId: string;
+  name: string;
+  brand?: string;
+  model?: string;
+  serial?: string;
+  partNumber?: string;
+  condition: ItemCondition;
+  location?: string;
+  attributes?: Record<string, string>;
+  notes?: string;
+  photos?: string[];
+};
+
+/** Ordinary quantity-product labels and free-text location. SKU, cost, and stock stay out. */
+export type UpdateQtyProductDetailsInput = {
+  qtyProductId: string;
+  name: string;
+  brand?: string;
+  location?: string;
 };
 
 export type RegisterQtyProductInput = {

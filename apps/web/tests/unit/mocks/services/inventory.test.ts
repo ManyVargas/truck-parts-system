@@ -18,6 +18,8 @@ import {
   registerItem,
   registerQtyProduct,
   resolveCatalogReview,
+  updateItemDetails,
+  updateQtyProductDetails,
 } from '../../../../src/mocks/services/inventory-commands';
 import {
   availableToReserve,
@@ -87,6 +89,10 @@ describe('inventory helpers', () => {
     expect(detail?.formerInstallation).toMatchObject({
       parentId: 'MOT-002',
       workOrderId: 'OD-DEMO-063',
+    });
+    expect(detail?.events[0]).toMatchObject({
+      type: 'DISMANTLING_COMPLETED',
+      actorName: 'Carlos Méndez',
     });
   });
 
@@ -934,6 +940,11 @@ describe('quantity stock receipt and adjustment', () => {
 
     expect(result.ok).toBe(true);
     expect(state.qtyProducts.find((product) => product.id === 'QTY-AVG-001')?.onHand).toBe(15);
+    expect(
+      buildQtyProductDetail(state, 'QTY-AVG-001')?.events.find((event) => event.type === 'QTY_STOCK_RECEIVED'),
+    ).toMatchObject({
+      actorName: 'Laura Pérez',
+    });
   });
 
   it('QTY-001: seller cannot adjust quantity stock', () => {
@@ -997,5 +1008,120 @@ describe('quantity stock receipt and adjustment', () => {
     expect(zero.ok).toBe(false);
     expect(negative.ok).toBe(false);
     expect(state.qtyProducts.find((product) => product.id === 'QTY-AVG-001')?.onHand).toBe(10);
+  });
+
+  it('INV-005: seller can enrich name, photos and location without rewriting identity or cost', () => {
+    const state = createInitialState();
+    const item = state.items.find((entry) => entry.id === 'FIL-001')!;
+    const registeredEvents = state.events.filter(
+      (event) => event.type === 'ITEM_REGISTERED' && event.metadata?.itemId === 'FIL-001',
+    );
+
+    const result = updateItemDetails(state, SELLER, {
+      itemId: 'FIL-001',
+      name: 'Filtro HD corregido',
+      brand: 'Fleetguard',
+      partNumber: 'LF9009',
+      condition: 'USED',
+      location: 'Estante 4',
+      notes: 'Foto de etiqueta ilegible',
+      photos: ['filtro-frente.jpg', 'filtro-etiqueta.jpg'],
+      attributes: { rosca: '1-12 UNF' },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(item).toMatchObject({
+      id: 'FIL-001',
+      categoryId: 'CAT-FIL',
+      name: 'Filtro HD corregido',
+      condition: 'USED',
+      location: 'Estante 4',
+      acquisitionCostDop: 850,
+      commercialState: 'AVAILABLE',
+      physicalRelationship: 'INDEPENDENT',
+      photos: ['filtro-frente.jpg', 'filtro-etiqueta.jpg'],
+    });
+    expect(item.attributes).toEqual({ rosca: '1-12 UNF' });
+    expect(state.events.filter((event) => event.type === 'ITEM_REGISTERED')).toHaveLength(
+      registeredEvents.length,
+    );
+    expect(state.events.find((event) => event.type === 'ITEM_EDITED')?.metadata).toMatchObject({
+      itemId: 'FIL-001',
+      changes: {
+        name: { before: 'Filtro de aceite HD', after: 'Filtro HD corregido' },
+        location: { before: 'Estante 3', after: 'Estante 4' },
+      },
+    });
+  });
+
+  it('INV-005: ignores protected identity fields and does not rewrite sold invoice snapshots', () => {
+    const state = createInitialState();
+    const turbo = state.items.find((entry) => entry.id === 'TUR-009')!;
+    const invoiceLine = state.invoices
+      .flatMap((invoice) => invoice.lines)
+      .find((line) => line.itemId === 'TUR-009');
+    const snapshotDescription = invoiceLine?.description;
+    const costBefore = turbo.acquisitionCostDop;
+
+    const result = updateItemDetails(state, ADMIN, {
+      itemId: 'TUR-009',
+      name: 'Turbo mal rotulado',
+      brand: 'Garrett',
+      partNumber: 'TUR-GT4094',
+      condition: 'USED',
+      photos: ['turbo.jpg'],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(turbo.name).toBe('Turbo mal rotulado');
+    expect(turbo.id).toBe('TUR-009');
+    expect(turbo.categoryId).toBe('CAT-TUR');
+    expect(turbo.acquisitionCostDop).toBe(costBefore);
+    expect(turbo.parentId).toBe('MOT-001');
+    expect(turbo.commercialState).toBe('SOLD');
+    expect(invoiceLine?.description).toBe(snapshotDescription);
+  });
+
+  it('INV-005: rejects installing a free-text location on an installed descendant', () => {
+    const state = createInitialState();
+    const alt = state.items.find((entry) => entry.id === 'ALT-004')!;
+    const eventCount = state.events.length;
+
+    const result = updateItemDetails(state, ADMIN, {
+      itemId: 'ALT-004',
+      name: alt.name,
+      condition: alt.condition,
+      location: 'Cajón B',
+    });
+
+    expect(result.ok).toBe(false);
+    expect(alt.location).toBeUndefined();
+    expect(state.events).toHaveLength(eventCount);
+  });
+
+  it('INV-005: seller can edit quantity product labels without changing SKU or stock', () => {
+    const state = createInitialState();
+    const product = state.qtyProducts.find((entry) => entry.id === 'QTY-OIL-15W40')!;
+    const onHand = product.onHand;
+    const reserved = product.reserved;
+    const unitCost = product.unitCostDop;
+
+    const result = updateQtyProductDetails(state, SELLER, {
+      qtyProductId: 'QTY-OIL-15W40',
+      name: 'Aceite 15W-40 Galón (corregido)',
+      brand: 'Valvoline',
+      location: 'Estante aceite',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(product).toMatchObject({
+      id: 'QTY-OIL-15W40',
+      name: 'Aceite 15W-40 Galón (corregido)',
+      brand: 'Valvoline',
+      location: 'Estante aceite',
+      onHand,
+      reserved,
+      unitCostDop: unitCost,
+    });
   });
 });

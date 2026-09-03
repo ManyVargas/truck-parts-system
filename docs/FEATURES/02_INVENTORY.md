@@ -71,20 +71,20 @@ Acquisition cost is entered in DOP when known or estimated; unknown is a real st
 - [ ] Define shared practical base fields and category attribute hook.
 - [ ] Represent known/estimated/unknown DOP acquisition-cost input without defaulting unknown to zero.
 - [ ] Add constraints for immutable inventory mode and unique internal ID.
-- [ ] Implement ordinary create/enrich/edit commands.
-- [ ] Implement protected correction command with reason and additive history.
-- [ ] Prevent generic request-body mass assignment.
+- [x] Implement ordinary create/enrich/edit commands.
+- [x] Implement protected correction command with reason and additive history.
+- [x] Prevent generic request-body mass assignment.
 
 ### Frontend
 - [ ] Registration form driven by category minimums.
 - [x] Prototype mock assigns the public item code at save from the category prefix; the operator does not type it (wizard, assembly checklist, catalog-present child). Quantity SKU remains operator-entered.
-- [ ] Detail/edit screen for ordinary fields.
+- [x] Detail/edit screen for ordinary fields.
 - [x] Clear visual separation of availability, condition, relationship, completeness, and reservation.
 - [x] Administrator-only protected correction flow.
 
 ### Tests
 - [ ] Duplicate/reused public-code rejection and failed create consuming no sequence number.
-- [ ] Partial registration and later enrichment.
+- [x] Partial registration and later enrichment.
 - [ ] Missing serial/part number allowed when category minimums pass.
 - [ ] Unknown cost remains unknown.
 - [x] Seller protected-correction denial.

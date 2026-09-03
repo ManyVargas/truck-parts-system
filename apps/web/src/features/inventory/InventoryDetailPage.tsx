@@ -6,6 +6,7 @@ import { Button, Info, useToast } from '../../shared/ui';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
 import { ItemAdminActions } from './ItemAdminActions';
 import { ItemDetailViewPanel } from './ItemDetailView';
+import { ItemDetailsEditor } from './ItemDetailsEditor';
 import { QtyProductDetail } from './QtyProductDetail';
 import { useInventoryDetail } from './useInventoryDetail';
 
@@ -73,15 +74,29 @@ export function InventoryDetailPage() {
     </div>
   ) : null;
 
+  const canEditDetails = user?.role === 'SELLER' || user?.role === 'ADMINISTRATOR';
+
   if (detail.kind === 'QTY') {
-    const canReceive = user?.role === 'SELLER' || user?.role === 'ADMINISTRATOR';
+    const canReceive = canEditDetails;
     return (
       <QtyProductDetail
         detail={detail}
         actions={draftButton}
+        canEdit={canEditDetails}
         canReceive={canReceive}
         canAdjust={isAdmin}
         isMutating={query.isMutating}
+        onEdit={async (input) => {
+          const response = await query.updateQtyProductDetails({
+            qtyProductId: detail.id,
+            ...input,
+          });
+          if (!response.ok) {
+            return response.error.message;
+          }
+          pushToast('Datos actualizados', 'success');
+          return null;
+        }}
         onReceive={async (input) => {
           const response = await query.receiveQtyStock({ qtyProductId: detail.id, ...input });
           if (!response.ok) {
@@ -108,6 +123,20 @@ export function InventoryDetailPage() {
       actions={
         <div className="flex flex-col items-stretch gap-3 sm:items-end">
           {draftButton}
+          {canEditDetails && (
+            <ItemDetailsEditor
+              detail={detail}
+              isMutating={query.isMutating}
+              onSave={async (input) => {
+                const response = await query.updateItemDetails({ itemId: detail.id, ...input });
+                if (!response.ok) {
+                  return response.error.message;
+                }
+                pushToast('Datos actualizados', 'success');
+                return null;
+              }}
+            />
+          )}
           {isAdmin && (
             <ItemAdminActions
               detail={detail}

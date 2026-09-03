@@ -11,6 +11,8 @@ import type {
   NoDesarmarInput,
   ReceiveQtyStockInput,
   ResolveCatalogReviewInput,
+  UpdateItemDetailsInput,
+  UpdateQtyProductDetailsInput,
 } from '../../api/contracts/inventory';
 import type { AppError, Result } from '../../shared/auth/types';
 import { inventoryRepository } from '../../api/repositories';
@@ -165,6 +167,34 @@ export function useInventoryDetail(id: string | undefined) {
     [reload],
   );
 
+  const updateItemDetails = useCallback(
+    async (input: UpdateItemDetailsInput): Promise<Result<void>> => {
+      setIsMutating(true);
+      const response = await inventoryRepository.updateItemDetails(input);
+      setIsMutating(false);
+      if (!response.ok) {
+        return response;
+      }
+      reload();
+      return { ok: true, value: undefined };
+    },
+    [reload],
+  );
+
+  const updateQtyProductDetails = useCallback(
+    async (input: UpdateQtyProductDetailsInput): Promise<Result<void>> => {
+      setIsMutating(true);
+      const response = await inventoryRepository.updateQtyProductDetails(input);
+      setIsMutating(false);
+      if (!response.ok) {
+        return response;
+      }
+      reload();
+      return { ok: true, value: undefined };
+    },
+    [reload],
+  );
+
   return {
     result,
     isMutating,
@@ -176,5 +206,7 @@ export function useInventoryDetail(id: string | undefined) {
     createWorkOrder,
     receiveQtyStock,
     adjustQtyStock,
+    updateItemDetails,
+    updateQtyProductDetails,
   };
 }

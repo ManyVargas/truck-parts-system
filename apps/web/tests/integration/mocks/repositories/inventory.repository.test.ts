@@ -50,6 +50,33 @@ describe('MockInventoryRepository', () => {
     expect(workOrder.ok).toBe(false);
   });
 
+  it('lets sellers edit ordinary item details and denies mechanics', async () => {
+    signInAs('SELLER');
+    const sellerResult = await mockInventoryRepository.updateItemDetails({
+      itemId: 'FIL-001',
+      name: 'Filtro HD',
+      brand: 'Fleetguard',
+      partNumber: 'LF9009',
+      condition: 'NEW',
+      location: 'Estante 3B',
+      photos: ['filtro.jpg'],
+    });
+    expect(sellerResult.ok).toBe(true);
+    expect(sellerResult.ok && sellerResult.value.location).toBe('Estante 3B');
+    expect(getMockState().items.find((item) => item.id === 'FIL-001')?.photos).toEqual(['filtro.jpg']);
+
+    signInAs('MECHANIC');
+    const mechanicResult = await mockInventoryRepository.updateItemDetails({
+      itemId: 'FIL-001',
+      name: 'No permitido',
+      condition: 'USED',
+    });
+    expect(mechanicResult.ok).toBe(false);
+    if (!mechanicResult.ok) {
+      expect(mechanicResult.error.code).toBe('FORBIDDEN');
+    }
+  });
+
   it('lets sellers register inventory and denies mechanics in the repository', async () => {
     signInAs('SELLER');
     const sellerResult = await mockInventoryRepository.registerItem({

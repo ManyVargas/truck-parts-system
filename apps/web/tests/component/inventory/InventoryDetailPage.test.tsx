@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -52,6 +53,7 @@ describe('InventoryDetailPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Filtro de aceite HD' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Agregar a borrador' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Editar datos' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Corregir costo' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Orden de trabajo manual' })).not.toBeInTheDocument();
   });
@@ -78,5 +80,37 @@ describe('InventoryDetailPage', () => {
 
     expect(await screen.findByText('No se pudo cargar el detalle del inventario')).toBeVisible();
     expect(screen.getByText('Inventario no encontrado')).toBeVisible();
+  });
+
+  it('lets a seller correct ordinary item details from the detail screen', async () => {
+    const user = userEvent.setup();
+    signInAs('SELLER');
+    renderWithProviders(detailRoute(), {
+      route: '/inventory/FIL-001',
+      auth: createAuthValue('SELLER'),
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Filtro de aceite HD' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Editar datos' }));
+    const dialog = screen.getByRole('dialog', { name: 'Editar FIL-001' });
+    const name = within(dialog).getByLabelText('Nombre');
+    await user.clear(name);
+    await user.type(name, 'Filtro HD corregido');
+    await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
+
+    expect(await screen.findByRole('heading', { name: 'Filtro HD corregido' })).toBeVisible();
+    expect(screen.getByText(/Datos descriptivos de FIL-001 actualizados/)).toBeVisible();
+    expect(screen.getByText(/por Laura Pérez/)).toBeVisible();
+  });
+
+  it('names the mechanic on piece history even after the account is deactivated', async () => {
+    signInAs('ADMINISTRATOR');
+    renderWithProviders(detailRoute(), {
+      route: '/inventory/ALT-010',
+      auth: createAuthValue('ADMINISTRATOR'),
+    });
+
+    expect(await screen.findByText(/ALT-010 retirado de MOT-002/)).toBeVisible();
+    expect(screen.getByText(/por Carlos Méndez/)).toBeVisible();
   });
 });

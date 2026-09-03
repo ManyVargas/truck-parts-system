@@ -59,7 +59,10 @@ describe('buildDashboardSnapshot', () => {
     });
 
     expect(snapshot.recentInvoices[0]?.number).toBe('FAC-000099');
-    expect(snapshot.activity[0]?.id).toBe('EV-003');
+    expect(snapshot.activity[0]).toMatchObject({
+      id: 'EV-003',
+      actorName: 'Laura Pérez',
+    });
   });
 
   it('omits profitability fields for Seller projections', () => {

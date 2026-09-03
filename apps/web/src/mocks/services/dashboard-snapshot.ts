@@ -10,6 +10,7 @@ import { DEMO_NOW_ISO } from '../data/demo-clock';
 import { reportedInvoiceProfitDop } from './profitability-view';
 import { isComplete } from './inventory-helpers';
 import { invoiceBalance, invoiceTotal, roundMoney, utcCalendarDate } from './invoice-money';
+import { toHistoryEventView } from './history-view';
 
 const RECENT_INVOICE_LIMIT = 5;
 const ACTIVITY_LIMIT = 8;
@@ -173,12 +174,7 @@ export function buildDashboardSnapshot(
   const activity: ActivityRow[] = [...state.events]
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
     .slice(0, ACTIVITY_LIMIT)
-    .map((event) => ({
-      id: event.id,
-      type: event.type,
-      description: event.description,
-      createdAt: event.createdAt,
-    }));
+    .map((event) => toHistoryEventView(event, state.users));
 
   return {
     kpis,

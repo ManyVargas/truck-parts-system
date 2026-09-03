@@ -4,6 +4,7 @@ export { Card } from './Card';
 export { Chip } from './Chip';
 export { EntityLink, HoverRow, TableShell } from './DataTable';
 export { Empty } from './Empty';
+export { EventTimeline } from './EventTimeline';
 export { Field, Input, Select, Textarea } from './Field';
 export { SearchInput } from './SearchInput';
 export { Info } from './Info';
