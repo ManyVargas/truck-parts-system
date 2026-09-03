@@ -30,8 +30,8 @@ describe('ItemAdminActions', () => {
     callbacks.onCorrectBaseline.mockResolvedValue('Seleccione al menos un faltante');
     renderWithProviders(<ItemAdminActions detail={detail} isMutating={false} {...callbacks} />);
 
-    await user.click(screen.getByRole('button', { name: 'Corregir baseline' }));
-    const dialog = screen.getByRole('dialog', { name: 'Corregir baseline de recepción' });
+    await user.click(screen.getByRole('button', { name: 'Corregir registro inicial' }));
+    const dialog = screen.getByRole('dialog', { name: 'Corregir registro inicial' });
     await user.type(within(dialog).getByLabelText('Motivo'), 'Corrección verificada');
     await user.click(within(dialog).getByRole('button', { name: 'Confirmar corrección' }));
 
@@ -111,7 +111,7 @@ describe('ItemAdminActions', () => {
 
     await user.click(screen.getByRole('button', { name: 'Registrar presente' }));
     const dialog = screen.getByRole('dialog', { name: 'Registrar Motor auxiliar presente' });
-    expect(within(dialog).getByText('Baseline de recepción')).toBeVisible();
+    expect(within(dialog).getByText('Registro inicial')).toBeVisible();
     expect(within(dialog).getByText('Alternador')).toBeVisible();
     expect(within(dialog).getByText('AUX')).toBeVisible();
     await user.click(within(dialog).getByRole('button', { name: 'Registrar en el árbol' }));

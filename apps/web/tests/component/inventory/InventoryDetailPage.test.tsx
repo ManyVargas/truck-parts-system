@@ -40,8 +40,9 @@ describe('InventoryDetailPage', () => {
     expect(screen.getByText('Completitud')).toBeVisible();
     expect(screen.getAllByText('Incompleto').length).toBeGreaterThan(0);
     expect(screen.getByText(/Turbo \(en recepción\)/)).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Corregir baseline' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Corregir registro inicial' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Orden de trabajo manual' })).toBeVisible();
+    expect(screen.getByText('Órdenes de trabajo')).toBeVisible();
   });
 
   it('hides administrator actions from sellers', async () => {
@@ -56,6 +57,7 @@ describe('InventoryDetailPage', () => {
     expect(screen.getByRole('button', { name: 'Editar datos' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Corregir costo' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Orden de trabajo manual' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Órdenes de trabajo')).not.toBeInTheDocument();
   });
 
   it('renders quantity stock separately from individual item state', async () => {
@@ -69,6 +71,7 @@ describe('InventoryDetailPage', () => {
     expect(screen.getByText('48')).toBeVisible();
     expect(screen.getByText('46')).toBeVisible();
     expect(screen.getByText('disponible = existencia − reservado')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Ajustar existencia' })).not.toBeInTheDocument();
   });
 
   it('reports an unknown inventory identifier', async () => {
@@ -101,6 +104,26 @@ describe('InventoryDetailPage', () => {
     expect(await screen.findByRole('heading', { name: 'Filtro HD corregido' })).toBeVisible();
     expect(screen.getByText(/Datos descriptivos de FIL-001 actualizados/)).toBeVisible();
     expect(screen.getByText(/por Laura Pérez/)).toBeVisible();
+  });
+
+  it('edits category attributes from generated fields, not free text', async () => {
+    const user = userEvent.setup();
+    signInAs('SELLER');
+    renderWithProviders(detailRoute(), {
+      route: '/inventory/MOT-001',
+      auth: createAuthValue('SELLER'),
+    });
+
+    expect(await screen.findByText(/Cilindrada: 14.8L/)).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Editar datos' }));
+    const dialog = screen.getByRole('dialog', { name: 'Editar MOT-001' });
+    expect(within(dialog).queryByLabelText('Atributos')).not.toBeInTheDocument();
+    const displacement = within(dialog).getByLabelText('Cilindrada (opcional)');
+    await user.clear(displacement);
+    await user.type(displacement, '15L');
+    await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
+
+    expect(await screen.findByText(/Cilindrada: 15L/)).toBeVisible();
   });
 
   it('names the mechanic on piece history even after the account is deactivated', async () => {

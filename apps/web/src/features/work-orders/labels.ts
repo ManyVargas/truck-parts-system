@@ -1,7 +1,8 @@
 import type { WorkOrderStatus, WorkOrderType } from '../../api/contracts/entities';
+import { UX_TERMS } from '../../shared/copy/glossary';
 
 export const WORK_ORDER_TYPE_LABELS: Record<WorkOrderType, string> = {
-  DISMANTLING: 'Desarme',
+  DISMANTLING: UX_TERMS.dismantling,
   INSTALLATION: 'Instalación',
 };
 

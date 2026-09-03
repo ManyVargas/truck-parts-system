@@ -4,6 +4,7 @@ import type {
   BaselineStatus,
   RegisterItemInput,
 } from '../../api/contracts/inventory';
+import { UX_TERMS } from '../../shared/copy/glossary';
 import { PresentComponentForm } from './PresentComponentForm';
 
 type BaselineChecklistProps = {
@@ -38,7 +39,7 @@ export function BaselineChecklist({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="font-semibold text-navy">Baseline de recepción</h3>
+        <h3 className="font-semibold text-navy">{UX_TERMS.receiptRecord}</h3>
         <p className="text-sm text-navy-400">
           Confirme el estado de cada componente esperado. Todos son obligatorios.
         </p>

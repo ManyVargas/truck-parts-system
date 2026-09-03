@@ -6,8 +6,9 @@ import type {
   ItemDetailView,
   RegisterItemInput,
 } from '../../api/contracts/inventory';
-import { Button, Field, Info, Input, Modal, Select, Textarea } from '../../shared/ui';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
+import { UX_TERMS } from '../../shared/copy/glossary';
+import { Button, Field, Info, Input, Modal, Select, Textarea } from '../../shared/ui';
 import { BaselineChecklist } from './BaselineChecklist';
 
 type ItemAdminActionsProps = {
@@ -236,7 +237,7 @@ export function ItemAdminActions({
               setBaselineOpen(true);
             }}
           >
-            Corregir baseline
+            Corregir {UX_TERMS.receiptRecord.toLowerCase()}
           </Button>
         )}
       </div>
@@ -278,7 +279,7 @@ export function ItemAdminActions({
 
       <Modal
         open={baselineOpen}
-        title="Corregir baseline de recepción"
+        title={`Corregir ${UX_TERMS.receiptRecord.toLowerCase()}`}
         onClose={() => {
           setError(null);
           setBaselineOpen(false);
@@ -286,7 +287,7 @@ export function ItemAdminActions({
       >
         <div className="space-y-3">
           {error && (
-            <Info tone="error" title="No se pudo corregir el baseline">
+            <Info tone="error" title={`No se pudo corregir el ${UX_TERMS.receiptRecord.toLowerCase()}`}>
               {error}
             </Info>
           )}
@@ -530,8 +531,8 @@ function WorkOrderForm({
       }}
     >
       <p className="text-sm text-navy-400">
-        La orden de trabajo queda pendiente. El desarme no mueve la jerarquía hasta que el
-        mecánico la complete. Pieza: {pieceId}
+        La orden de trabajo queda pendiente. El {UX_TERMS.dismantling.toLowerCase()} no mueve la
+        jerarquía hasta que el mecánico la complete. Pieza: {pieceId}
       </p>
       <Field label="Tipo" htmlFor="wo-type">
         <Select
@@ -539,7 +540,7 @@ function WorkOrderForm({
           value={type}
           onChange={(event) => setType(event.target.value as 'DISMANTLING' | 'INSTALLATION')}
         >
-          <option value="DISMANTLING">Desarme</option>
+          <option value="DISMANTLING">{UX_TERMS.dismantling}</option>
           <option value="INSTALLATION">Instalación</option>
         </Select>
       </Field>

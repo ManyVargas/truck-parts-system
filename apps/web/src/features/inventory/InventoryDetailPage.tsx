@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { useAuth } from '../auth/useAuth';
-import { Button, Info, useToast } from '../../shared/ui';
+import { can } from '../../shared/auth/policies';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
+import { UX_TERMS } from '../../shared/copy/glossary';
+import { Button, Info, useToast } from '../../shared/ui';
 import { ItemAdminActions } from './ItemAdminActions';
 import { ItemDetailViewPanel } from './ItemDetailView';
 import { ItemDetailsEditor } from './ItemDetailsEditor';
@@ -17,7 +19,8 @@ export function InventoryDetailPage() {
   const { pushToast } = useToast();
   const query = useInventoryDetail(id);
   const [actionError, setActionError] = useState<string | null>(null);
-  const isAdmin = user?.role === 'ADMINISTRATOR';
+  const isAdmin = can(user, 'inventory.admin');
+  const canEditDetails = can(user, 'inventory.register');
 
   if (query.result.status === 'loading') {
     return (
@@ -73,8 +76,6 @@ export function InventoryDetailPage() {
       )}
     </div>
   ) : null;
-
-  const canEditDetails = user?.role === 'SELLER' || user?.role === 'ADMINISTRATOR';
 
   if (detail.kind === 'QTY') {
     const canReceive = canEditDetails;
@@ -162,7 +163,7 @@ export function InventoryDetailPage() {
                 if (!response.ok) {
                   return response.error.message;
                 }
-                pushToast('Baseline corregido', 'success');
+                pushToast(UX_TERMS.receiptRecordCorrected, 'success');
                 return null;
               }}
               onResolveCatalogReview={async (input) => {
