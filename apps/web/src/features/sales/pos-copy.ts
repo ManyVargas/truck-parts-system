@@ -1,6 +1,108 @@
 import type { LineType } from '../../api/contracts/entities';
+import type { PosLineView } from '../../api/contracts/sales';
 import type { AppError } from '../../shared/auth/types';
 import type { AppCapabilities } from '../../shared/config/capabilities';
+
+export const POS_VIEW_REQUIREMENTS_LABEL = 'Ver requisitos';
+export const POS_LINE_REMOVED_TOAST = 'Producto eliminado.';
+export const POS_DRAFT_DISCARDED_TOAST = 'Borrador descartado.';
+export const POS_UNDO_LABEL = 'Deshacer';
+
+export const POS_FIELD_IDS = {
+  customer: 'pos-customer',
+  currency: 'pos-currency',
+  fiscal: 'pos-fiscal',
+  lines: 'pos-lines',
+  blockers: 'pos-blockers',
+} as const;
+
+export function posLinePriceFieldId(lineId: string): string {
+  return `pos-line-price-${lineId}`;
+}
+
+export function posLineSku(line: Pick<PosLineView, 'itemId' | 'qtyProductId' | 'serviceId'>): string | undefined {
+  return line.itemId ?? line.qtyProductId ?? line.serviceId;
+}
+
+/**
+ * Short reason next to Confirmar venta. Full blocker list stays in Totals.
+ */
+export function posBlockedConfirmSummary(blockers: string[]): string | null {
+  if (blockers.length === 0) {
+    return null;
+  }
+  if (blockers.length === 1) {
+    return blockers[0] ?? null;
+  }
+  return `Faltan ${blockers.length} requisitos`;
+}
+
+function normalizeBlockerText(blocker: string): string {
+  return blocker
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase();
+}
+
+function blockerMentions(blocker: string, ...needles: string[]): boolean {
+  const normalized = normalizeBlockerText(blocker);
+  return needles.some((needle) => normalized.includes(needle));
+}
+
+/**
+ * First incomplete field for "Ver requisitos", in the plan order:
+ * customer → pending price → currency → fiscal → other.
+ */
+export function firstPosProblemElementId(draft: {
+  blockers: string[];
+  lines: Array<{ id: string; pricePending: boolean }>;
+}): string | null {
+  if (draft.blockers.length === 0) {
+    return null;
+  }
+
+  if (draft.blockers.some((blocker) => blockerMentions(blocker, 'cliente'))) {
+    return POS_FIELD_IDS.customer;
+  }
+
+  const pendingPriceLine = draft.lines.find((line) => line.pricePending);
+  if (pendingPriceLine) {
+    return posLinePriceFieldId(pendingPriceLine.id);
+  }
+
+  if (draft.blockers.some((blocker) => blockerMentions(blocker, 'moneda'))) {
+    return POS_FIELD_IDS.currency;
+  }
+
+  if (draft.blockers.some((blocker) => blockerMentions(blocker, 'fiscal', 'rnc', 'cedula', 'comprobante'))) {
+    return POS_FIELD_IDS.fiscal;
+  }
+
+  if (draft.blockers.some((blocker) => blockerMentions(blocker, 'linea'))) {
+    return POS_FIELD_IDS.lines;
+  }
+
+  return POS_FIELD_IDS.blockers;
+}
+
+const FOCUSABLE_CONTROL = 'input, select, textarea, button, [tabindex]';
+
+/** Focus and scroll the control whose id was resolved from blockers. */
+export function focusPosElement(elementId: string): void {
+  const element = document.getElementById(elementId);
+  if (!(element instanceof HTMLElement)) {
+    return;
+  }
+
+  if (typeof element.scrollIntoView === 'function') {
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  const focusable = element.matches(FOCUSABLE_CONTROL)
+    ? element
+    : element.querySelector<HTMLElement>(FOCUSABLE_CONTROL);
+  focusable?.focus();
+}
 
 /**
  * POS copy follows the active capabilities so Release 2 billing never

@@ -17,23 +17,25 @@ describe('prepareCategorySave', () => {
   const seedCategories = createInitialState().categories;
 
   it('creates a unique assembly category without touching inventory', () => {
-    expect(nextCategoryId(seedCategories, 'Rin')).toBe('CAT-RIN');
+    expect(nextCategoryId(seedCategories, 'Bomba')).toBe('CAT-BOMBA');
 
     const result = prepareCategorySave(seedCategories, {
-      name: '  Rin  ',
-      codePrefix: 'rin',
+      name: '  Bomba  ',
+      codePrefix: 'bom',
       isAssembly: true,
       expectedComponents: ['Disco', '  Tuerca  ', ''],
+      attributes: [{ key: 'flow', label: 'Caudal', type: 'text' }],
     });
 
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value).toEqual({
-        id: 'CAT-RIN',
-        name: 'Rin',
-        codePrefix: 'RIN',
+        id: 'CAT-BOMBA',
+        name: 'Bomba',
+        codePrefix: 'BOM',
         isAssembly: true,
         expectedComponents: ['Disco', 'Tuerca'],
+        attributes: [{ key: 'flow', label: 'Caudal', type: 'text' }],
       });
     }
     expect(createInitialState().items).toHaveLength(createInitialState().items.length);
@@ -87,6 +89,9 @@ describe('prepareCategorySave', () => {
         'Turbo',
         'Motor de arranque',
       ]);
+      expect(result.value.attributes).toEqual([
+        { key: 'displacement', label: 'Cilindrada', type: 'text' },
+      ]);
     }
   });
 
@@ -117,6 +122,23 @@ describe('prepareCategorySave', () => {
       expect(result.value.name).toBe('Filtros HD');
       expect(result.value.codePrefix).toBe('FIL');
       expect(result.value.expectedComponents).toBeUndefined();
+    }
+  });
+
+  it('rejects duplicate category attribute keys', () => {
+    const result = prepareCategorySave(seedCategories, {
+      name: 'Sensor',
+      codePrefix: 'SEN',
+      isAssembly: false,
+      attributes: [
+        { key: 'voltage', label: 'Voltaje', type: 'text' },
+        { key: 'voltage', label: 'Voltios', type: 'text' },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe('VALIDATION');
     }
   });
 

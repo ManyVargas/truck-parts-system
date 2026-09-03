@@ -2,14 +2,18 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { ItemDetailView } from '../../api/contracts/inventory';
+import { useAuth } from '../auth/useAuth';
+import { can } from '../../shared/auth/policies';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
+import { UX_TERMS } from '../../shared/copy/glossary';
+import { labeledAttributeEntries } from '../../shared/domain/category-attributes';
 import { Card, EventTimeline, Mono, SectionTitle, money } from '../../shared/ui';
 import { HierarchyTree } from './HierarchyTree';
 import { PhotoGrid } from './PhotoGrid';
 import { StatusPanel } from './StatusPanel';
 
 const WO_TYPE: Record<string, string> = {
-  DISMANTLING: 'Desarme',
+  DISMANTLING: UX_TERMS.dismantling,
   INSTALLATION: 'Instalación',
 };
 
@@ -27,7 +31,11 @@ export function ItemDetailViewPanel({
   detail: ItemDetailView;
   actions: ReactNode;
 }) {
+  const { user } = useAuth();
   const { workOrders } = useAppCapabilities();
+  const canManageWorkOrders = can(user, 'workOrders.manage');
+  const category = detail.catalogCategories.find((entry) => entry.id === detail.categoryId);
+  const attributeEntries = labeledAttributeEntries(category?.attributes, detail.attributes);
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -96,13 +104,11 @@ export function ItemDetailViewPanel({
               <dt className="text-navy-400">Procedencia</dt>
               <dd>{detail.costProvenance ?? '—'}</dd>
             </div>
-            {detail.attributes && Object.keys(detail.attributes).length > 0 && (
+            {attributeEntries.length > 0 && (
               <div className="sm:col-span-2">
                 <dt className="text-navy-400">Atributos de categoría</dt>
                 <dd>
-                  {Object.entries(detail.attributes)
-                    .map(([key, value]) => `${key}: ${value}`)
-                    .join(' · ')}
+                  {attributeEntries.map((entry) => `${entry.label}: ${entry.value}`).join(' · ')}
                 </dd>
               </div>
             )}
@@ -110,7 +116,7 @@ export function ItemDetailViewPanel({
           {detail.notes && <p className="mt-3 text-sm text-navy-400">{detail.notes}</p>}
         </Card>
 
-        {workOrders && (
+        {workOrders && canManageWorkOrders && (
           <Card>
             <SectionTitle title="Órdenes de trabajo" />
             {detail.workOrders.length === 0 ? (

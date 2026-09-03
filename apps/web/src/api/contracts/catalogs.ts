@@ -1,3 +1,5 @@
+import type { CategoryAttributeDefinition } from './entities';
+
 export type SaveCategoryInput = {
   id?: string;
   name: string;
@@ -5,6 +7,8 @@ export type SaveCategoryInput = {
   codePrefix?: string;
   isAssembly: boolean;
   expectedComponents?: string[];
+  /** Omit on edit to keep the current schema. Empty array clears it. */
+  attributes?: CategoryAttributeDefinition[];
 };
 
 export type SaveServiceInput = {

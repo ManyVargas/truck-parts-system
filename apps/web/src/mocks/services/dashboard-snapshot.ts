@@ -14,11 +14,13 @@ import { toHistoryEventView } from './history-view';
 
 const RECENT_INVOICE_LIMIT = 5;
 const ACTIVITY_LIMIT = 8;
+const PROFIT_ACTIVITY_TYPES = new Set(['GROSS_PROFIT_RECORDED', 'DEMO_FX_TOGGLED']);
 
 export type BuildDashboardSnapshotOptions = {
   nowIso?: string;
   includeProfitability: boolean;
   includeAdminAlerts?: boolean;
+  includeWorkOrderQueue?: boolean;
 };
 
 function availableInventoryCount(state: AppState): number {
@@ -146,12 +148,17 @@ export function buildDashboardSnapshot(
     outstandingDop: outstanding.dop,
     outstandingUsd: outstanding.usd,
     draftCount: state.invoices.filter((invoice) => invoice.status === 'DRAFT').length,
-    pendingDismantling: state.workOrders.filter(
-      (order) => order.type === 'DISMANTLING' && order.status === 'PENDING',
-    ).length,
-    workOrdersInProgress: state.workOrders.filter((order) => order.status === 'IN_PROGRESS').length,
     incompleteAssemblies: incompleteAssemblyCount(state),
   };
+
+  if (options.includeWorkOrderQueue) {
+    kpis.pendingDismantling = state.workOrders.filter(
+      (order) => order.type === 'DISMANTLING' && order.status === 'PENDING',
+    ).length;
+    kpis.workOrdersInProgress = state.workOrders.filter(
+      (order) => order.status === 'IN_PROGRESS',
+    ).length;
+  }
 
   if (options.includeProfitability) {
     kpis.profitDop = profitDopTotal(state);
@@ -172,6 +179,7 @@ export function buildDashboardSnapshot(
     .filter((row): row is RecentInvoiceRow => row != null);
 
   const activity: ActivityRow[] = [...state.events]
+    .filter((event) => options.includeProfitability || !PROFIT_ACTIVITY_TYPES.has(event.type))
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
     .slice(0, ACTIVITY_LIMIT)
     .map((event) => toHistoryEventView(event, state.users));

@@ -115,7 +115,7 @@ Deactivation must invalidate future access while preserving historical foreign-k
 - [x] Login/logout flow.
 - [x] Session-expired / inactive-account handling.
 - [x] Administrator user-management screen (`name`, `username`, optional `phone`/`email`, role, active state). Prototype mock: `/users`, `users.manage`, password required on create. Covered by unit, integration, and component tests (WM11).
-- [x] Role-aware navigation without treating hidden controls as security.
+- [x] Role-aware navigation without treating hidden controls as security. Prototype mock 2.0-M1.2 also hides on-screen actions the role cannot perform (`can()` + route guards).
 - [x] Self-service profile edit (own name, optional phone/email, password) for every active role. Username, role, and active stay administrator-managed. Uses `profile.update`, not `users.manage`. Covered by unit, integration, and component tests.
 
 ### Tests

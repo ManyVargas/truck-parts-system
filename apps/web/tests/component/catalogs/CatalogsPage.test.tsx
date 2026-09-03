@@ -27,14 +27,14 @@ describe('CatalogsPage', () => {
 
     expect(await screen.findByText('Motor')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Nueva categoría' }));
-    await user.type(screen.getByLabelText('Nombre'), 'Rin');
-    await user.type(screen.getByLabelText('Prefijo de código'), 'RIN');
+    await user.type(screen.getByLabelText('Nombre'), 'Bomba');
+    await user.type(screen.getByLabelText('Prefijo de código'), 'BOM');
     await user.click(screen.getByLabelText(/Es ensamblaje/));
     await user.type(screen.getByLabelText('Componentes esperados'), 'Disco\nTuerca');
     await user.click(screen.getByRole('button', { name: 'Guardar' }));
 
     expect(await screen.findByText('Categoría creada')).toBeVisible();
-    expect(await screen.findByText('Rin')).toBeVisible();
+    expect(await screen.findByText('Bomba')).toBeVisible();
 
     unmount();
     renderWithProviders(<InventoryPage />, { route: '/inventory' });
@@ -42,7 +42,35 @@ describe('CatalogsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
     const dialog = screen.getByRole('dialog');
 
-    expect(within(dialog).getByRole('option', { name: /Rin/ })).toBeInTheDocument();
+    expect(within(dialog).getByRole('option', { name: /Bomba/ })).toBeInTheDocument();
+  });
+
+  it('defines category attributes that appear as registration fields', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderWithProviders(<CatalogsPage />, { route: '/catalogs' });
+
+    await user.click(screen.getByRole('button', { name: 'Nueva categoría' }));
+    await user.type(screen.getByLabelText('Nombre'), 'Sensor');
+    await user.type(screen.getByLabelText('Prefijo de código'), 'SEN');
+    await user.click(screen.getByRole('button', { name: 'Añadir atributo' }));
+    expect(screen.queryByLabelText('Clave')).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText('Etiqueta'), 'Señal');
+    await user.selectOptions(screen.getByLabelText('Tipo'), 'text');
+    await user.click(screen.getByLabelText('Obligatorio al registrar'));
+    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    expect(await screen.findByText('Categoría creada')).toBeVisible();
+    expect(await screen.findByText('Señal')).toBeVisible();
+
+    unmount();
+    renderWithProviders(<InventoryPage />, { route: '/inventory' });
+    await screen.findByText('Filtro de aceite HD');
+    await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
+    const dialog = screen.getByRole('dialog');
+    await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-SENSOR');
+
+    expect(within(dialog).getByLabelText('Señal')).toBeVisible();
+    expect(within(dialog).queryByLabelText('Atributos (opcional)')).not.toBeInTheDocument();
   });
 
   it('keeps the edit dialog open and shows an error when an expected name is repeated', async () => {

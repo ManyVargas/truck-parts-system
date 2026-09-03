@@ -425,4 +425,27 @@ describe('mechanic take, evidence and completion', () => {
       'OD-DEMO-062',
     ]);
   });
+
+  it('lists a cancelled assigned order for that mechanic and hides cancelled-before-take', () => {
+    const state = createInitialState();
+
+    expect(
+      cancelOrder(state, ADMIN, {
+        workOrderId: 'OD-DEMO-060',
+        reason: 'Abandono verificado',
+        physicalVerified: true,
+      }).ok,
+    ).toBe(true);
+    expect(
+      cancelOrder(state, ADMIN, {
+        workOrderId: 'OD-DEMO-062',
+        reason: 'Ya no aplica instalar',
+      }).ok,
+    ).toBe(true);
+
+    const ids = buildMechanicWorkOrderList(state, PEDRO).map((entry) => entry.id);
+    expect(ids).toContain('OD-DEMO-060');
+    expect(ids).toContain('OD-DEMO-061');
+    expect(ids).not.toContain('OD-DEMO-062');
+  });
 });

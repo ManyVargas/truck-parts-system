@@ -1,18 +1,19 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import type { Category, ItemCondition } from '../../api/contracts/entities';
 import type { AssemblyBaselineEntry, RegisterItemInput } from '../../api/contracts/inventory';
 import { inventoryRepository } from '../../api/repositories';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
+import { UX_TERMS } from '../../shared/copy/glossary';
 import { Button, Field, Info, Input, Modal, Select, Textarea } from '../../shared/ui';
 import { BaselineChecklist } from './BaselineChecklist';
+import { CategoryAttributeFields } from './CategoryAttributeFields';
 import { ITEM_CONDITIONS } from './item-conditions';
 import { OptionalDetails } from './OptionalDetails';
 import { PhotoEditor } from './PhotoEditor';
 import {
   mergeBaselineEntries,
-  parseAttributeLines,
   pendingEnrichmentLabels,
   type RegistrationMode,
 } from './registration-enrichment';
@@ -31,8 +32,12 @@ const EMPTY_ITEM: RegisterItemInput = {
   photos: [],
 };
 
+const REGISTER_STEP1_FORM_ID = 'register-item-step-1';
+const REGISTER_STEP2_FORM_ID = 'register-item-step-2';
+
 type RegisteredSummary = {
   id: string;
+  mode: RegistrationMode;
   pending: string[];
 };
 
@@ -48,7 +53,6 @@ export function RegisterItemWizard({
   const [step, setStep] = useState<1 | 2>(1);
   const [item, setItem] = useState<RegisterItemInput>(EMPTY_ITEM);
   const [qtySku, setQtySku] = useState('');
-  const [attributesText, setAttributesText] = useState('');
   const [initialQuantity, setInitialQuantity] = useState('0');
   const [unitCostDop, setUnitCostDop] = useState('');
   const [baseline, setBaseline] = useState<AssemblyBaselineEntry[]>([]);
@@ -65,6 +69,8 @@ export function RegisterItemWizard({
   );
   const isAssemblyFlow =
     Boolean(hierarchy) && mode === 'INDIVIDUAL' && Boolean(selectedCategory?.isAssembly);
+  const categoryAttributes = selectedCategory?.attributes ?? [];
+  const showCharacteristics = mode === 'INDIVIDUAL' && categoryAttributes.length > 0;
 
   const patchItem = (patch: Partial<RegisterItemInput>) =>
     setItem((current) => ({ ...current, ...patch }));
@@ -73,7 +79,6 @@ export function RegisterItemWizard({
     setStep(1);
     setItem(EMPTY_ITEM);
     setQtySku('');
-    setAttributesText('');
     setInitialQuantity('0');
     setUnitCostDop('');
     setBaseline([]);
@@ -89,8 +94,7 @@ export function RegisterItemWizard({
   const save = async () => {
     setSaving(true);
     setError(undefined);
-    const attributes = parseAttributeLines(attributesText);
-    const normalizedItem = { ...item, attributes };
+    const normalizedItem = item;
     const result =
       mode === 'QUANTITY'
         ? await inventoryRepository.registerQtyProduct({
@@ -114,7 +118,8 @@ export function RegisterItemWizard({
     onRegistered(id);
     setRegistered({
       id,
-      pending: pendingEnrichmentLabels(mode, normalizedItem),
+      mode,
+      pending: pendingEnrichmentLabels(mode, normalizedItem, selectedCategory?.attributes),
     });
   };
 
@@ -137,49 +142,128 @@ export function RegisterItemWizard({
       ? 'Registrar ensamblaje'
       : 'Registrar inventario';
 
-  return (
-    <Modal open={open} title={modalTitle} onClose={close}>
-      <div className="max-h-[75vh] overflow-y-auto pr-1">
-        {registered ? (
-          <div className="space-y-4">
-            <Info tone="success" title={`${registered.id} quedó registrado`}>
-              <p>Ya está en inventario y puede buscarse en el listado.</p>
-              {registered.pending.length > 0 ? (
-                <>
-                  <p className="mt-2">
-                    Aún puede completar: {registered.pending.join(', ')}.
-                  </p>
-                  <p className="mt-1">Esa información se añade después desde el detalle de la pieza.</p>
-                </>
-              ) : (
-                <p className="mt-2">No quedó información adicional pendiente.</p>
-              )}
-            </Info>
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={close}>
-                Volver al listado
-              </Button>
-              <Button
-                onClick={() => {
-                  const itemId = registered.id;
-                  close();
-                  navigate(`/inventory/${itemId}`);
-                }}
-              >
-                Ver pieza
-              </Button>
-            </div>
-          </div>
-        ) : step === 1 ? (
-          <form className="space-y-4" onSubmit={handleFirstStep}>
-            {isAssemblyFlow && (
-              <p className="text-sm font-medium text-navy" aria-live="polite">
-                Paso 1 de 2 — Información del ensamblaje
-              </p>
-            )}
+  const footer = registered ? (
+    <>
+      <Button variant="secondary" onClick={close}>
+        Volver al listado
+      </Button>
+      <Button
+        onClick={() => {
+          const itemId = registered.id;
+          close();
+          navigate(`/inventory/${itemId}`);
+        }}
+      >
+        {registered.mode === 'QUANTITY' ? 'Ver producto' : 'Ver pieza'}
+      </Button>
+    </>
+  ) : step === 2 ? (
+    <>
+      <Button variant="secondary" onClick={close} disabled={saving}>
+        Cancelar
+      </Button>
+      <div className="flex gap-2">
+        <Button variant="secondary" onClick={() => setStep(1)} disabled={saving}>
+          Atrás
+        </Button>
+        <Button type="submit" form={REGISTER_STEP2_FORM_ID} disabled={saving} busy={saving}>
+          {saving ? 'Guardando…' : 'Registrar ensamblaje'}
+        </Button>
+      </div>
+    </>
+  ) : (
+    <>
+      <Button variant="secondary" onClick={close} disabled={saving}>
+        Cancelar
+      </Button>
+      <Button type="submit" form={REGISTER_STEP1_FORM_ID} disabled={saving} busy={saving}>
+        {isAssemblyFlow ? 'Continuar' : saving ? 'Guardando…' : 'Registrar'}
+      </Button>
+    </>
+  );
 
-            <fieldset className="space-y-2">
-              <legend className="text-sm font-medium text-navy">Tipo de registro</legend>
+  return (
+    <Modal open={open} title={modalTitle} onClose={close} size="lg" footer={footer}>
+      {registered ? (
+        <Info tone="success" title={`${registered.id} quedó registrado`}>
+          <p>Ya está en inventario y puede buscarse en el listado.</p>
+          {registered.pending.length > 0 ? (
+            <>
+              <p className="mt-2">Aún puede completar: {registered.pending.join(', ')}.</p>
+              <p className="mt-1">Esa información se añade después desde el detalle de la pieza.</p>
+            </>
+          ) : (
+            <p className="mt-2">No quedó información adicional pendiente.</p>
+          )}
+        </Info>
+      ) : step === 1 ? (
+        <form id={REGISTER_STEP1_FORM_ID} className="space-y-4" onSubmit={handleFirstStep}>
+          {isAssemblyFlow && (
+            <p className="text-sm font-medium text-navy" aria-live="polite">
+              Paso 1 de 2 — Información del ensamblaje
+            </p>
+          )}
+
+          {error && (
+            <Info tone="error" title="No se pudo registrar">
+              {error}
+            </Info>
+          )}
+
+          <FormSection legend="Identificación">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Nombre" htmlFor="register-name">
+                <Input
+                  id="register-name"
+                  value={item.name}
+                  onChange={(event) => patchItem({ name: event.target.value })}
+                  required
+                />
+              </Field>
+              <Field label="Categoría" htmlFor="register-category">
+                <Select
+                  id="register-category"
+                  value={item.categoryId}
+                  onChange={(event) =>
+                    patchItem({ categoryId: event.target.value, attributes: undefined })
+                  }
+                  required
+                >
+                  <option value="">Seleccione…</option>
+                  {visibleCategories.map((category) => (
+                    <option
+                      key={category.id}
+                      value={category.id}
+                      disabled={mode === 'QUANTITY' && category.isAssembly}
+                    >
+                      {category.name}
+                      {category.isAssembly ? ` · ${UX_TERMS.assembly}` : ''}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              {mode === 'QUANTITY' ? (
+                <Field
+                  label="Código de producto"
+                  htmlFor="register-id"
+                  hint="SKU del producto intercambiable, no un código por unidad."
+                >
+                  <Input
+                    id="register-id"
+                    value={qtySku}
+                    onChange={(event) => setQtySku(event.target.value)}
+                    required
+                  />
+                </Field>
+              ) : (
+                <InternalCodeInfo codePrefix={selectedCategory?.codePrefix} />
+              )}
+            </div>
+          </FormSection>
+
+          <FormSection legend="Inventario">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-navy">Tipo de registro</p>
               <div className="grid grid-cols-2 gap-2">
                 <label className="rounded-lg border border-navy-200 p-3 text-sm">
                   <input
@@ -197,81 +281,12 @@ export function RegisterItemWizard({
                     checked={mode === 'QUANTITY'}
                     onChange={() => setMode('QUANTITY')}
                   />{' '}
-                  Producto por cantidad
+                  {UX_TERMS.quantityItem}
                 </label>
               </div>
-            </fieldset>
-
-            {error && (
-              <Info tone="error" title="No se pudo registrar">
-                {error}
-              </Info>
-            )}
+            </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              {mode === 'QUANTITY' ? (
-                <Field
-                  label="Código de producto"
-                  htmlFor="register-id"
-                  hint="SKU del producto intercambiable, no un código por unidad."
-                >
-                  <Input
-                    id="register-id"
-                    value={qtySku}
-                    onChange={(event) => setQtySku(event.target.value)}
-                    required
-                  />
-                </Field>
-              ) : (
-                <Field
-                  label="Código interno"
-                  htmlFor="register-code"
-                  hint={
-                    selectedCategory
-                      ? `Se asignará al guardar con prefijo ${selectedCategory.codePrefix}.`
-                      : 'Elige una categoría; el sistema asigna el código.'
-                  }
-                >
-                  <Input
-                    id="register-code"
-                    value={
-                      selectedCategory
-                        ? selectedCategory.codePrefix
-                        : 'Seleccione una categoría'
-                    }
-                    readOnly
-                    disabled
-                  />
-                </Field>
-              )}
-              <Field label="Nombre" htmlFor="register-name">
-                <Input
-                  id="register-name"
-                  value={item.name}
-                  onChange={(event) => patchItem({ name: event.target.value })}
-                  required
-                />
-              </Field>
-              <Field label="Categoría" htmlFor="register-category">
-                <Select
-                  id="register-category"
-                  value={item.categoryId}
-                  onChange={(event) => patchItem({ categoryId: event.target.value })}
-                  required
-                >
-                  <option value="">Seleccione…</option>
-                  {visibleCategories.map((category) => (
-                    <option
-                      key={category.id}
-                      value={category.id}
-                      disabled={mode === 'QUANTITY' && category.isAssembly}
-                    >
-                      {category.name}
-                      {category.isAssembly ? ' · Ensamblaje' : ''}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
               {mode === 'INDIVIDUAL' && (
                 <>
                   <Field label="Condición" htmlFor="register-condition">
@@ -344,137 +359,146 @@ export function RegisterItemWizard({
                   </Field>
                 </>
               )}
+              <Field label="Ubicación (opcional)" htmlFor="register-location">
+                <Input
+                  id="register-location"
+                  value={item.location ?? ''}
+                  onChange={(event) => patchItem({ location: event.target.value })}
+                />
+              </Field>
             </div>
+          </FormSection>
 
-            <OptionalDetails>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Marca (opcional)" htmlFor="register-brand">
-                  <Input
-                    id="register-brand"
-                    value={item.brand ?? ''}
-                    onChange={(event) => patchItem({ brand: event.target.value })}
-                  />
-                </Field>
-                {mode === 'INDIVIDUAL' && (
-                  <>
-                    <Field label="Modelo (opcional)" htmlFor="register-model">
-                      <Input
-                        id="register-model"
-                        value={item.model ?? ''}
-                        onChange={(event) => patchItem({ model: event.target.value })}
-                      />
-                    </Field>
-                    <Field label="Serial (opcional)" htmlFor="register-serial">
-                      <Input
-                        id="register-serial"
-                        value={item.serial ?? ''}
-                        onChange={(event) => patchItem({ serial: event.target.value })}
-                      />
-                    </Field>
-                    <Field label="Número de parte (opcional)" htmlFor="register-part">
-                      <Input
-                        id="register-part"
-                        value={item.partNumber ?? ''}
-                        onChange={(event) => patchItem({ partNumber: event.target.value })}
-                      />
-                    </Field>
-                    <Field
-                      label="Procedencia del costo (opcional)"
-                      htmlFor="register-cost-source"
-                      hint="Por ejemplo: factura, estimado."
-                    >
-                      <Input
-                        id="register-cost-source"
-                        value={item.costProvenance ?? ''}
-                        onChange={(event) => patchItem({ costProvenance: event.target.value })}
-                      />
-                    </Field>
-                  </>
-                )}
-                <Field label="Ubicación (opcional)" htmlFor="register-location">
-                  <Input
-                    id="register-location"
-                    value={item.location ?? ''}
-                    onChange={(event) => patchItem({ location: event.target.value })}
-                  />
-                </Field>
-              </div>
+          {showCharacteristics && (
+            <FormSection legend="Características">
+              <CategoryAttributeFields
+                definitions={categoryAttributes}
+                values={item.attributes}
+                idPrefix="register-attr"
+                onChange={(attributes) => patchItem({ attributes })}
+              />
+            </FormSection>
+          )}
+
+          {mode === 'INDIVIDUAL' && (
+            <FormSection legend="Evidencia">
+              <PhotoEditor
+                photos={item.photos ?? []}
+                onChange={(photos) => patchItem({ photos })}
+              />
+            </FormSection>
+          )}
+
+          <OptionalDetails>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Marca (opcional)" htmlFor="register-brand">
+                <Input
+                  id="register-brand"
+                  value={item.brand ?? ''}
+                  onChange={(event) => patchItem({ brand: event.target.value })}
+                />
+              </Field>
               {mode === 'INDIVIDUAL' && (
                 <>
+                  <Field label="Modelo (opcional)" htmlFor="register-model">
+                    <Input
+                      id="register-model"
+                      value={item.model ?? ''}
+                      onChange={(event) => patchItem({ model: event.target.value })}
+                    />
+                  </Field>
+                  <Field label="Serial (opcional)" htmlFor="register-serial">
+                    <Input
+                      id="register-serial"
+                      value={item.serial ?? ''}
+                      onChange={(event) => patchItem({ serial: event.target.value })}
+                    />
+                  </Field>
+                  <Field label="Número de parte (opcional)" htmlFor="register-part">
+                    <Input
+                      id="register-part"
+                      value={item.partNumber ?? ''}
+                      onChange={(event) => patchItem({ partNumber: event.target.value })}
+                    />
+                  </Field>
                   <Field
-                    label="Atributos (opcional)"
-                    htmlFor="register-attributes"
-                    hint="Uno por línea, por ejemplo voltaje: 24V."
+                    label="Procedencia del costo (opcional)"
+                    htmlFor="register-cost-source"
+                    hint="Por ejemplo: factura, estimado."
                   >
-                    <Textarea
-                      id="register-attributes"
-                      rows={3}
-                      value={attributesText}
-                      onChange={(event) => setAttributesText(event.target.value)}
+                    <Input
+                      id="register-cost-source"
+                      value={item.costProvenance ?? ''}
+                      onChange={(event) => patchItem({ costProvenance: event.target.value })}
                     />
                   </Field>
-                  <Field label="Notas (opcional)" htmlFor="register-notes">
-                    <Textarea
-                      id="register-notes"
-                      rows={3}
-                      value={item.notes ?? ''}
-                      onChange={(event) => patchItem({ notes: event.target.value })}
-                    />
-                  </Field>
-                  <PhotoEditor
-                    photos={item.photos ?? []}
-                    onChange={(photos) => patchItem({ photos })}
-                  />
                 </>
               )}
-            </OptionalDetails>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={close} disabled={saving}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {isAssemblyFlow
-                  ? 'Continuar'
-                  : saving
-                    ? 'Guardando…'
-                    : 'Registrar'}
-              </Button>
             </div>
-          </form>
-        ) : (
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void save();
-            }}
-          >
-            <p className="text-sm font-medium text-navy" aria-live="polite">
-              Paso 2 de 2 — Componentes iniciales
-            </p>
-            {error && (
-              <Info tone="error" title="No se pudo registrar">
-                {error}
-              </Info>
+            {mode === 'INDIVIDUAL' && (
+              <Field label="Notas (opcional)" htmlFor="register-notes">
+                <Textarea
+                  id="register-notes"
+                  rows={3}
+                  value={item.notes ?? ''}
+                  onChange={(event) => patchItem({ notes: event.target.value })}
+                />
+              </Field>
             )}
-            <BaselineChecklist
-              expectedComponents={selectedCategory?.expectedComponents ?? []}
-              categories={categories}
-              entries={baseline}
-              onChange={setBaseline}
-            />
-            <div className="flex justify-between gap-2">
-              <Button variant="secondary" onClick={() => setStep(1)} disabled={saving}>
-                Atrás
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving ? 'Guardando…' : 'Registrar ensamblaje'}
-              </Button>
-            </div>
-          </form>
-        )}
-      </div>
+          </OptionalDetails>
+        </form>
+      ) : (
+        <form
+          id={REGISTER_STEP2_FORM_ID}
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void save();
+          }}
+        >
+          <p className="text-sm font-medium text-navy" aria-live="polite">
+            Paso 2 de 2 — Componentes iniciales
+          </p>
+          {error && (
+            <Info tone="error" title="No se pudo registrar">
+              {error}
+            </Info>
+          )}
+          <BaselineChecklist
+            expectedComponents={selectedCategory?.expectedComponents ?? []}
+            categories={categories}
+            entries={baseline}
+            onChange={setBaseline}
+          />
+        </form>
+      )}
     </Modal>
+  );
+}
+
+/** Visual grouping inside step 1 — not extra wizard steps. */
+function FormSection({ legend, children }: { legend: string; children: ReactNode }) {
+  return (
+    <fieldset className="space-y-3 rounded-lg border border-navy-200 p-4">
+      <legend className="px-1 text-sm font-semibold text-navy">{legend}</legend>
+      {children}
+    </fieldset>
+  );
+}
+
+/**
+ * Internal codes are assigned on save. Showing them as a disabled input
+ * implied the operator could (or should) edit the value.
+ */
+function InternalCodeInfo({ codePrefix }: { codePrefix?: string }) {
+  return (
+    <div className="flex flex-col gap-1.5 sm:col-span-2">
+      <p className="text-sm font-medium text-navy">Código interno</p>
+      <p className="text-sm text-navy-400">
+        {codePrefix
+          ? `Se asignará al guardar con prefijo ${codePrefix}.`
+          : 'Se generará automáticamente al registrar.'}
+      </p>
+    </div>
   );
 }

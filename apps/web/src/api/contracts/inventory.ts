@@ -13,10 +13,33 @@ import type {
 
 export type InventoryKind = 'ITEM' | 'QTY';
 
+/** Quick chips on the inventory list. Combined with AND. Distinct from advanced fields. */
+export type InventoryQuickFilter =
+  | 'available'
+  | 'installed'
+  | 'independent'
+  | 'reserved'
+  | 'assemblies'
+  | 'incomplete'
+  | 'quantity';
+
+/**
+ * Inventory catalog filters.
+ * URL query on `/inventory` (M3 owns parsing; M5 KPI links use the same keys):
+ * q, category, sold=1, available=1, installed=1, independent=1, reserved=1,
+ * assemblies=1, incomplete=1, quantity=1, location, condition,
+ * commercial=AVAILABLE|SOLD|UNAVAILABLE, kind=ITEM|QTY, pendingCatalog=1
+ */
 export type InventoryListFilters = {
   query?: string;
   categoryId?: string;
   includeSold?: boolean;
+  quick?: InventoryQuickFilter[];
+  location?: string;
+  condition?: ItemCondition;
+  commercialState?: CommercialState | 'UNAVAILABLE';
+  kind?: InventoryKind;
+  pendingCatalog?: boolean;
 };
 
 export type DraftEligibility = {

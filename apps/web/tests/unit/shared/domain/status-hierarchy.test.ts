@@ -23,7 +23,7 @@ describe('status-hierarchy', () => {
       'Instalado en Motor Detroit DD15',
     );
     expect(physicalRelationLabel('INDEPENDENT')).toBe('Independiente');
-    expect(physicalRelationLabel()).toBe('Por cantidad');
+    expect(physicalRelationLabel()).toBe('Producto por cantidad');
   });
 
   it('surfaces only incomplete as an exception and assembly as optional context', () => {

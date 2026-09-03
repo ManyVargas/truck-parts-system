@@ -2,7 +2,7 @@
 
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Route, Routes } from 'react-router-dom';
 
 import { PosPage } from '../../../src/features/sales/PosPage';
@@ -23,6 +23,24 @@ function renderPos(draftId = 'INV-DRAFT-01', capabilities?: AppCapabilities) {
   );
 }
 
+const originalMatchMedia = window.matchMedia;
+
+function stubViewportWidth(width: number) {
+  window.matchMedia = ((query: string) => {
+    const minWidth = Number(/min-width:\s*(\d+)/.exec(query)?.[1] ?? 0);
+    return {
+      matches: width >= minWidth,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+  }) as typeof window.matchMedia;
+}
+
 describe('PosPage', () => {
   beforeEach(() => {
     resetMockState();
@@ -31,6 +49,7 @@ describe('PosPage', () => {
 
   afterEach(() => {
     resetMockState();
+    window.matchMedia = originalMatchMedia;
   });
 
   it('loads the seed draft with nonfiscal ITBIS at zero', async () => {
@@ -55,17 +74,21 @@ describe('PosPage', () => {
     expect(screen.getByTestId('pos-total')).toBeVisible();
   });
 
-  it('asks for confirmation before discarding a draft with lines', async () => {
+  it('discards a draft with lines via undo toast instead of a confirm dialog', async () => {
     const user = userEvent.setup();
     renderPos();
     await screen.findByText('Alternador 24V');
 
     await user.click(screen.getByRole('button', { name: 'Descartar borrador' }));
 
-    expect(await screen.findByRole('dialog', { name: 'Descartar borrador' })).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Seguir editando' }));
     expect(screen.queryByRole('dialog', { name: 'Descartar borrador' })).not.toBeInTheDocument();
-    expect(screen.getByText('Alternador 24V')).toBeVisible();
+    expect(await screen.findByText('Borrador descartado.')).toBeVisible();
+    expect(screen.queryByText('Alternador 24V')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Deshacer' }));
+
+    expect(await screen.findByText('Alternador 24V')).toBeVisible();
+    expect(screen.getByText('Aceite 15W-40 Galón')).toBeVisible();
   });
 
   it('hides inventory line types and reservation copy in Release 2', async () => {
@@ -149,5 +172,71 @@ describe('PosPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Punto de venta' })).toBeVisible();
     expect(screen.queryByText('Borrador no encontrado')).not.toBeInTheDocument();
+  });
+
+  it('explains a blocked confirm and jumps to the first missing requirement', async () => {
+    const created = await mockSalesRepository.createDraft();
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const user = userEvent.setup();
+    renderPos(created.value.draftId);
+
+    expect(await screen.findByRole('button', { name: 'Confirmar venta' })).toBeDisabled();
+    expect(screen.getByText('Agregue al menos una línea', { selector: '#pos-confirm-block-reason' })).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Ver requisitos' }));
+    expect(document.getElementById('pos-lines')).toHaveFocus();
+  });
+
+  it('jumps Ver requisitos to the first pending price', async () => {
+    const created = await mockSalesRepository.createDraft();
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    await mockSalesRepository.addLine({
+      draftId: created.value.draftId,
+      type: 'ITEM',
+      itemId: 'ALT-010',
+    });
+
+    const user = userEvent.setup();
+    renderPos(created.value.draftId);
+
+    expect(await screen.findByText('Hay precios pendientes', { selector: '#pos-confirm-block-reason' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Ver requisitos' }));
+    expect(document.activeElement).toHaveAttribute('aria-label', expect.stringMatching(/^Precio de /));
+  });
+
+  it('removes a line immediately and restores it from the undo toast', async () => {
+    const user = userEvent.setup();
+    renderPos();
+    await screen.findByText('Alternador 24V');
+
+    await user.click(screen.getAllByRole('button', { name: 'Quitar' })[0]!);
+
+    expect(await screen.findByText('Producto eliminado.')).toBeVisible();
+    expect(screen.queryByText('Alternador 24V')).not.toBeInTheDocument();
+    expect(screen.getByText('Aceite 15W-40 Galón')).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Deshacer' }));
+
+    expect(await screen.findByText('Alternador 24V')).toBeVisible();
+    expect(screen.queryByText('Precio pendiente')).not.toBeInTheDocument();
+  });
+
+  it('renders line cards below the lg breakpoint', async () => {
+    stubViewportWidth(768);
+    renderPos();
+
+    expect(await screen.findByText('Alternador 24V')).toBeVisible();
+    expect(screen.queryByRole('columnheader', { name: 'Descripción' })).not.toBeInTheDocument();
+    expect(screen.getByText('Artículo · ALT-004')).toBeVisible();
+    expect(screen.getAllByText('Cantidad')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Quitar' })).toHaveLength(2);
   });
 });

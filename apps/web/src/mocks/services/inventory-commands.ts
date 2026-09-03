@@ -40,6 +40,7 @@ import {
   protectedAncestor,
   syncDirectParentCompleteness,
 } from './inventory-helpers';
+import { applyCategoryAttributes } from '../../shared/domain/category-attributes';
 import { allocateItemCode } from './item-code';
 
 function optionalText(value: string | undefined): string | undefined {
@@ -51,15 +52,6 @@ function normalizePhotos(photos: string[] | undefined): string[] {
   return [...new Set((photos ?? []).map((photo) => photo.trim()).filter(Boolean))];
 }
 
-function normalizeAttributes(
-  attributes: Record<string, string> | undefined,
-): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(attributes ?? {})
-      .map(([key, value]) => [key.trim(), value.trim()])
-      .filter(([key, value]) => key && value),
-  );
-}
 
 function assignOptionalText<T extends object>(
   target: T,
@@ -172,7 +164,11 @@ function buildRegisteredItem(
   }
   const id = allocated.value;
 
-  const attributes = normalizeAttributes(input.attributes);
+  const attributesResult = applyCategoryAttributes(category.attributes, input.attributes);
+  if (!attributesResult.ok) {
+    return attributesResult;
+  }
+  const attributes = attributesResult.value;
   const photos = normalizePhotos(input.photos);
   const item: Item = {
     id,
@@ -202,7 +198,7 @@ function buildRegisteredItem(
   if (input.acquisitionCostDop !== undefined) {
     item.acquisitionCostDop = input.acquisitionCostDop;
   }
-  if (Object.keys(attributes).length > 0) {
+  if (attributes) {
     item.attributes = attributes;
   }
   if (parentId) {
@@ -330,8 +326,18 @@ export function updateItemDetails(
   }
 
   const photos = input.photos !== undefined ? normalizePhotos(input.photos) : [...item.photos];
-  const attributes =
-    input.attributes !== undefined ? normalizeAttributes(input.attributes) : { ...(item.attributes ?? {}) };
+  const category = state.categories.find((entry) => entry.id === item.categoryId);
+  if (!category) {
+    return err({ code: 'VALIDATION', message: 'La categoría seleccionada no existe' });
+  }
+  const attributesResult =
+    input.attributes !== undefined
+      ? applyCategoryAttributes(category.attributes, input.attributes, item.attributes)
+      : ok(item.attributes);
+  if (!attributesResult.ok) {
+    return attributesResult;
+  }
+  const attributes = attributesResult.value ?? {};
   const brand = optionalText(input.brand);
   const model = optionalText(input.model);
   const serial = optionalText(input.serial);

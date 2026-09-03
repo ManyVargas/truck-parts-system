@@ -1,4 +1,7 @@
 import type { ItemDetailView } from '../../api/contracts/inventory';
+import { useAuth } from '../auth/useAuth';
+import { can } from '../../shared/auth/policies';
+import { locationDisplay } from '../../shared/copy/glossary';
 import { InventoryStatusCluster, PhysicalWorkChip } from '../../shared/domain';
 import { Card, Info } from '../../shared/ui';
 
@@ -9,6 +12,8 @@ const CONDITION_LABEL: Record<ItemDetailView['condition'], string> = {
 };
 
 export function StatusPanel({ detail }: { detail: ItemDetailView }) {
+  const { user } = useAuth();
+  const canResolveCatalogReviews = can(user, 'inventory.admin');
   const activeWork = detail.workOrders.find(
     (order) => order.status === 'PENDING' || order.status === 'IN_PROGRESS',
   );
@@ -38,7 +43,7 @@ export function StatusPanel({ detail }: { detail: ItemDetailView }) {
         </div>
         <div>
           <dt className="text-navy-400">Ubicación efectiva</dt>
-          <dd className="font-medium text-navy">{detail.effectiveLocation ?? 'Pendiente'}</dd>
+          <dd className="font-medium text-navy">{locationDisplay(detail.effectiveLocation)}</dd>
         </div>
         {detail.ownLocation && detail.ownLocation !== detail.effectiveLocation && (
           <div>
@@ -79,6 +84,11 @@ export function StatusPanel({ detail }: { detail: ItemDetailView }) {
       {detail.pendingCatalogReviews.length > 0 && (
         <div className="mt-4 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm text-navy">
           <p className="font-medium">Componentes añadidos al catálogo</p>
+          {!canResolveCatalogReviews && (
+            <p className="mt-1 text-navy-400">
+              Solo el administrador puede confirmar, registrar presente o marcar falta.
+            </p>
+          )}
           <ul className="mt-2 list-disc pl-4">
             {detail.pendingCatalogReviews.map((entry) => (
               <li key={entry.id}>

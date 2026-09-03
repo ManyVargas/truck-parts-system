@@ -1,28 +1,50 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
+import type { Currency } from '../../api/contracts/entities';
+import type { PosDraftView, PosLineView } from '../../api/contracts/sales';
 import { PageHeader } from '../../shared/layout/PageHeader';
+import { useMediaQuery } from '../../shared/layout/useMediaQuery';
 import { AssemblyKindChip, RelationChip } from '../../shared/domain';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
-import { Button, Card, Chip, Info, Modal, money, useToast } from '../../shared/ui';
+import { UNDO_TOAST_DURATION_MS } from '../../shared/copy/glossary';
+import { Button, Card, Chip, Info, money, useToast } from '../../shared/ui';
 import { AddLineModal } from './AddLineModal';
 import { AssemblyTree } from './AssemblyTree';
 import { ConfirmSaleModal } from './ConfirmSaleModal';
 import { DocumentPanel } from './DocumentPanel';
 import { LINE_TYPE_LABELS } from './labels';
-import { posDraftDescription, posEmptyLinesMessage, toPosUserMessage } from './pos-copy';
+import {
+  firstPosProblemElementId,
+  focusPosElement,
+  POS_DRAFT_DISCARDED_TOAST,
+  POS_FIELD_IDS,
+  POS_LINE_REMOVED_TOAST,
+  POS_UNDO_LABEL,
+  POS_VIEW_REQUIREMENTS_LABEL,
+  posBlockedConfirmSummary,
+  posDraftDescription,
+  posEmptyLinesMessage,
+  posLinePriceFieldId,
+  posLineSku,
+  toPosUserMessage,
+} from './pos-copy';
 import { PriceCell } from './PriceCell';
 import { TotalsPanel } from './TotalsPanel';
-import { usePos } from './usePos';
+import { restoreDiscardedDraft, snapshotPosDraft, snapshotPosLine, usePos } from './usePos';
+
+/** Tailwind `lg` — table on desktop, cards on tablet/mobile. */
+const POS_LINES_TABLE_MIN_WIDTH_PX = 1024;
 
 export function PosPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const pos = usePos(id);
   const capabilities = useAppCapabilities();
   const { pushToast } = useToast();
+  const isDesktopLines = useMediaQuery(`(min-width: ${POS_LINES_TABLE_MIN_WIDTH_PX}px)`, true);
   const [addOpen, setAddOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [discardOpen, setDiscardOpen] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [metaError, setMetaError] = useState<string | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -46,6 +68,8 @@ export function PosPage() {
 
   const draft = pos.result.draft;
   const readOnly = draft.status !== 'DRAFT';
+  const confirmBlocked = draft.blockers.length > 0;
+  const blockedSummary = posBlockedConfirmSummary(draft.blockers);
 
   async function handleAddLine(input: Parameters<typeof pos.addLine>[0]) {
     setAddError(null);
@@ -56,6 +80,69 @@ export function PosPage() {
     }
     setAddOpen(false);
     pushToast('Línea agregada', 'success');
+  }
+
+  async function handleRemoveLine(line: PosLineView) {
+    const snapshot = snapshotPosLine(line);
+    const response = await pos.removeLine(line.id);
+    if (!response.ok) {
+      pushToast(toPosUserMessage(response.error), 'error');
+      return;
+    }
+    pushToast(POS_LINE_REMOVED_TOAST, 'success', {
+      durationMs: UNDO_TOAST_DURATION_MS,
+      action: {
+        label: POS_UNDO_LABEL,
+        onClick: () => {
+          void pos.restoreRemovedLine(snapshot).then((restored) => {
+            if (!restored.ok) {
+              pushToast(toPosUserMessage(restored.error), 'error');
+            }
+          });
+        },
+      },
+    });
+  }
+
+  async function handleDiscardDraft() {
+    setDiscardError(null);
+    if (draft.lines.length === 0) {
+      const response = await pos.discard();
+      if (!response.ok) {
+        setDiscardError(toPosUserMessage(response.error));
+      }
+      return;
+    }
+
+    const snapshot = snapshotPosDraft(draft);
+    const response = await pos.discard();
+    if (!response.ok) {
+      setDiscardError(toPosUserMessage(response.error));
+      return;
+    }
+
+    pushToast(POS_DRAFT_DISCARDED_TOAST, 'success', {
+      durationMs: UNDO_TOAST_DURATION_MS,
+      action: {
+        label: POS_UNDO_LABEL,
+        onClick: () => {
+          void restoreDiscardedDraft(snapshot).then((restored) => {
+            if (!restored.ok) {
+              pushToast(toPosUserMessage(restored.error), 'error');
+              return;
+            }
+            navigate(`/sales/draft/${restored.value}`);
+          });
+        },
+      },
+    });
+  }
+
+  function handleViewRequirements() {
+    const elementId = firstPosProblemElementId(draft);
+    if (elementId) {
+      focusPosElement(elementId);
+    }
   }
 
   return (
@@ -74,7 +161,7 @@ export function PosPage() {
         actions={
           !readOnly && (
             <div className="flex flex-col items-stretch gap-3 sm:items-end">
-              <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="flex flex-wrap items-start justify-end gap-2">
                 <Button
                   variant="secondary"
                   size="sm"
@@ -83,16 +170,33 @@ export function PosPage() {
                 >
                   Agregar línea
                 </Button>
-                <Button
-                  size="lg"
-                  disabled={pos.isMutating || draft.blockers.length > 0}
-                  onClick={() => {
-                    setConfirmError(null);
-                    setConfirmOpen(true);
-                  }}
-                >
-                  Confirmar venta
-                </Button>
+                <div className="flex flex-col items-end gap-1">
+                  <Button
+                    size="lg"
+                    disabled={pos.isMutating || confirmBlocked}
+                    busy={pos.isMutating}
+                    aria-describedby={confirmBlocked ? 'pos-confirm-block-reason' : undefined}
+                    onClick={() => {
+                      setConfirmError(null);
+                      setConfirmOpen(true);
+                    }}
+                  >
+                    Confirmar venta
+                  </Button>
+                  {confirmBlocked && blockedSummary && (
+                    <div className="flex max-w-xs flex-wrap items-center justify-end gap-x-3 gap-y-1 text-sm text-amber-800">
+                      <span id="pos-confirm-block-reason">{blockedSummary}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto min-h-0 px-0 py-0 text-sm font-semibold text-brand hover:bg-transparent"
+                        onClick={handleViewRequirements}
+                      >
+                        {POS_VIEW_REQUIREMENTS_LABEL}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
               <Button
                 variant="ghost"
@@ -100,16 +204,7 @@ export function PosPage() {
                 className="self-end text-red-700 hover:bg-red-50"
                 disabled={pos.isMutating}
                 onClick={() => {
-                  setDiscardError(null);
-                  if (draft.lines.length === 0) {
-                    void pos.discard().then((response) => {
-                      if (!response.ok) {
-                        setDiscardError(toPosUserMessage(response.error));
-                      }
-                    });
-                    return;
-                  }
-                  setDiscardOpen(true);
+                  void handleDiscardDraft();
                 }}
               >
                 Descartar borrador
@@ -143,7 +238,7 @@ export function PosPage() {
 
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(16rem,1fr)]">
         <div className="flex min-w-0 flex-col gap-4">
-          <Card>
+          <Card id={POS_FIELD_IDS.lines} tabIndex={-1} className="outline-none">
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <h2 className="text-lg font-semibold text-navy">Líneas</h2>
               <Chip>{draft.id}</Chip>
@@ -151,76 +246,26 @@ export function PosPage() {
             </div>
             {draft.lines.length === 0 ? (
               <p className="text-sm text-navy-400">{posEmptyLinesMessage(capabilities)}</p>
+            ) : isDesktopLines ? (
+              <DraftLinesTable
+                draft={draft}
+                readOnly={readOnly}
+                isMutating={pos.isMutating}
+                onSetPrice={(lineId, unitPrice) => {
+                  void pos.setLinePrice(lineId, unitPrice);
+                }}
+                onRemove={handleRemoveLine}
+              />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-navy-100 text-navy-400">
-                      <th className="py-2 pr-3 font-medium">Descripción</th>
-                      <th className="py-2 pr-3 font-medium">Tipo</th>
-                      <th className="py-2 pr-3 font-medium">Cantidad</th>
-                      <th className="py-2 pr-3 font-medium">Precio</th>
-                      <th className="py-2 pr-3 font-medium">Impuesto ITBIS</th>
-                      <th className="py-2 pr-3 font-medium">Total</th>
-                      {!readOnly && <th className="py-2 font-medium"> </th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {draft.lines.map((line) => (
-                      <tr key={line.id} className="border-b border-navy-50 align-top">
-                        <td className="py-3 pr-3">
-                          <div className="font-medium text-navy">{line.description}</div>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {line.installed && (
-                              <RelationChip relationship="INSTALLED" parentName={line.parentName} />
-                            )}
-                            {line.isAssembly && <AssemblyKindChip isAssembly />}
-                          </div>
-                        </td>
-                        <td className="py-3 pr-3">
-                          <Chip>{LINE_TYPE_LABELS[line.type]}</Chip>
-                        </td>
-                        <td className="py-3 pr-3 text-navy">{line.quantity}</td>
-                        <td className="py-3 pr-3">
-                          {readOnly ? (
-                            money(line.unitPrice, draft.currency)
-                          ) : (
-                            <PriceCell
-                              lineId={line.id}
-                              value={line.unitPrice}
-                              pending={line.pricePending}
-                              disabled={pos.isMutating}
-                              onCommit={(lineId, unitPrice) => {
-                                void pos.setLinePrice(lineId, unitPrice);
-                              }}
-                            />
-                          )}
-                        </td>
-                        <td className="py-3 pr-3 text-navy">
-                          {line.taxable && draft.fiscal ? money(line.itbis, draft.currency) : '—'}
-                        </td>
-                        <td className="py-3 pr-3 font-medium text-navy">
-                          {money(line.gross, draft.currency)}
-                        </td>
-                        {!readOnly && (
-                          <td className="py-3">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={pos.isMutating}
-                              onClick={() => {
-                                void pos.removeLine(line.id);
-                              }}
-                            >
-                              Quitar
-                            </Button>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DraftLineCards
+                draft={draft}
+                readOnly={readOnly}
+                isMutating={pos.isMutating}
+                onSetPrice={(lineId, unitPrice) => {
+                  void pos.setLinePrice(lineId, unitPrice);
+                }}
+                onRemove={handleRemoveLine}
+              />
             )}
           </Card>
 
@@ -268,7 +313,7 @@ export function PosPage() {
           <Card>
             <h2 className="mb-4 text-lg font-semibold text-navy">Totales</h2>
             {draft.blockers.length > 0 && !readOnly && (
-              <div className="mb-4">
+              <div id={POS_FIELD_IDS.blockers} tabIndex={-1} className="mb-4 outline-none">
                 <Info tone="warning" title="No se puede confirmar todavía">
                   <ul className="list-disc space-y-1 pl-5">
                     {draft.blockers.map((blocker) => (
@@ -319,48 +364,173 @@ export function PosPage() {
           });
         }}
       />
-
-      <Modal
-        open={discardOpen}
-        title="Descartar borrador"
-        onClose={() => {
-          if (!pos.isMutating) {
-            setDiscardOpen(false);
-          }
-        }}
-      >
-        <div className="flex flex-col gap-4 text-sm text-navy">
-          <p>
-            Se perderán las líneas de este borrador. Esta acción no se puede deshacer desde el punto de
-            venta.
-          </p>
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              variant="secondary"
-              disabled={pos.isMutating}
-              onClick={() => setDiscardOpen(false)}
-            >
-              Seguir editando
-            </Button>
-            <Button
-              variant="danger"
-              disabled={pos.isMutating}
-              onClick={() => {
-                void pos.discard().then((response) => {
-                  if (!response.ok) {
-                    setDiscardOpen(false);
-                    setDiscardError(toPosUserMessage(response.error));
-                    return;
-                  }
-                  setDiscardOpen(false);
-                });
-              }}
-            >
-              {pos.isMutating ? 'Descartando…' : 'Sí, descartar'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </>
+  );
+}
+
+type DraftLinesProps = {
+  draft: PosDraftView;
+  readOnly: boolean;
+  isMutating: boolean;
+  onSetPrice: (lineId: string, unitPrice: number) => void;
+  onRemove: (line: PosLineView) => void;
+};
+
+function DraftLinesTable({ draft, readOnly, isMutating, onSetPrice, onRemove }: DraftLinesProps) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full text-left text-sm">
+        <thead>
+          <tr className="border-b border-navy-100 text-navy-400">
+            <th className="py-2 pr-3 font-medium">Descripción</th>
+            <th className="py-2 pr-3 font-medium">Tipo</th>
+            <th className="py-2 pr-3 font-medium">Cantidad</th>
+            <th className="py-2 pr-3 font-medium">Precio</th>
+            <th className="py-2 pr-3 font-medium">Impuesto ITBIS</th>
+            <th className="py-2 pr-3 font-medium">Total</th>
+            {!readOnly && <th className="py-2 font-medium"> </th>}
+          </tr>
+        </thead>
+        <tbody>
+          {draft.lines.map((line) => (
+            <tr key={line.id} className="border-b border-navy-50 align-top">
+              <td className="py-3 pr-3">
+                <LineDescription line={line} />
+              </td>
+              <td className="py-3 pr-3">
+                <Chip>{LINE_TYPE_LABELS[line.type]}</Chip>
+              </td>
+              <td className="py-3 pr-3 text-navy">{line.quantity}</td>
+              <td className="py-3 pr-3">
+                <LinePrice
+                  line={line}
+                  currency={draft.currency}
+                  readOnly={readOnly}
+                  disabled={isMutating}
+                  onCommit={onSetPrice}
+                />
+              </td>
+              <td className="py-3 pr-3 text-navy">
+                {line.taxable && draft.fiscal ? money(line.itbis, draft.currency) : '—'}
+              </td>
+              <td className="py-3 pr-3 font-medium text-navy">{money(line.gross, draft.currency)}</td>
+              {!readOnly && (
+                <td className="py-3">
+                  <RemoveLineButton disabled={isMutating} onClick={() => onRemove(line)} />
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function DraftLineCards({ draft, readOnly, isMutating, onSetPrice, onRemove }: DraftLinesProps) {
+  return (
+    <ul className="flex flex-col gap-3">
+      {draft.lines.map((line) => {
+        const sku = posLineSku(line);
+        return (
+          <li key={line.id}>
+            <Card padding="sm">
+              <div className="font-medium text-navy">{line.description}</div>
+              <p className="mt-1 text-sm text-navy-400">
+                {LINE_TYPE_LABELS[line.type]}
+                {sku ? ` · ${sku}` : ''}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {line.installed && (
+                  <RelationChip relationship="INSTALLED" parentName={line.parentName} />
+                )}
+                {line.isAssembly && <AssemblyKindChip isAssembly />}
+              </div>
+              <dl className="mt-3 space-y-2 text-sm text-navy">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-navy-400">Cantidad</dt>
+                  <dd>{line.quantity}</dd>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <dt className="pt-2 text-navy-400">Precio</dt>
+                  <dd className="min-w-[8rem]">
+                    <LinePrice
+                      line={line}
+                      currency={draft.currency}
+                      readOnly={readOnly}
+                      disabled={isMutating}
+                      onCommit={onSetPrice}
+                    />
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-navy-400">ITBIS</dt>
+                  <dd>{line.taxable && draft.fiscal ? money(line.itbis, draft.currency) : '—'}</dd>
+                </div>
+                <div className="flex justify-between gap-3 font-medium">
+                  <dt>Total</dt>
+                  <dd>{money(line.gross, draft.currency)}</dd>
+                </div>
+              </dl>
+              {!readOnly && (
+                <div className="mt-3">
+                  <RemoveLineButton disabled={isMutating} onClick={() => onRemove(line)} />
+                </div>
+              )}
+            </Card>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function LineDescription({ line }: { line: PosLineView }) {
+  return (
+    <>
+      <div className="font-medium text-navy">{line.description}</div>
+      <div className="mt-1 flex flex-wrap gap-1">
+        {line.installed && <RelationChip relationship="INSTALLED" parentName={line.parentName} />}
+        {line.isAssembly && <AssemblyKindChip isAssembly />}
+      </div>
+    </>
+  );
+}
+
+function LinePrice({
+  line,
+  currency,
+  readOnly,
+  disabled,
+  onCommit,
+}: {
+  line: PosLineView;
+  currency: Currency;
+  readOnly: boolean;
+  disabled: boolean;
+  onCommit: (lineId: string, unitPrice: number) => void;
+}) {
+  return (
+    <div id={posLinePriceFieldId(line.id)} data-pos-field="price">
+      {readOnly ? (
+        money(line.unitPrice, currency)
+      ) : (
+        <PriceCell
+          lineId={line.id}
+          value={line.unitPrice}
+          pending={line.pricePending}
+          disabled={disabled}
+          onCommit={onCommit}
+        />
+      )}
+    </div>
+  );
+}
+
+function RemoveLineButton({ disabled, onClick }: { disabled: boolean; onClick: () => void }) {
+  return (
+    <Button variant="ghost" size="sm" disabled={disabled} onClick={onClick}>
+      Quitar
+    </Button>
   );
 }

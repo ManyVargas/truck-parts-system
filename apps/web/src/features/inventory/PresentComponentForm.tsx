@@ -1,6 +1,7 @@
 import type { Category, ItemCondition } from '../../api/contracts/entities';
 import type { RegisterItemInput } from '../../api/contracts/inventory';
 import { Field, Input, Select } from '../../shared/ui';
+import { CategoryAttributeFields } from './CategoryAttributeFields';
 import { ITEM_CONDITIONS } from './item-conditions';
 import { OptionalDetails } from './OptionalDetails';
 
@@ -82,6 +83,14 @@ export function PresentComponentForm({
           />
         </Field>
       </div>
+      {(category.attributes?.length ?? 0) > 0 && (
+        <CategoryAttributeFields
+          definitions={category.attributes ?? []}
+          values={current.attributes}
+          idPrefix={`${prefix}-attr`}
+          onChange={(attributes) => patch({ attributes })}
+        />
+      )}
       <OptionalDetails summary="Datos adicionales del componente (opcional)">
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Marca (opcional)" htmlFor={`${prefix}-brand`}>

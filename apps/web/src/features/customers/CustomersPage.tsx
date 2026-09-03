@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import type { CustomerListRow, SaveCustomerInput } from '../../api/contracts/customers';
-import { Button, Info, SearchInput, useToast } from '../../shared/ui';
+import { Button, Info, SearchInput, Skeleton, toPageLoadMessage, useToast } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
 import { CustomerFormModal } from './CustomerFormModal';
 import { CustomerTable } from './CustomerTable';
@@ -52,7 +52,7 @@ export function CustomersPage() {
   if (result.status === 'error') {
     return (
       <Info tone="error" title="No se pudo cargar los clientes">
-        {result.error.message}
+        {toPageLoadMessage(result.error.message, 'No pudimos cargar los clientes.')}
       </Info>
     );
   }
@@ -80,9 +80,7 @@ export function CustomersPage() {
       </div>
 
       {result.status === 'loading' ? (
-        <p className="text-sm text-navy-400" aria-live="polite">
-          Cargando clientes…
-        </p>
+        <Skeleton label="Cargando clientes" />
       ) : (
         <CustomerTable rows={result.rows} onEdit={openEdit} />
       )}

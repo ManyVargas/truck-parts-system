@@ -9,6 +9,7 @@ import { workOrderRepository } from '../../../src/api/repositories';
 import { MechanicMinePage } from '../../../src/features/mechanic/MechanicMinePage';
 import { MechanicOrderView } from '../../../src/features/mechanic/MechanicOrderView';
 import { MechanicPendingPage } from '../../../src/features/mechanic/MechanicPendingPage';
+import { cancelOrder } from '../../../src/mocks/services/work-order-commands';
 import { getMockState, resetMockState } from '../../../src/mocks/state';
 import { createAuthValue, renderWithProviders } from '../../support/render';
 import { signInAs } from '../../support/session';
@@ -85,11 +86,53 @@ describe('MechanicMinePage and MechanicOrderView', () => {
 
     expect(await screen.findByRole('heading', { name: 'Mis órdenes' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'En proceso' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Historial' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Completadas' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Canceladas' })).toBeVisible();
     expect(screen.getByText('OD-DEMO-060')).toBeVisible();
     expect(screen.getByText('Turbo Garrett')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Continuar' })).toBeVisible();
     expect(screen.queryByText('OD-DEMO-061')).not.toBeInTheDocument();
     expect(screen.getByText('Todavía no hay órdenes terminadas.')).toBeVisible();
+    expect(screen.getByText('No hay órdenes canceladas.')).toBeVisible();
+  });
+
+  it('keeps Pedro cancelled assigned work under Historial as read-only', async () => {
+    signInAs('MECHANIC');
+    const user = userEvent.setup();
+    const state = getMockState();
+    const admin = state.users.find((entry) => entry.role === 'ADMINISTRATOR')!;
+    expect(
+      cancelOrder(state, admin, {
+        workOrderId: 'OD-DEMO-060',
+        reason: 'Abandono verificado',
+        physicalVerified: true,
+      }).ok,
+    ).toBe(true);
+
+    renderWithProviders(mechanicRoutes(), {
+      route: '/mechanic/mine',
+      auth: createAuthValue('MECHANIC'),
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Historial' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Canceladas' })).toBeVisible();
+    expect(screen.getByText('OD-DEMO-060')).toBeVisible();
+    expect(screen.getByText('Turbo Garrett')).toBeVisible();
+    expect(screen.getByText('Todavía no hay órdenes terminadas.')).toBeVisible();
+    expect(screen.queryByText('No hay órdenes canceladas.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Continuar' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: 'Ver historial' }));
+
+    expect(
+      await screen.findByText('Esta orden fue cancelada. Ya no se puede completar ni agregar evidencia.'),
+    ).toBeVisible();
+    expect(screen.getByText('Orden cancelada')).toBeVisible();
+    expect(screen.getByRole('link', { name: '← Mis órdenes' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Completar desmonte' })).toBeDisabled();
+    expect(screen.getByText('Esta orden fue cancelada. No se puede completar.')).toBeVisible();
+    expect(screen.queryByLabelText('Después')).not.toBeInTheDocument();
   });
 
   it('treats a completed order as history, not as work to finish', async () => {
@@ -104,7 +147,7 @@ describe('MechanicMinePage and MechanicOrderView', () => {
 
     expect(await screen.findByText('Trabajo terminado. La evidencia queda en el historial.')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Ir a pendientes' })).toBeVisible();
-    expect(screen.queryByRole('button', { name: 'Completar desarme' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Completar desmonte' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Después')).not.toBeInTheDocument();
   });
 
@@ -119,12 +162,12 @@ describe('MechanicMinePage and MechanicOrderView', () => {
     });
 
     expect(await screen.findByText('Turbo Garrett')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Completar desarme' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Completar desmonte' })).toBeDisabled();
 
     await user.upload(screen.getByLabelText('Después'), file);
 
     expect(await screen.findByText('Foto de después agregada')).toBeVisible();
-    const complete = await screen.findByRole('button', { name: 'Completar desarme' });
+    const complete = await screen.findByRole('button', { name: 'Completar desmonte' });
     expect(complete).toBeEnabled();
     await user.click(complete);
 
@@ -170,7 +213,7 @@ describe('MechanicMinePage and MechanicOrderView', () => {
       error: { code: 'INTERNAL', message: 'Failed to fetch' },
     });
 
-    await user.click(screen.getByRole('button', { name: 'Completar desarme' }));
+    await user.click(screen.getByRole('button', { name: 'Completar desmonte' }));
     expect(await screen.findAllByText(/conexión estable/)).not.toHaveLength(0);
     expect(screen.getByLabelText('Ubicación después del desarme')).toHaveValue('Patio norte');
     expect(screen.getByText('after-turbo.jpg')).toBeVisible();

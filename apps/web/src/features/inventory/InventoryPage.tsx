@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Button, Info } from '../../shared/ui';
+
+import { useAuth } from '../auth/useAuth';
+import { can } from '../../shared/auth/policies';
+import { Button, Info, Skeleton, toPageLoadMessage } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
 import { InventoryFilters } from './InventoryFilters';
 import { InventoryTable } from './InventoryTable';
@@ -7,13 +10,15 @@ import { useInventoryCatalog } from './useInventoryCatalog';
 import { RegisterItemWizard } from './RegisterItemWizard';
 
 export function InventoryPage() {
+  const { user } = useAuth();
   const { filters, patchFilters, result, categories, refresh } = useInventoryCatalog();
   const [registerOpen, setRegisterOpen] = useState(false);
+  const canRegister = can(user, 'inventory.register');
 
   if (result.status === 'error') {
     return (
       <Info tone="error" title="No se pudo cargar el inventario">
-        {result.error.message}
+        {toPageLoadMessage(result.error.message, 'No pudimos cargar el inventario.')}
       </Info>
     );
   }
@@ -23,27 +28,31 @@ export function InventoryPage() {
       <PageHeader
         title="Inventario"
         description="Piezas individuales y productos por cantidad. Los vendidos se ocultan salvo que active el histórico."
-        actions={<Button onClick={() => setRegisterOpen(true)}>Registrar inventario</Button>}
+        actions={
+          canRegister ? (
+            <Button onClick={() => setRegisterOpen(true)}>Registrar inventario</Button>
+          ) : undefined
+        }
       />
 
       <InventoryFilters filters={filters} categories={categories} onChange={patchFilters} />
 
       {result.status === 'loading' ? (
-        <p className="text-sm text-navy-400" aria-live="polite">
-          Cargando inventario…
-        </p>
+        <Skeleton label="Cargando inventario" />
       ) : (
         <InventoryTable rows={result.rows} />
       )}
 
-      <RegisterItemWizard
-        open={registerOpen}
-        categories={categories}
-        onClose={() => setRegisterOpen(false)}
-        onRegistered={() => {
-          refresh();
-        }}
-      />
+      {canRegister && (
+        <RegisterItemWizard
+          open={registerOpen}
+          categories={categories}
+          onClose={() => setRegisterOpen(false)}
+          onRegistered={() => {
+            refresh();
+          }}
+        />
+      )}
     </>
   );
 }

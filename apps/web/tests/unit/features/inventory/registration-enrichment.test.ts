@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   mergeBaselineEntries,
-  parseAttributeLines,
   pendingEnrichmentLabels,
 } from '../../../../src/features/inventory/registration-enrichment';
 
@@ -19,21 +18,24 @@ describe('pendingEnrichmentLabels', () => {
       'Serial',
       'Número de parte',
       'Costo de adquisición',
-      'Atributos',
       'Notas',
       'Fotos',
     ]);
   });
 
-  it('omits fields that were already provided', () => {
+  it('lists unfilled category attributes by their catalog labels', () => {
     expect(
-      pendingEnrichmentLabels('INDIVIDUAL', {
-        brand: 'Delco',
-        location: 'Patio',
-        acquisitionCostDop: 1200,
-        photos: ['alt.jpg'],
-      }),
-    ).toEqual(['Modelo', 'Serial', 'Número de parte', 'Atributos', 'Notas']);
+      pendingEnrichmentLabels(
+        'INDIVIDUAL',
+        {
+          brand: 'Delco',
+          location: 'Patio',
+          acquisitionCostDop: 1200,
+          photos: ['alt.jpg'],
+        },
+        [{ key: 'voltage', label: 'Voltaje', type: 'select', options: ['12V', '24V'] }],
+      ),
+    ).toEqual(['Modelo', 'Serial', 'Número de parte', 'Voltaje', 'Notas']);
   });
 
   it('only tracks brand and location for quantity products', () => {
@@ -42,13 +44,6 @@ describe('pendingEnrichmentLabels', () => {
         brand: 'Fleetguard',
       }),
     ).toEqual(['Ubicación']);
-  });
-});
-
-describe('parseAttributeLines', () => {
-  it('ignores blank lines and returns undefined when empty', () => {
-    expect(parseAttributeLines('  \n')).toBeUndefined();
-    expect(parseAttributeLines('voltaje: 24V\n')).toEqual({ voltaje: '24V' });
   });
 });
 

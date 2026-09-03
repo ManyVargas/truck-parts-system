@@ -4,6 +4,12 @@ import type { SaveCategoryInput } from '../../api/contracts/catalogs';
 import type { Category } from '../../api/contracts/entities';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
 import { Button, Field, Info, Input, Modal, Textarea } from '../../shared/ui';
+import {
+  CategoryAttributeDefinitionsEditor,
+  definitionsFromDrafts,
+  draftsFromDefinitions,
+  type AttributeDraft,
+} from './CategoryAttributeDefinitionsEditor';
 
 export type CategoryFormModalProps = {
   open: boolean;
@@ -19,6 +25,7 @@ type FormFields = {
   codePrefix: string;
   isAssembly: boolean;
   expectedComponentsText: string;
+  attributeDrafts: AttributeDraft[];
 };
 
 const EMPTY_FIELDS: FormFields = {
@@ -26,6 +33,7 @@ const EMPTY_FIELDS: FormFields = {
   codePrefix: '',
   isAssembly: false,
   expectedComponentsText: '',
+  attributeDrafts: [],
 };
 
 export function CategoryFormModal({
@@ -55,6 +63,7 @@ export function CategoryFormModal({
       codePrefix: category.codePrefix,
       isAssembly: category.isAssembly,
       expectedComponentsText: (category.expectedComponents ?? []).join('\n'),
+      attributeDrafts: draftsFromDefinitions(category.attributes),
     });
   }, [open, category]);
 
@@ -69,6 +78,7 @@ export function CategoryFormModal({
         hierarchy && fields.isAssembly
           ? fields.expectedComponentsText.split('\n')
           : undefined,
+      attributes: definitionsFromDrafts(fields.attributeDrafts),
     });
   }
 
@@ -143,6 +153,11 @@ export function CategoryFormModal({
             />
           </Field>
         )}
+
+        <CategoryAttributeDefinitionsEditor
+          drafts={fields.attributeDrafts}
+          onChange={(attributeDrafts) => setFields((current) => ({ ...current, attributeDrafts }))}
+        />
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>

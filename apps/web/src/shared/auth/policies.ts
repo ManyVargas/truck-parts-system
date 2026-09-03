@@ -24,9 +24,10 @@ export type PolicyContext = Record<string, unknown>;
 /**
  * Authorization skeleton — full matrix wired in WM2+.
  * Services must call this before mutating state; route guards are UX-only.
+ * Accepts the session user (no password) or a full User record.
  */
 export function can(
-  user: User | null,
+  user: Pick<User, 'role' | 'active'> | null,
   action: PolicyAction,
   _context?: PolicyContext,
 ): boolean {

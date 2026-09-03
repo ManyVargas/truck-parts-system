@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { UX_TERMS } from '../copy/glossary';
 import { Chip } from '../ui';
 import {
   assemblyKindLabel,
@@ -61,7 +62,7 @@ export function PhysicalWorkChip({
     return null;
   }
 
-  const action = type === 'DISMANTLING' ? 'Desarme' : 'Instalación';
+  const action = type === 'DISMANTLING' ? UX_TERMS.dismantling : 'Instalación';
   const phase = status === 'IN_PROGRESS' ? 'en proceso' : 'pendiente';
 
   return <Chip tone="amber">{`${action} ${phase}`}</Chip>;
@@ -212,7 +213,7 @@ export function InventoryStatusCluster({
     >
       {wide && (
         <StatusFact label="Tipo">
-          <span className="text-sm text-navy">{isAssembly ? 'Ensamblaje' : 'Pieza'}</span>
+          <span className="text-sm text-navy">{isAssembly ? UX_TERMS.assembly : 'Pieza'}</span>
         </StatusFact>
       )}
       <StatusFact label="Comercial">
@@ -279,7 +280,7 @@ export function WOTypeChip({
 }) {
   return (
     <span className="text-sm text-navy-500">
-      {type === 'INSTALLATION' ? 'Instalación' : 'Desarme'}
+      {type === 'INSTALLATION' ? 'Instalación' : UX_TERMS.dismantling}
     </span>
   );
 }

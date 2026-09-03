@@ -10,7 +10,7 @@ export function WorkOrderTable({ rows }: WorkOrderTableProps) {
   if (rows.length === 0) {
     return (
       <Empty
-        title="No hay órdenes en esta vista"
+        title="No hay órdenes de trabajo en esta vista"
         description="Cambie de filtro o cree una orden de trabajo manual de desarme o instalación."
       />
     );

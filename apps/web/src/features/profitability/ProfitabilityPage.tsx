@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import type { ProfitabilityInvoiceRow } from '../../api/contracts/profitability';
 import { FxStatusChip } from '../../shared/domain';
@@ -6,13 +7,16 @@ import { KpiCard } from '../../shared/layout/KpiCard';
 import { PageHeader } from '../../shared/layout/PageHeader';
 import {
   Button,
+  Chip,
   Empty,
   EntityLink,
   HoverRow,
   Info,
   money,
   currencyLabel,
+  Skeleton,
   TableShell,
+  toPageLoadMessage,
   useToast,
 } from '../../shared/ui';
 import { RecordGrossProfitModal } from './RecordGrossProfitModal';
@@ -21,26 +25,38 @@ import { useProfitability } from './useProfitability';
 export function ProfitabilityPage() {
   const { query, isMutating, setFxAvailable, retryUsd, recordManualGrossProfit } = useProfitability();
   const { pushToast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [recording, setRecording] = useState<ProfitabilityInvoiceRow | null>(null);
   const [recordError, setRecordError] = useState<string | null>(null);
+  const pendingFxOnly = searchParams.get('pendingFx') === '1';
 
   if (query.status === 'loading') {
-    return (
-      <p className="text-sm text-navy-400" aria-live="polite">
-        Cargando rentabilidad…
-      </p>
-    );
+    return <Skeleton label="Cargando rentabilidad" variant="cards" lines={4} />;
   }
 
   if (query.status === 'error') {
     return (
       <Info tone="error" title="No se pudo cargar la rentabilidad">
-        {query.error.message}
+        {toPageLoadMessage(query.error.message, 'No pudimos cargar la rentabilidad.')}
       </Info>
     );
   }
 
   const { snapshot } = query;
+  const invoices = pendingFxOnly
+    ? snapshot.invoices.filter((row) => row.pendingFx)
+    : snapshot.invoices;
+
+  function clearPendingFxFilter() {
+    setSearchParams(
+      (prev) => {
+        const nextParams = new URLSearchParams(prev);
+        nextParams.delete('pendingFx');
+        return nextParams;
+      },
+      { replace: true },
+    );
+  }
 
   async function handleToggleFx() {
     const response = await setFxAvailable(!snapshot.fxAvailable);
@@ -118,10 +134,27 @@ export function ProfitabilityPage() {
           />
         </div>
 
-        {snapshot.invoices.length === 0 ? (
+        {pendingFxOnly && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Chip tone="amber">Pendientes de tasa de cambio</Chip>
+            <Button variant="ghost" size="sm" onClick={clearPendingFxFilter}>
+              Quitar filtro
+            </Button>
+          </div>
+        )}
+
+        {invoices.length === 0 ? (
           <Empty
-            title="No hay facturas con rentabilidad"
-            description="Las facturas completadas aparecerán aquí cuando exista ganancia calculada o pendiente."
+            title={
+              pendingFxOnly
+                ? 'No hay facturas pendientes de tasa'
+                : 'No hay facturas con rentabilidad'
+            }
+            description={
+              pendingFxOnly
+                ? 'Quitar el filtro para ver el resto de facturas.'
+                : 'Las facturas completadas aparecerán aquí cuando exista ganancia calculada o pendiente.'
+            }
           />
         ) : (
           <TableShell>
@@ -138,7 +171,7 @@ export function ProfitabilityPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-navy-100">
-              {snapshot.invoices.map((row) => (
+              {invoices.map((row) => (
                 <HoverRow key={row.id} to={row.href}>
                   <td className="px-4 py-3 font-medium text-navy">
                     <EntityLink to={row.href}>{row.number}</EntityLink>

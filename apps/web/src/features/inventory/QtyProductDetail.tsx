@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { QtyProductDetailView } from '../../api/contracts/inventory';
+import { locationDisplay } from '../../shared/copy/glossary';
 import { InventoryStatusCluster } from '../../shared/domain';
 import { Button, Card, EventTimeline, Field, Info, Input, Modal, Mono, SectionTitle, Textarea, money } from '../../shared/ui';
 import { PhotoGrid } from './PhotoGrid';
@@ -133,7 +134,7 @@ export function QtyProductDetail({
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-navy-400">Ubicación</dt>
-              <dd>{detail.location ?? 'Pendiente'}</dd>
+              <dd>{locationDisplay(detail.location)}</dd>
             </div>
             <div>
               <dt className="text-navy-400">Costo unitario promedio</dt>

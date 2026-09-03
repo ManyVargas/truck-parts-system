@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { useAuth } from '../auth/useAuth';
 import { InvoiceStatusChip, PaymentChip } from '../../shared/domain';
+import { can } from '../../shared/auth/policies';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
 import { Button, Card, Chip, Info, money, Mono } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
@@ -44,6 +45,8 @@ export function InvoiceDetailPage() {
   }
 
   const detail = result.detail;
+  const canViewProfit = can(user, 'profit.view');
+  const canManageWorkOrders = can(user, 'workOrders.manage');
 
   return (
     <>
@@ -57,7 +60,7 @@ export function InvoiceDetailPage() {
                 Vista previa del documento
               </Button>
             )}
-            {detail.actions.canPay && capabilities.payments && (
+            {detail.actions.canPay && can(user, 'sales.manage') && capabilities.payments && (
               <Button
                 onClick={() => {
                   setActionError(null);
@@ -67,7 +70,7 @@ export function InvoiceDetailPage() {
                 Registrar pago
               </Button>
             )}
-            {detail.actions.canCorrectCurrency && (
+            {detail.actions.canCorrectCurrency && can(user, 'sales.correctCurrency') && (
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -78,7 +81,9 @@ export function InvoiceDetailPage() {
                 Corregir moneda
               </Button>
             )}
-            {detail.actions.canCancel && capabilities.invoiceCancellation && (
+            {detail.actions.canCancel &&
+              can(user, 'sales.cancel') &&
+              capabilities.invoiceCancellation && (
               <Button
                 variant="danger"
                 onClick={() => {
@@ -159,7 +164,7 @@ export function InvoiceDetailPage() {
           <ul className="space-y-1 text-sm text-navy-400">
             {detail.linkedWorkOrders.map((order) => (
               <li key={order.id}>
-                {user?.role === 'ADMINISTRATOR' ? (
+                {canManageWorkOrders ? (
                   <Link to={`/work-orders/${order.id}`} className="text-brand hover:underline">
                     <Mono>{order.id}</Mono>
                   </Link>
@@ -179,7 +184,7 @@ export function InvoiceDetailPage() {
         </div>
       )}
 
-      {detail.profitability && capabilities.profitability && (
+      {detail.profitability && canViewProfit && capabilities.profitability && (
         <div className="mb-8">
           <ProfitabilityPanel view={detail.profitability} />
         </div>

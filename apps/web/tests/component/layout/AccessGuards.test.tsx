@@ -90,6 +90,20 @@ describe('access guards', () => {
     expect(screen.queryByText('Acceso no autorizado')).not.toBeInTheDocument();
   });
 
+  it('blocks a seller from the work-order administration screens', async () => {
+    renderWithProviders(
+      <Routes>
+        <Route element={<RouteAccessGuard />}>
+          <Route path="/work-orders" element={<div>Cola administrativa</div>} />
+        </Route>
+      </Routes>,
+      { route: '/work-orders', auth: createAuthValue('SELLER') },
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Acceso no autorizado' })).toBeVisible();
+    expect(screen.queryByText('Cola administrativa')).not.toBeInTheDocument();
+  });
+
   it('blocks administrator-only sections inside the desktop shell', async () => {
     renderWithProviders(
       <Routes>

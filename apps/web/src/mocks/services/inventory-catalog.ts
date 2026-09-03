@@ -3,6 +3,7 @@ import type {
   HierarchyNode,
   InventoryListFilters,
   InventoryListRow,
+  InventoryQuickFilter,
   ItemDetailView,
   QtyProductDetailView,
 } from '../../api/contracts/inventory';
@@ -247,6 +248,47 @@ function workOrdersForPiece(orders: WorkOrder[], pieceId: string): WorkOrder[] {
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
+function matchesQuickFilter(row: InventoryListRow, key: InventoryQuickFilter): boolean {
+  switch (key) {
+    case 'available':
+      return row.commercialState === 'AVAILABLE';
+    case 'installed':
+      return row.physicalRelationship === 'INSTALLED';
+    case 'independent':
+      return row.physicalRelationship === 'INDEPENDENT';
+    case 'reserved':
+      return row.reserved;
+    case 'assemblies':
+      return row.isAssembly === true;
+    case 'incomplete':
+      return row.complete === false;
+    case 'quantity':
+      return row.kind === 'QTY';
+  }
+}
+
+/** Quick chips combine with AND. QTY rows have no physicalRelationship or condition. */
+function matchesRowFilters(
+  row: InventoryListRow,
+  filters: InventoryListFilters,
+  pendingParentIds: Set<string> | undefined,
+): boolean {
+  if (filters.kind && row.kind !== filters.kind) {
+    return false;
+  }
+  if (filters.commercialState && row.commercialState !== filters.commercialState) {
+    return false;
+  }
+  const locationNeedle = filters.location?.trim().toLowerCase();
+  if (locationNeedle && !(row.effectiveLocation ?? '').toLowerCase().includes(locationNeedle)) {
+    return false;
+  }
+  if (pendingParentIds && !pendingParentIds.has(row.id)) {
+    return false;
+  }
+  return (filters.quick ?? []).every((key) => matchesQuickFilter(row, key));
+}
+
 /** Unified catalog: individual pieces + quantity products. */
 export function buildInventoryCatalog(
   state: AppState,
@@ -255,27 +297,37 @@ export function buildInventoryCatalog(
   const query = filters.query?.trim().toLowerCase() ?? '';
   const includeSold = filters.includeSold === true;
   const categoryId = filters.categoryId?.trim() || undefined;
+  const pendingParentIds = filters.pendingCatalog
+    ? new Set(state.pendingCatalogReviews.map((entry) => entry.parentId))
+    : undefined;
 
   const itemRows = state.items
     .filter((item) => includeSold || item.commercialState !== 'SOLD')
     .filter((item) => !categoryId || item.categoryId === categoryId)
+    .filter((item) => !filters.condition || item.condition === filters.condition)
     .filter((item) => {
       if (!query) {
         return true;
       }
       return matchesQuery(item, categoryName(state.categories, item.categoryId), query);
     })
-    .map((item) => toItemRow(state, item));
+    .map((item) => toItemRow(state, item))
+    .filter((row) => matchesRowFilters(row, filters, pendingParentIds));
 
   const qtyRows = state.qtyProducts
     .filter((product) => !categoryId || product.categoryId === categoryId)
     .filter((product) => {
+      // Qty products have no condition; a condition filter excludes them.
+      if (filters.condition) {
+        return false;
+      }
       if (!query) {
         return true;
       }
       return matchesQtyQuery(product, categoryName(state.categories, product.categoryId), query);
     })
-    .map((product) => toQtyRow(state, product));
+    .map((product) => toQtyRow(state, product))
+    .filter((row) => matchesRowFilters(row, filters, pendingParentIds));
 
   return [...itemRows, ...qtyRows].sort((left, right) => left.id.localeCompare(right.id));
 }

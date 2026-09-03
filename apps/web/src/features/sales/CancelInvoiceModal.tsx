@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 
 import type { InProgressCancelDecision, LinkedWorkOrderView } from '../../api/contracts/sales';
 import type { PaymentMethod } from '../../api/contracts/entities';
+import { UX_TERMS } from '../../shared/copy/glossary';
 import { Button, Field, Info, Input, Modal, Select, Textarea, money } from '../../shared/ui';
 import { PAYMENT_METHOD_LABELS } from './labels';
 
@@ -62,7 +63,7 @@ export function CancelInvoiceModal({
     <Modal open={open} title="Cancelar factura" onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <Info tone="warning" title="La cancelación no borra el documento">
-          Se conserva el historial y se restauran existencias elegibles según el estado de las órdenes de desarme.
+          Se conserva el historial y se restauran existencias elegibles según el estado de las órdenes de {UX_TERMS.dismantling.toLowerCase()}.
         </Info>
 
         {workOrders.length > 0 && (
@@ -76,14 +77,14 @@ export function CancelInvoiceModal({
         )}
 
         {hasInProgress && (
-          <Field label="Desarme en proceso" htmlFor="cancel-wo-decision">
+          <Field label={`${UX_TERMS.dismantling} en proceso`} htmlFor="cancel-wo-decision">
             <Select
               id="cancel-wo-decision"
               value={inProgressDecision}
               onChange={(event) => setInProgressDecision(event.target.value as InProgressCancelDecision)}
             >
               <option value="STOP">Detener trabajo y cancelar la orden</option>
-              <option value="CONTINUE">Cancelar la venta y continuar el desarme</option>
+              <option value="CONTINUE">{`Cancelar la venta y continuar el ${UX_TERMS.dismantling.toLowerCase()}`}</option>
             </Select>
           </Field>
         )}

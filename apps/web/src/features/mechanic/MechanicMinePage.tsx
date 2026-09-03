@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 
 import type { MechanicWorkOrderView } from '../../api/contracts/entities';
-import { Empty } from '../../shared/ui';
+import { Empty, Skeleton } from '../../shared/ui';
 import { MechanicOrderCard } from './MechanicOrderCard';
 import { MechanicQueryError } from './MechanicQueryError';
 import { useMechanicOrders } from './useMechanicOrders';
@@ -35,22 +35,21 @@ export function MechanicMinePage() {
   }
 
   if (result.status === 'loading') {
-    return (
-      <p className="text-base text-navy-400" aria-live="polite">
-        Cargando mis órdenes…
-      </p>
-    );
+    return <Skeleton label="Cargando mis órdenes" size="lg" lines={4} />;
   }
 
   const mine = result.orders.filter((order) => order.status !== 'PENDING');
   const inProgress = mine.filter((order) => order.status === 'IN_PROGRESS');
   const completed = mine.filter((order) => order.status === 'COMPLETED');
+  const cancelled = mine.filter((order) => order.status === 'CANCELLED');
 
   return (
     <div className="space-y-6">
       <header>
         <h1 className="text-xl font-bold">Mis órdenes</h1>
-        <p className="mt-1 text-base text-navy-400">Trabajo asignado a usted, en proceso o completado.</p>
+        <p className="mt-1 text-base text-navy-400">
+          Trabajo asignado a usted, en proceso o en el historial.
+        </p>
       </header>
 
       {mine.length === 0 ? (
@@ -74,13 +73,26 @@ export function MechanicMinePage() {
             )}
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold">Completadas</h2>
-            {completed.length === 0 ? (
-              <p className="text-base text-navy-400">Todavía no hay órdenes terminadas.</p>
-            ) : (
-              <OrderList orders={completed} />
-            )}
+          <section className="space-y-4">
+            <h2 className="text-lg font-semibold">Historial</h2>
+
+            <div className="space-y-3">
+              <h3 className="text-base font-semibold">Completadas</h3>
+              {completed.length === 0 ? (
+                <p className="text-base text-navy-400">Todavía no hay órdenes terminadas.</p>
+              ) : (
+                <OrderList orders={completed} />
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-base font-semibold">Canceladas</h3>
+              {cancelled.length === 0 ? (
+                <p className="text-base text-navy-400">No hay órdenes canceladas.</p>
+              ) : (
+                <OrderList orders={cancelled} />
+              )}
+            </div>
           </section>
         </>
       )}

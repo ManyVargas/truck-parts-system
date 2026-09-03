@@ -23,6 +23,7 @@ export function CategoryList({ rows, onEdit }: CategoryListProps) {
           <th className="px-4 py-3 font-medium">Nombre</th>
           <th className="px-4 py-3 font-medium">Prefijo</th>
           <th className="px-4 py-3 font-medium">Tipo</th>
+          <th className="px-4 py-3 font-medium">Atributos</th>
           <th className="px-4 py-3 font-medium">Componentes esperados</th>
           <th className="px-4 py-3 font-medium">
             <span className="sr-only">Acciones</span>
@@ -40,6 +41,11 @@ export function CategoryList({ rows, onEdit }: CategoryListProps) {
             </td>
             <td className="px-4 py-3 text-navy-400">
               {row.isAssembly ? 'Ensamblaje' : 'Pieza / cantidad'}
+            </td>
+            <td className="px-4 py-3 text-navy-400">
+              {row.attributes?.length
+                ? row.attributes.map((attribute) => attribute.label).join(', ')
+                : '—'}
             </td>
             <td className="px-4 py-3 text-navy-400">
               {row.isAssembly ? (row.expectedComponents?.join(', ') ?? '—') : '—'}

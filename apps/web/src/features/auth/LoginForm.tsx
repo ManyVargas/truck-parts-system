@@ -90,7 +90,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           id="username"
           name="username"
           autoComplete="username"
-          placeholder="Ej: admin"
+          placeholder="Ingrese su usuario"
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           required
@@ -109,7 +109,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             name="password"
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
-            placeholder="demo1234"
+            placeholder="Ingrese su contraseña"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             className="pr-11"
@@ -126,7 +126,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         </div>
       </Field>
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
+      <Button type="submit" className="w-full" disabled={isSubmitting} busy={isSubmitting}>
         {isSubmitting ? 'Iniciando sesión…' : 'Iniciar sesión'}
       </Button>
     </form>

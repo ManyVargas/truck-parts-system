@@ -43,6 +43,7 @@ describe('buildDashboardSnapshot', () => {
     const snapshot = buildDashboardSnapshot(createInitialState(), {
       nowIso: DEMO_DAY,
       includeProfitability: true,
+      includeWorkOrderQueue: true,
     });
 
     expect(snapshot.kpis).toEqual({
@@ -73,6 +74,8 @@ describe('buildDashboardSnapshot', () => {
 
     expect(snapshot.kpis.profitDop).toBeUndefined();
     expect(snapshot.kpis.pendingFx).toBeUndefined();
+    expect(snapshot.kpis.pendingDismantling).toBeUndefined();
+    expect(snapshot.kpis.workOrdersInProgress).toBeUndefined();
     expect(snapshot.kpis.draftCount).toBe(1);
     expect(snapshot.kpis.availableInventory).toBe(78);
   });
@@ -87,6 +90,7 @@ describe('buildDashboardSnapshot', () => {
       nowIso: DEMO_DAY,
       includeProfitability: true,
       includeAdminAlerts: true,
+      includeWorkOrderQueue: true,
     });
     const sellerSnapshot = buildDashboardSnapshot(state, {
       nowIso: DEMO_DAY,
