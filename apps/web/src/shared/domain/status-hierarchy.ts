@@ -1,3 +1,5 @@
+import { UX_TERMS } from '../copy/glossary';
+
 export type CommercialDisplayState = 'AVAILABLE' | 'SOLD' | 'UNAVAILABLE';
 export type PhysicalDisplayRelationship = 'INDEPENDENT' | 'INSTALLED';
 
@@ -24,7 +26,7 @@ export function physicalRelationLabel(
   parentName?: string,
 ): string {
   if (!relationship) {
-    return 'Por cantidad';
+    return UX_TERMS.quantityItem;
   }
   if (relationship === 'INSTALLED') {
     return parentName ? `Instalado en ${parentName}` : 'Instalado';

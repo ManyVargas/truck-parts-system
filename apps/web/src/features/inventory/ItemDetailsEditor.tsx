@@ -2,16 +2,11 @@ import { useEffect, useState } from 'react';
 
 import type { ItemCondition } from '../../api/contracts/entities';
 import type { ItemDetailView, UpdateItemDetailsInput } from '../../api/contracts/inventory';
+import { locationDisplay } from '../../shared/copy/glossary';
 import { Button, Field, Info, Input, Modal, Select, Textarea } from '../../shared/ui';
+import { CategoryAttributeFields } from './CategoryAttributeFields';
 import { ITEM_CONDITIONS } from './item-conditions';
 import { PhotoEditor } from './PhotoEditor';
-import { parseAttributeLines } from './registration-enrichment';
-
-function attributesToText(attributes: Record<string, string> | undefined): string {
-  return Object.entries(attributes ?? {})
-    .map(([key, value]) => `${key}: ${value}`)
-    .join('\n');
-}
 
 export function ItemDetailsEditor({
   detail,
@@ -32,9 +27,11 @@ export function ItemDetailsEditor({
   const [condition, setCondition] = useState<ItemCondition>(detail.condition);
   const [location, setLocation] = useState(detail.ownLocation ?? '');
   const [notes, setNotes] = useState(detail.notes ?? '');
-  const [attributesText, setAttributesText] = useState(attributesToText(detail.attributes));
+  const [attributes, setAttributes] = useState(detail.attributes ?? {});
   const [photos, setPhotos] = useState(detail.photos);
   const locationEditable = detail.physicalRelationship === 'INDEPENDENT';
+  const category = detail.catalogCategories.find((entry) => entry.id === detail.categoryId);
+  const attributeDefinitions = category?.attributes ?? [];
 
   useEffect(() => {
     if (!open) {
@@ -49,7 +46,7 @@ export function ItemDetailsEditor({
     setCondition(detail.condition);
     setLocation(detail.ownLocation ?? '');
     setNotes(detail.notes ?? '');
-    setAttributesText(attributesToText(detail.attributes));
+    setAttributes(detail.attributes ?? {});
     setPhotos(detail.photos);
   }, [open, detail]);
 
@@ -88,7 +85,7 @@ export function ItemDetailsEditor({
                 condition,
                 location: locationEditable ? location : undefined,
                 notes,
-                attributes: parseAttributeLines(attributesText) ?? {},
+                attributes,
                 photos,
               });
               if (message) {
@@ -171,22 +168,23 @@ export function ItemDetailsEditor({
             </Field>
           ) : (
             <p className="text-sm text-navy-400">
-              Ubicación efectiva heredada: {detail.effectiveLocation ?? 'Pendiente'}. Edite la pieza
+              Ubicación efectiva heredada: {locationDisplay(detail.effectiveLocation)}. Edite la pieza
               independiente raíz para mover el conjunto.
             </p>
           )}
-          <Field
-            label="Atributos"
-            htmlFor="edit-item-attributes"
-            hint="Uno por línea, por ejemplo voltaje: 24V."
-          >
-            <Textarea
-              id="edit-item-attributes"
-              rows={3}
-              value={attributesText}
-              onChange={(event) => setAttributesText(event.target.value)}
-            />
-          </Field>
+          {attributeDefinitions.length > 0 && (
+            <div>
+              <p className="mb-2 text-sm font-medium text-navy">
+                Atributos de {detail.categoryName}
+              </p>
+              <CategoryAttributeFields
+                definitions={attributeDefinitions}
+                values={attributes}
+                idPrefix="edit-item-attr"
+                onChange={setAttributes}
+              />
+            </div>
+          )}
           <Field label="Notas" htmlFor="edit-item-notes">
             <Textarea
               id="edit-item-notes"
