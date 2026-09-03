@@ -33,6 +33,7 @@ export function DocumentPanel({
       <Field htmlFor="pos-customer" label="Cliente">
         <Select
           id="pos-customer"
+          data-pos-field="customer"
           value={draft.customerId}
           disabled={readOnly || isMutating}
           onChange={(event) => onCustomerChange(event.target.value)}
@@ -49,6 +50,7 @@ export function DocumentPanel({
       <Field htmlFor="pos-currency" label="Moneda">
         <Select
           id="pos-currency"
+          data-pos-field="currency"
           value={draft.currency}
           disabled={readOnly || isMutating}
           onChange={(event) => onCurrencyChange(event.target.value as Currency)}
@@ -60,6 +62,7 @@ export function DocumentPanel({
       <label className="flex items-start gap-2 text-sm text-navy">
         <input
           id="pos-fiscal"
+          data-pos-field="fiscal"
           type="checkbox"
           className="mt-1"
           checked={draft.fiscal}

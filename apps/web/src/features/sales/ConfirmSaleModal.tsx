@@ -160,6 +160,7 @@ export function ConfirmSaleModal({
           <Button
             onClick={handleConfirm}
             disabled={isConfirming || draft.blockers.length > 0}
+            busy={isConfirming}
           >
             {isConfirming ? 'Confirmando…' : 'Confirmar venta'}
           </Button>

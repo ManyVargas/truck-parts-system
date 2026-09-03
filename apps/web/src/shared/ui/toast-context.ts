@@ -2,15 +2,26 @@ import { createContext, useContext } from 'react';
 
 export type ToastTone = 'info' | 'success' | 'warning' | 'error';
 
+export type ToastAction = {
+  label: string;
+  onClick: () => void;
+};
+
+export type ToastOptions = {
+  durationMs?: number;
+  action?: ToastAction;
+};
+
 export type Toast = {
   id: string;
   message: string;
   tone: ToastTone;
+  action?: ToastAction;
 };
 
 export type ToastContextValue = {
   toasts: Toast[];
-  pushToast: (message: string, tone?: ToastTone) => void;
+  pushToast: (message: string, tone?: ToastTone, options?: ToastOptions) => void;
   dismissToast: (id: string) => void;
 };
 

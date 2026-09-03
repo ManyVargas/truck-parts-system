@@ -1,14 +1,143 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import type { Currency } from '../../api/contracts/entities';
 import type {
   AddDraftLineInput,
   ConfirmInvoicePayment,
   PosDraftView,
+  PosLineView,
   SetDraftMetaInput,
 } from '../../api/contracts/sales';
 import type { AppError, Result } from '../../shared/auth/types';
 import { salesRepository } from '../../api/repositories';
+
+/** Fields needed to re-add a line after Quitar or Descartar. */
+export type PosLineSnapshot = Pick<
+  PosLineView,
+  | 'type'
+  | 'itemId'
+  | 'qtyProductId'
+  | 'serviceId'
+  | 'description'
+  | 'quantity'
+  | 'unitPrice'
+  | 'acquisitionCostDop'
+  | 'pricePending'
+>;
+
+export type PosDraftSnapshot = {
+  customerId: string;
+  currency: Currency;
+  fiscal: boolean;
+  lines: PosLineSnapshot[];
+};
+
+export function snapshotPosLine(line: PosLineView): PosLineSnapshot {
+  return {
+    type: line.type,
+    itemId: line.itemId,
+    qtyProductId: line.qtyProductId,
+    serviceId: line.serviceId,
+    description: line.description,
+    quantity: line.quantity,
+    unitPrice: line.unitPrice,
+    acquisitionCostDop: line.acquisitionCostDop,
+    pricePending: line.pricePending,
+  };
+}
+
+export function snapshotPosDraft(draft: PosDraftView): PosDraftSnapshot {
+  return {
+    customerId: draft.customerId,
+    currency: draft.currency,
+    fiscal: draft.fiscal,
+    lines: draft.lines.map(snapshotPosLine),
+  };
+}
+
+export function toPosAddLineInput(line: PosLineSnapshot): Omit<AddDraftLineInput, 'draftId'> {
+  return {
+    type: line.type,
+    itemId: line.itemId,
+    qtyProductId: line.qtyProductId,
+    serviceId: line.serviceId,
+    description: line.description,
+    quantity: line.quantity,
+    unitPrice: line.unitPrice,
+    acquisitionCostDop: line.acquisitionCostDop,
+  };
+}
+
+/**
+ * ITEM addLine always leaves pricePending; restore the committed price so undo
+ * matches the line the seller removed. Other types already accept unitPrice.
+ */
+async function restoreLinePriceIfNeeded(
+  draftId: string,
+  draft: PosDraftView,
+  line: PosLineSnapshot,
+): Promise<Result<PosDraftView>> {
+  if (line.type !== 'ITEM' || line.pricePending) {
+    return { ok: true, value: draft };
+  }
+
+  const restored = draft.lines.find((entry) => entry.itemId === line.itemId);
+  if (!restored || !restored.pricePending) {
+    return { ok: true, value: draft };
+  }
+
+  return salesRepository.setLinePrice({
+    draftId,
+    lineId: restored.id,
+    unitPrice: line.unitPrice,
+  });
+}
+
+async function addLineFromSnapshot(
+  draftId: string,
+  line: PosLineSnapshot,
+): Promise<Result<PosDraftView>> {
+  const added = await salesRepository.addLine({
+    draftId,
+    ...toPosAddLineInput(line),
+  });
+  if (!added.ok) {
+    return added;
+  }
+  return restoreLinePriceIfNeeded(draftId, added.value, line);
+}
+
+/**
+ * Recreates a discarded draft on a new id (discard cannot be reversed in place).
+ * Used from the undo toast after PosPage has already navigated away.
+ */
+export async function restoreDiscardedDraft(snapshot: PosDraftSnapshot): Promise<Result<string>> {
+  const created = await salesRepository.createDraft();
+  if (!created.ok) {
+    return created;
+  }
+
+  const draftId = created.value.draftId;
+  const meta = await salesRepository.setDraftMeta({
+    draftId,
+    customerId: snapshot.customerId,
+    currency: snapshot.currency,
+    fiscal: snapshot.fiscal,
+  });
+  if (!meta.ok) {
+    return meta;
+  }
+
+  for (const line of snapshot.lines) {
+    const restored = await addLineFromSnapshot(draftId, line);
+    if (!restored.ok) {
+      return restored;
+    }
+  }
+
+  return { ok: true, value: draftId };
+}
 
 type PosQuery =
   | { status: 'loading' }
@@ -179,6 +308,16 @@ export function usePos(draftId: string | undefined) {
     });
   }, [draftId, navigate, runExclusive]);
 
+  const restoreRemovedLine = useCallback(
+    async (line: PosLineSnapshot): Promise<Result<void>> => {
+      if (!draftId || draftId === 'new') {
+        return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
+      }
+      return runExclusive(async () => applyDraftResult(await addLineFromSnapshot(draftId, line)));
+    },
+    [applyDraftResult, draftId, runExclusive],
+  );
+
   return {
     result,
     isMutating,
@@ -188,5 +327,6 @@ export function usePos(draftId: string | undefined) {
     setMeta,
     confirm,
     discard,
+    restoreRemovedLine,
   };
 }
