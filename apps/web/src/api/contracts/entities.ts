@@ -97,6 +97,17 @@ export type Customer = {
   contacts: CustomerContact[];
 };
 
+export type CategoryAttributeType = 'text' | 'number' | 'select';
+
+/** Small Administrator-maintained field; not free-form item metadata. */
+export type CategoryAttributeDefinition = {
+  key: string;
+  label: string;
+  type: CategoryAttributeType;
+  required?: boolean;
+  options?: string[];
+};
+
 export type Category = {
   id: string;
   name: string;
@@ -104,6 +115,7 @@ export type Category = {
   codePrefix: string;
   isAssembly: boolean;
   expectedComponents?: string[];
+  attributes?: CategoryAttributeDefinition[];
 };
 
 export type Service = {

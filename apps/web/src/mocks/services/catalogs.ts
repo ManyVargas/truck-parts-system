@@ -1,6 +1,7 @@
 import type { SaveCategoryInput, SaveServiceInput } from '../../api/contracts/catalogs';
 import type { AppState, Category, Service } from '../../api/contracts/entities';
 import { err, ok, type Result } from '../../shared/auth/types';
+import { parseAttributeDefinitions } from '../../shared/domain/category-attributes';
 import { normalizeCodePrefix } from './item-code';
 
 function optionalText(value: string | undefined): string | undefined {
@@ -162,12 +163,21 @@ export function prepareCategorySave(
     });
   }
 
+  const attributesResult =
+    input.attributes !== undefined
+      ? parseAttributeDefinitions(input.attributes)
+      : ok(existing?.attributes);
+  if (!attributesResult.ok) {
+    return attributesResult;
+  }
+
   return ok({
     id: existing?.id ?? nextCategoryId(categories, name),
     name,
     codePrefix,
     isAssembly: input.isAssembly,
     expectedComponents: input.isAssembly ? expectedComponents : undefined,
+    ...(attributesResult.value ? { attributes: attributesResult.value } : {}),
   });
 }
 

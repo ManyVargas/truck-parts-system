@@ -61,6 +61,7 @@ export function createInitialState(): AppState {
       codePrefix: 'MOT',
       isAssembly: true,
       expectedComponents: ['Alternador', 'Turbo', 'Motor de arranque'],
+      attributes: [{ key: 'displacement', label: 'Cilindrada', type: 'text' as const }],
     },
     {
       id: 'CAT-TRANS',
@@ -74,6 +75,14 @@ export function createInitialState(): AppState {
       name: 'Alternador',
       codePrefix: 'ALT',
       isAssembly: false,
+      attributes: [
+        {
+          key: 'voltage',
+          label: 'Voltaje',
+          type: 'select' as const,
+          options: ['12V', '24V'],
+        },
+      ],
     },
     {
       id: 'CAT-TUR',
@@ -98,6 +107,55 @@ export function createInitialState(): AppState {
       name: 'Lubricantes',
       codePrefix: 'LUB',
       isAssembly: false,
+    },
+    {
+      id: 'CAT-BAT',
+      name: 'Batería',
+      codePrefix: 'BAT',
+      isAssembly: false,
+      attributes: [
+        {
+          key: 'voltage',
+          label: 'Voltaje',
+          type: 'select' as const,
+          required: true,
+          options: ['12V', '24V'],
+        },
+        { key: 'capacity', label: 'Capacidad', type: 'text' as const },
+      ],
+    },
+    {
+      id: 'CAT-TIR',
+      name: 'Goma',
+      codePrefix: 'GOM',
+      isAssembly: false,
+      attributes: [
+        {
+          key: 'tireType',
+          label: 'Tipo',
+          type: 'select' as const,
+          required: true,
+          options: ['Radial', 'Diagonal'],
+        },
+        { key: 'size', label: 'Medida', type: 'text' as const, required: true },
+        { key: 'diameter', label: 'Diámetro', type: 'text' as const, required: true },
+      ],
+    },
+    {
+      id: 'CAT-RIM',
+      name: 'Rin',
+      codePrefix: 'RIN',
+      isAssembly: false,
+      attributes: [
+        {
+          key: 'material',
+          label: 'Material',
+          type: 'select' as const,
+          required: true,
+          options: ['Acero reforzado', 'Aluminio'],
+        },
+        { key: 'size', label: 'Medida', type: 'text' as const, required: true },
+      ],
     },
   ];
 

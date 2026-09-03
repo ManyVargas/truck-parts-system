@@ -30,8 +30,8 @@ describe('MockCategoryRepository', () => {
     signInAs('ADMINISTRATOR');
 
     const saved = await mockCategoryRepository.save({
-      name: 'Rin',
-      codePrefix: 'RIN',
+      name: 'Bomba',
+      codePrefix: 'BOM',
       isAssembly: true,
       expectedComponents: ['Disco', 'Tuerca'],
     });
@@ -41,10 +41,10 @@ describe('MockCategoryRepository', () => {
     expect(listed.ok).toBe(true);
     if (listed.ok) {
       expect(listed.value).toContainEqual(
-        expect.objectContaining({ id: 'CAT-RIN', name: 'Rin', codePrefix: 'RIN', isAssembly: true }),
+        expect.objectContaining({ id: 'CAT-BOMBA', name: 'Bomba', codePrefix: 'BOM', isAssembly: true }),
       );
     }
-    expect(getMockState().items.every((item) => item.categoryId !== 'CAT-RIN')).toBe(true);
+    expect(getMockState().items.every((item) => item.categoryId !== 'CAT-BOMBA')).toBe(true);
   });
 
   it('backfills unsold motors including an installed engine when a new expected component is added', async () => {

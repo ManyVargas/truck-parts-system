@@ -6,9 +6,11 @@ export type DashboardKpis = {
   outstandingDop: number;
   outstandingUsd: number;
   draftCount: number;
-  pendingDismantling: number;
-  workOrdersInProgress: number;
   incompleteAssemblies: number;
+  /** Administrator-only work-order queue — omitted for Seller (WO-003). */
+  pendingDismantling?: number;
+  /** Administrator-only work-order queue — omitted for Seller (WO-003). */
+  workOrdersInProgress?: number;
   /** Administrator-only — omitted from Seller projections. */
   profitDop?: number;
   /** Administrator-only — omitted from Seller projections. */

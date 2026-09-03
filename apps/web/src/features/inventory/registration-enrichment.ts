@@ -1,4 +1,6 @@
 import type { AssemblyBaselineEntry, RegisterItemInput } from '../../api/contracts/inventory';
+import type { CategoryAttributeDefinition } from '../../api/contracts/entities';
+import { pendingAttributeLabels } from '../../shared/domain/category-attributes';
 
 export type RegistrationMode = 'INDIVIDUAL' | 'QUANTITY';
 
@@ -10,7 +12,6 @@ export const ENRICHMENT_LABELS = {
   partNumber: 'Número de parte',
   acquisitionCost: 'Costo de adquisición',
   location: 'Ubicación',
-  attributes: 'Atributos',
   notes: 'Notas',
   photos: 'Fotos',
 } as const;
@@ -37,6 +38,7 @@ export function pendingEnrichmentLabels(
     | 'notes'
     | 'photos'
   >,
+  attributeDefinitions?: CategoryAttributeDefinition[],
 ): string[] {
   const pending: string[] = [];
 
@@ -63,9 +65,7 @@ export function pendingEnrichmentLabels(
   if (item.acquisitionCostDop == null) {
     pending.push(ENRICHMENT_LABELS.acquisitionCost);
   }
-  if (!item.attributes || Object.keys(item.attributes).length === 0) {
-    pending.push(ENRICHMENT_LABELS.attributes);
-  }
+  pending.push(...pendingAttributeLabels(attributeDefinitions, item.attributes));
   if (!hasText(item.notes)) {
     pending.push(ENRICHMENT_LABELS.notes);
   }
@@ -74,14 +74,6 @@ export function pendingEnrichmentLabels(
   }
 
   return pending;
-}
-
-export function parseAttributeLines(value: string): Record<string, string> | undefined {
-  const entries = value
-    .split('\n')
-    .map((line) => line.split(':', 2).map((part) => part.trim()))
-    .filter(([key, entryValue]) => key && entryValue);
-  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
 /** Keep already-entered checklist rows when returning to step 2. */

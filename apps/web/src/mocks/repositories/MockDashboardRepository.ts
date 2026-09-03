@@ -17,6 +17,7 @@ export class MockDashboardRepository implements DashboardRepository {
       nowIso: DEMO_NOW_ISO,
       includeProfitability: can(permission.value, 'profit.view'),
       includeAdminAlerts: can(permission.value, 'inventory.admin'),
+      includeWorkOrderQueue: can(permission.value, 'workOrders.manage'),
     });
 
     return ok(snapshot);
