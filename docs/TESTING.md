@@ -2,7 +2,8 @@
 
 ## Resultado de la verificación
 
-Última ejecución: **2 de septiembre de 2026**, mediante `npm run test:unit`, `npm run test:integration` y `npm run test:web:component`.
+Última ejecución frontend: **2 de septiembre de 2026** (`npm run test:unit`, `npm run test:integration`, `npm run test:web:component`).  
+Última ejecución backend: **3 de septiembre de 2026** (`npm run test:unit -w @truck-parts/api`, `npm run test:integration -w @truck-parts/api`), tras registrar las pruebas del contrato de errores (Milestone 3).
 
 | Aplicación            | Tipo        | Archivos | Pruebas declaradas | Resultado obtenido |
 | --------------------- | ----------- | -------: | -----------------: | ------------------ |
@@ -10,12 +11,12 @@
 | Frontend              | Integración |       10 |                 68 | 68 aprobadas       |
 | Frontend              | Componentes |       27 |                119 | 119 aprobadas      |
 | **Subtotal frontend** |             |   **67** |            **443** | **443**            |
-| Backend               | Unitarias   |        2 |                 11 | 11 aprobadas       |
-| Backend               | Integración |        1 |                  2 | 2 aprobadas        |
-| **Subtotal backend**  |             |    **3** |             **13** | **13**             |
-| **Total**             |             |   **70** |            **456** | **456**            |
+| Backend               | Unitarias   |        3 |                 25 | 25 aprobadas       |
+| Backend               | Integración |        2 |                 15 | 13 aprobadas; 2 omitidas sin BD de pruebas |
+| **Subtotal backend**  |             |    **5** |             **40** | **38** (más 2 si PostgreSQL de test está arriba) |
+| **Total**             |             |   **72** |            **483** | **481** (más 2 con BD) |
 
-> Las dos integraciones del backend usan `describe.skipIf(!integrationDatabaseReady)`. En esta ejecución PostgreSQL estuvo disponible y ambas fueron aprobadas; en un entorno sin base de pruebas se reportan como omitidas.
+> Solo `integration/health/routes.test.ts` usa `describe.skipIf(!integrationDatabaseReady)`. El contrato HTTP de errores no depende de PostgreSQL. En un entorno con base de pruebas, las dos de health también se ejecutan.
 
 ## Frontend
 
@@ -120,22 +121,24 @@ Renderizan React en jsdom con Testing Library y validan comportamiento visible. 
 
 ### Pruebas unitarias
 
-Validan el repositorio y el servicio de salud con dependencias simuladas. Hay **11 pruebas en 2 archivos**.
+Validan el repositorio y el servicio de salud con dependencias simuladas, y el mapper de errores de aplicación sin HTTP. Hay **25 pruebas en 3 archivos**.
 
-| Archivo                          | Cantidad | Pruebas realizadas                                                                                                                                   | Resultado esperado                                                                                                                                                                                                            |
-| -------------------------------- | -------: | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `unit/health/repository.test.ts` |        6 | Artefacto de migraciones ausente/vacío; migraciones pendientes; migraciones al día; metadatos ilegibles; `SELECT 1` exitoso; PostgreSQL inaccesible. | Devuelve respectivamente `unavailable` sin consultar la BD, `pending`, `up_to_date`, `unavailable`, `true` y `false`.                                                                                                         |
-| `unit/health/service.test.ts`    |        5 | Liveness; readiness con BD caída; metadatos no verificables; migraciones pendientes; servicio listo.                                                 | Liveness devuelve `{ status: 'ok' }` sin tocar BD; readiness devuelve error con `database: down`, error con `migrations: unavailable`, error con `migrations: pending` o éxito con `database: up` y `migrations: up_to_date`. |
+| Archivo                                    | Cantidad | Pruebas realizadas                                                                                                                                   | Resultado esperado                                                                                                                                                                                                            |
+| ------------------------------------------ | -------: | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `unit/health/repository.test.ts`           |        6 | Artefacto de migraciones ausente/vacío; migraciones pendientes; migraciones al día; metadatos ilegibles; `SELECT 1` exitoso; PostgreSQL inaccesible. | Devuelve respectivamente `unavailable` sin consultar la BD, `pending`, `up_to_date`, `unavailable`, `true` y `false`.                                                                                                         |
+| `unit/health/service.test.ts`              |        5 | Liveness; readiness con BD caída; metadatos no verificables; migraciones pendientes; servicio listo.                                                 | Liveness devuelve `{ status: 'ok' }` sin tocar BD; readiness devuelve error con `database: down`, error con `migrations: unavailable`, error con `migrations: pending` o éxito con `database: up` y `migrations: up_to_date`. |
+| `unit/infrastructure/map-error.test.ts`    |       14 | ZodError; JSON malformado; body-parser 413/415; `UNAUTHORIZED`/`FORBIDDEN`/`NOT_FOUND`/`CONFLICT`/`VALIDATION`/`PAYLOAD_TOO_LARGE`/`UNSUPPORTED_MEDIA_TYPE`; `Error` inesperado; `AppError` INTERNAL. | 400 `VALIDATION` sin `errorId`; 413/415 de body-parser como cliente (`isUnexpected: false`); 4xx de aplicación sin `errorId`; 500 `INTERNAL` con `errorId` y mensaje genérico. |
 
 ### Pruebas de integración
 
-Ejercitan rutas HTTP reales con Supertest y PostgreSQL de pruebas migrado. Hay **2 pruebas en 1 archivo**.
+Ejercitan rutas HTTP reales con Supertest. Health usa PostgreSQL de pruebas migrado; el contrato de errores monta un router **solo de tests**. Hay **15 pruebas en 2 archivos**.
 
-| Archivo                             | Cantidad | Pruebas realizadas                                                                        | Resultado esperado                                                                                                        |
-| ----------------------------------- | -------: | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `integration/health/routes.test.ts` |        2 | `GET /api/health/live`; `GET /api/health/ready` con BD accesible y migraciones aplicadas. | `/live` responde 200 con `{ status: 'ok' }`; `/ready` responde 200 con estado `ok`, base `up` y migraciones `up_to_date`. |
+| Archivo                                  | Cantidad | Pruebas realizadas                                                                        | Resultado esperado                                                                                                        |
+| ---------------------------------------- | -------: | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `integration/health/routes.test.ts`      |        2 | `GET /api/health/live`; `GET /api/health/ready` con BD accesible y migraciones aplicadas. | `/live` responde 200 con `{ status: 'ok' }`; `/ready` responde 200 con estado `ok`, base `up` y migraciones `up_to_date`. |
+| `integration/http/error-contract.test.ts` |       13 | Body inválido y campos desconocidos (Zod); query válida e inválida; params; snapshot de path; JSON demasiado grande (413); charset no UTF (415); 500 forzado; `CONFLICT`; ruta inexistente; `X-Request-Id`; Helmet. | 400 `VALIDATION`; `req.requestPath` conserva el mount (`/api/test-probe/...`) aunque `req.path` quede `/path-snapshot`; 413 `PAYLOAD_TOO_LARGE` y 415 `UNSUPPORTED_MEDIA_TYPE` sin `errorId`; 500 genérico; 409/404 con envelope; request ID y `nosniff`. |
 
-En esta verificación estas dos pruebas **se ejecutaron y aprobaron**. Si PostgreSQL no responde, `describe.skipIf(!integrationDatabaseReady)` las omite. Para forzarlas: configurar la URL de `apps/api/tests/helpers/database.ts` y ejecutar `npm run test:integration -w @truck-parts/api`.
+Las dos de health se omiten si PostgreSQL no responde (`describe.skipIf(!integrationDatabaseReady)`). Las trece del contrato de errores siempre corren. Para forzar health: configurar la URL de `apps/api/tests/helpers/database.ts` y ejecutar `npm run test:integration -w @truck-parts/api`.
 
 ## Comandos
 
@@ -160,6 +163,6 @@ npm run typecheck:test -w @truck-parts/web
 
 - No hay pruebas E2E de navegador; las pruebas React actuales son de componentes en jsdom.
 - La integración del frontend usa repositorios mock y memoria; no sustituye pruebas transaccionales contra PostgreSQL.
-- Las rutas reales del backend solo tienen cobertura de salud (`live` y `ready`).
+- Las rutas reales del backend cubren salud (`live` y `ready`) y el contrato de errores HTTP (400/404/409/413/415/500, `errorId` solo en 500, request ID, path capturado a la entrada, Helmet). El 400 de Zod se demuestra con un router de prueba, no con un endpoint de producto.
 - Ventas (listado, detalle, pagos, cancelación, PDF), POS (borrador, ITBIS fiscal, confirmación `FAC-`, pago inicial, undo de líneas), OT de escritorio (WM9), app Mecánico (WM10) y catálogos/usuarios admin (WM11) tienen suites unitarias, de repositorio y de componente. Un esperado nuevo en categoría de ensamblaje rellena NA provisional en unidades no vendidas y avisa al administrador. Los atributos de categoría se definen en catálogo y se capturan como campos generados en el alta y la edición. Rentabilidad incluye reintento FX y registro admin de ganancia bruta cuando el costo es desconocido. Las capabilities de UX-0 siguen los releases del Development Plan (`release-1` … `release-8` y `prototype`). Las pruebas de componente usan el preset `prototype` por defecto para no heredar `VITE_CAPABILITIES_PRESET` del `.env` local. UX-1 cubre Modal/Field/Tabs con teclado, Button `busy` y Skeleton anunciado. UX-2 agrupa el sidebar comercial por intención de trabajo y compacta/overlay según breakpoint. UX-3 aplica progressive disclosure al registro de inventario (INV-002). UX-4 jerarquiza estados de inventario y unifica tablas (click de fila al detalle más enlace para teclado; columnas operativas separadas). UX-5 endurece el POS. UX-6 endurece la app del mecánico (targets, evidencia con progreso/reintento, historial completado, copy de red). El listado de inventario y ventas lee filtros operativos desde la URL (p. ej. KPIs del escritorio). Siguen fuera: carga real de fotos.
 - Cada cambio de negocio debe agregar una prueba en el nivel más bajo que demuestre la regla y una integración cuando intervengan autorización o estado compartido.

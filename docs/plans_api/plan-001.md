@@ -1,8 +1,8 @@
 # Plan 001 — Release 1 Milestones: Foundation + Access and Users
 
 **Release:** 1 — Application Foundation and Access (Local Development)  
-**Estado:** Milestone 2 completado — Milestone 3 pendiente  
-**Último milestone:** Milestone 11 — Frontend usuarios + exit gate Release 1
+**Estado:** Milestone 3 completado — Milestone 4 pendiente  
+**Último milestone:** Milestone 11 — Integrar users HTTP + exit gate Release 1
 
 ---
 
@@ -13,8 +13,9 @@
 - **Entorno:** desarrollo y pruebas **únicamente en local** durante Release 1. No hay staging ni producción.
 - **Primer despliegue productivo:** después de completar Release 2 — Billing Core ([`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) §First production deployment).
 - **Features en alcance:** [`../FEATURES/01_ACCESS_AND_USERS.md`](../FEATURES/01_ACCESS_AND_USERS.md) + slice R1 de [`../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md`](../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md).
-- **Estado del repo al crear el plan:** solo documentación; sin código productivo.
-- **Ciclo por milestone:** plan → implementación → pruebas → revisión → commit.
+- **Frontend:** el prototipo mock de [`../plans_web/plan-001.md`](../plans_web/plan-001.md) está **cerrado** (WM12). Login, shell por rol, usuarios y perfil propio ya existen contra mocks (`VITE_USE_MOCK_API`). M10–M11 de este plan **no reconstruyen pantallas**; sustituyen el repositorio mock por HTTP.
+- **Estado API:** M1–M3 completados (health live/ready + contrato de errores). Ningún endpoint de Access/Users existe todavía.
+- **Ciclo por milestone:** plan → implementación → pruebas → revisión → commit. La integración web se hace **solo** cuando la función API cumple el criterio de la sección Integración API → Web.
 
 
 
@@ -42,6 +43,66 @@ Documentadas en [`../FEATURES/01_ACCESS_AND_USERS.md`](../FEATURES/01_ACCESS_AND
 8. Mechanic en R1: proyección mínima de sesión + tests negativos; proyección WO completa en release correspondiente.
 9. History R1: envelope reutilizable + solo eventos de ciclo de vida de usuarios.
 10. Feature 01: un feature de producto; módulos `access` y `users` compartiendo modelo/repositorio de usuario.
+11. Integración web Release 1: el prototipo ya cubre la UI de Feature 01. No se cablea una función a HTTP hasta que el backend tenga el stack completo de esa función (ruta → controller → service → repository → validation → types + tests) **y** M3 haya fijado el contrato de errores. Pantallas de Releases 2–8 (clientes, facturas, inventario, OT, etc.) **permanecen en mock** aunque la UI exista.
+
+## Integración API → Web (cuándo cablear)
+
+El prototipo web ya está listo para Access/Users. El cuello de botella es la API, no la UI.
+
+**Una función está lista para integrar** cuando se cumplen los tres lados:
+
+| Lado | Listo cuando |
+|---|---|
+| API | Módulo con routes, controller, service, repository, validation, types; tests de la función; errores HTTP estables (M3) |
+| Web | Pantalla/flujo + interfaz de repositorio + stub HTTP en `apps/web/src/api/` (ya cubierto por WM2/WM11/WM12 para auth, perfil y usuarios) |
+| Alcance de release | La función pertenece a Release 1. Tener UI mock de un release posterior **no** autoriza a integrar esa API ahora ([`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) §1.7) |
+
+Hasta entonces: `VITE_USE_MOCK_API` distinto de `false` (mocks). No mezclar login real con listados mock de usuarios, ni al revés.
+
+### Estado ahora (después de M3, antes de M4)
+
+**No hay función de Access/Users integrable.** El contrato de errores está fijado. Faltan modelo User/Session, HTTP de auth, policies y CRUD de usuarios.
+
+| Función API | ¿Integrable ahora? | Motivo |
+|---|---|---|
+| `GET /api/health/live` | Opcional (ops) | API completa. El prototipo **ya no** tiene pantalla de health; no es Feature 01. Se puede usar a mano o en CI. |
+| `GET /api/health/ready` | Opcional (ops) | Igual: readiness de PostgreSQL, no flujo de usuario. |
+| Login / logout / sesión / perfil propio | No | No existen endpoints. UI lista (`/login`, shell, `/profile`, `/mechanic/profile`). |
+| Gestión Administrator de usuarios | No | No existen endpoints. UI lista (`/users`). |
+| History de usuarios | No | Envelope aún no existe. En R1 **no hay pantalla** de historial de usuarios; es persistencia + tests. |
+| Clientes, facturas, inventario, OT, dashboard KPIs, recovery | No (fuera de R1) | UI mock existe; API y release correspondientes son R2+. |
+
+### Matriz Release 1 — primer momento integrable
+
+| Función | Componentes API | Componentes web (ya existen) | Primer momento integrable | Trabajo de integración |
+|---|---|---|---|---|
+| Health live/ready | M1–M2 | Ninguno de producto (se quitó el health check de WM1) | **Después de M2** (ya cumplido) | No hay slice de producto. Smoke/CI solamente. |
+| Contrato de errores (`errorId`, 400/401/403/409/500) | M3 | Toasts / `Result<T, AppError>` | Después de M3 | No se “integra” una pantalla. M10–M11 **mapean** estos códigos. Sin M3 no se cablea auth. |
+| Test harness / CI | M4 | — | Nunca a UI | Plantilla de smoke; se completa cuando existan login y policies. |
+| User/Session + bootstrap CLI | M5 | — | Nunca a UI | Persistencia y CLI. El web sigue en mock hasta que haya HTTP. |
+| `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/session` | M6 | `AuthRepository`, `LoginForm`, `AuthContext`, `credentials: 'include'` previsto | **Después de M6** a nivel de cliente HTTP; **no** activar mock→HTTP de sesión hasta M7 | El swap real es M10. Tras M6 se puede implementar `auth-api.ts` contra el contrato, pero la proyección Mechanic/roles llega en M7. |
+| `GET /api/auth/me`, `PATCH /api/auth/me` (perfil propio: name, phone, email, password; no username/rol/active) | M6 (mismo módulo `access`) | `ProfilePage`, `updateOwnProfile` | **Después de M6** (mismo corte que login) | Incluir estos endpoints en M6: el web ya los declara en `endpoint-map.ts`. Feature 01 checklist frontend. |
+| Policies `requireRole` / proyección `/session` | M7 | Shell por rol, `policies.ts` (UX, no seguridad) | **Después de M7** | Primera integración de producto: M10. Login real + cookie + 401/403. |
+| `POST/GET/PATCH` usuarios Administrator | M8 | `UserTable`, `UserFormModal`, `UserRepository` | **Después de M8** | Integración en M11. Alinear paths web (`/api/users`) vs este plan (`/api/admin/users`) en el cliente HTTP; **la API de este plan es la fuente HTTP**. |
+| Eventos `USER_*` | M9 | Sin pantalla R1 | **No integrar UI en R1** | Append en la misma transacción que M8. El exit gate de M11 **verifica** eventos por API/tests, no por una vista nueva. |
+
+### Qué hacer después de cada milestone
+
+| Al terminar | Integrar a web | No integrar todavía |
+|---|---|---|
+| **M1** (hecho) | Health stub si la app era el placeholder | Auth, usuarios |
+| **M2** (hecho) | Nada de producto. Health ready queda para CI/manual | Auth, usuarios. El prototipo web sigue 100 % mock |
+| **M3** | Nada de pantallas. Deja el contrato de error que M10–M11 consumirán | Login HTTP |
+| **M4** | Nada de UI | Login HTTP (los tests de smoke auth esperan M6–M7) |
+| **M5** | Nada de UI. Bootstrap CLI crea el admin real para pruebas posteriores | Login HTTP |
+| **M6** | **Preparar** `HttpAuthRepository` (login/logout/session/me/profile). Aún no poner `VITE_USE_MOCK_API=false` como default | Shell por rol contra proyección incompleta; usuarios admin |
+| **M7** | Auth **queda integrable** (login/sesión/perfil/shell). En este plan el swap se hace en M10, después de M8, para probar los 3 roles con usuarios reales | `/users` (falta M8); cualquier pantalla R2+ |
+| **M8** | Usuarios admin **quedan integrables**. El swap se hace en M11 (tras M10) | History UI; facturación |
+| **M9** | Nada de UI nueva | Recovery/diagnostics (Release 8) |
+| **M10** | Auth HTTP verificado en browser (3 roles) | Gestión de usuarios si M8 no está |
+| **M11** | Usuarios HTTP + exit gate R1 | Release 2 (clientes/facturas) |
+
+**Release 1 cerrado:** solo Access/Users (+ health + envelope de history) habla con API real. El resto del prototipo permanece mock hasta su release en [`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md).
 
 ## Diagrama de dependencias
 
@@ -56,13 +117,14 @@ flowchart TD
   M7[M7 Autorizacion policies]
   M8[M8 User management backend]
   M9[M9 History envelope R1]
-  M10[M10 Frontend auth shell]
-  M11[M11 Frontend users exit gate]
+  M10[M10 Integrar auth HTTP]
+  M11[M11 Integrar users HTTP + exit gate]
 
   M1 --> M2 --> M3 --> M4
   M2 --> M5 --> M6 --> M7 --> M8
   M5 --> M9
   M8 --> M9
+  M3 --> M10
   M6 --> M10
   M7 --> M10
   M8 --> M11
@@ -72,19 +134,19 @@ flowchart TD
 
 ## Milestones — estado
 
-| ID | Milestone | Estado |
-|---|---|---|
-| M1 | Scaffold monorepo FE/BE + convenciones + health stub | completado |
-| M2 | PostgreSQL + Prisma + health readiness | completado |
-| M3 | Errores, logging, validación HTTP | pendiente |
-| M4 | Test harness + CI baseline (smoke R1) | pendiente |
-| M5 | Modelo User/Session + bootstrap CLI admin | pendiente |
-| M6 | Login/logout/sesiones (AUTH-001) | pendiente |
-| M7 | Autorización server-side (AUTH-002/005) | pendiente |
-| M8 | User management backend (AUTH-003/004) | pendiente |
-| M9 | History envelope R1 + eventos de usuarios | pendiente |
-| M10 | Frontend login/logout/shell por rol | pendiente |
-| M11 | Frontend gestión de usuarios + exit gate Release 1 | pendiente |
+| ID | Milestone | Estado | Integración web |
+|---|---|---|---|
+| M1 | Scaffold monorepo FE/BE + convenciones + health stub | completado | Health stub (histórico; ya no es UI de producto) |
+| M2 | PostgreSQL + Prisma + health readiness | completado | **Nada de producto.** Health solo CI/ops |
+| M3 | Errores, logging, validación HTTP | completado | Contrato de errores; aún sin pantallas HTTP |
+| M4 | Test harness + CI baseline (smoke R1) | pendiente | Ninguna |
+| M5 | Modelo User/Session + bootstrap CLI admin | pendiente | Ninguna (CLI, no HTTP) |
+| M6 | Login/logout/sesiones + perfil propio (AUTH-001) | pendiente | Cliente HTTP auth **preparable**; swap no default |
+| M7 | Autorización server-side (AUTH-002/005) | pendiente | **Listo para M10** (auth + shell) |
+| M8 | User management backend (AUTH-003/004) | pendiente | **Listo para M11** (`/users`) |
+| M9 | History envelope R1 + eventos de usuarios | pendiente | Sin UI R1; tests/API en el exit gate |
+| M10 | Integrar auth HTTP (login/sesión/perfil/shell) | pendiente | Swap `AuthRepository` mock → HTTP |
+| M11 | Integrar users HTTP + exit gate Release 1 | pendiente | Swap `UserRepository` mock → HTTP |
 
 ---
 
@@ -116,6 +178,8 @@ flowchart TD
 - Clonar, instalar, ejecutar FE+BE en local, ver health check.
 - Sin lógica de negocio ni BD.
 
+**Integración web:** En su momento el placeholder consultaba `/api/health`. Ese UI ya no existe. No hay más que cablear de M1.
+
 ---
 
 ## Milestone 2 — PostgreSQL, Prisma y conectividad
@@ -141,6 +205,8 @@ flowchart TD
 - API reporta readiness real contra PostgreSQL local.
 - Migraciones reproducibles desde cero.
 
+**Integración web (después de M2 — estado actual):** **No se integra Access/Users.** Health live/ready quedan para smoke y diagnóstico. El prototipo web sigue enteramente en mock. No poner `VITE_USE_MOCK_API=false`.
+
 ---
 
 ## Milestone 3 — Errores, logging, validación HTTP
@@ -162,6 +228,8 @@ flowchart TD
 - Pipeline estándar request → validate → controller → service operativo.
 - Logs correlacionables por request ID.
 
+**Integración web (después de M3):** **Aún no hay pantallas HTTP.** Este milestone desbloquea el mapeo de `errorId` / 400 / 401 / 403 / 409 / 500 que M10–M11 usarán. Sin este contrato no se cablea login.
+
 ---
 
 ## Milestone 4 — Test harness y CI baseline
@@ -181,6 +249,8 @@ flowchart TD
 **Definición de terminado:**
 - CI bloquea merge si falla typecheck o tests.
 - Smoke scope R1 documentado y automatizable.
+
+**Integración web (después de M4):** Ninguna. El smoke de login/sesión se rellena cuando existan M6–M7; no adelantar UI.
 
 ---
 
@@ -209,6 +279,8 @@ flowchart TD
 - Bootstrap CLI documentado y testeado.
 - Repositorios testeados sin HTTP de auth aún.
 
+**Integración web (después de M5):** Ninguna. No hay rutas HTTP. El CLI deja el primer Administrator para cuando M6 exista; el login de la web sigue siendo mock (`admin` / `demo1234` no es el usuario de PostgreSQL).
+
 ---
 
 ## Milestone 6 — Autenticación: login, logout, sesiones (AUTH-001)
@@ -219,6 +291,8 @@ flowchart TD
 - `POST /api/auth/login` — verificación credenciales, sesión nueva, rotación
 - `POST /api/auth/logout`
 - `GET /api/auth/session`
+- `GET /api/auth/me` — usuario de la sesión (sin `passwordHash`)
+- `PATCH /api/auth/me` — perfil propio: `name`, `phone?`, `email?`, cambio de password (mínimo 6; requiere password actual). **No** acepta `username`, `role` ni `active` del cliente (eso es M8 / `users.manage`)
 - Cookie: `HttpOnly`, `SameSite` explícito; `Secure` solo en despliegue HTTPS futuro
 - Sesiones en PostgreSQL
 - Rate limiting + mensaje genérico en login fallido
@@ -233,9 +307,13 @@ flowchart TD
 - Credenciales inválidas / inactive → rechazo
 - Logout invalida sesión
 - Sin password/hash en responses ni logs
+- PATCH propio: actualiza contacto; rechaza username/rol/active; password corta o actual incorrecta → 400
 
 **Definición de terminado:**
 - AUTH-001 cubierto por tests automatizados vía API.
+- Perfil propio cubierto por tests (validación + rechazo de campos de cuenta).
+
+**Integración web (después de M6):** **Preparable, no default.** Implementar `apps/web/src/api/client/auth-api.ts` contra estos paths. No activar `VITE_USE_MOCK_API=false` hasta M7/M10: falta proyección por rol y denegaciones 403. No cablear `/users`.
 
 ---
 
@@ -259,6 +337,8 @@ flowchart TD
 **Definición de terminado:**
 - Tests negativos de rol vía Supertest.
 - Mechanic verificado solo con proyección mínima + denegaciones.
+
+**Integración web (después de M7):** **Sí — ejecutar M10.** Login, logout, sesión, perfil propio y shell por rol pueden dejar el mock. Mechanic no debe recibir datos comerciales en `/session` ni `/me`. `/users` espera M8.
 
 ---
 
@@ -289,6 +369,8 @@ flowchart TD
 - Checklist backend Feature 01 completo excepto history events (M9).
 - API usable sin frontend.
 
+**Integración web (después de M8):** **Sí — ejecutar M11** para `/users`. El cliente HTTP debe hablar con `/api/admin/users` (este plan), aunque el mapa mock del web diga `/api/users`. Create vs update: el web usa un `save()` único; el cliente parte create (`POST`) y patch (`PATCH`). No integrar clientes/facturas.
+
 ---
 
 ## Milestone 9 — History mínimo Release 1 (HIST-001/002 slice)
@@ -310,40 +392,47 @@ flowchart TD
 - AUTH-004 + HIST-002 demostrables con integration test.
 - Sin recovery/diagnostics/otros eventos.
 
+**Integración web (después de M9):** **Ninguna pantalla nueva.** Release 1 no tiene timeline de usuarios. M11 comprueba eventos con tests/API (crear/desactivar produce `USER_*`). Recovery UI del prototipo sigue mock (Release 8).
+
 ---
 
-## Milestone 10 — Frontend: login, logout, sesión y shell por rol
+## Milestone 10 — Integrar auth HTTP: login, sesión, perfil y shell
 
-**Objetivo:** UI local para AUTH-001/002/005; navegación por rol sin ser seguridad.
+**Objetivo:** Sustituir el mock de `AuthRepository` por la API de M6–M7. La UI de login/shell/perfil **ya existe** (prototipo WM2 + perfil); no se rediseña.
 
 **Alcance:**
-- Pantalla login (`username` + password)
-- Manejo sesión expirada / cuenta inactive
-- Logout
-- App shell por rol (Admin → Users; Seller/Mechanic shells mínimos)
-- Mechanic: shell mobile-first placeholder sin datos comerciales
-- `credentials: 'include'`
-- Route guards UX complementarios
+- Implementar `HttpAuthRepository` / `auth-api.ts`: login, logout, session, me, `updateOwnProfile`
+- `credentials: 'include'` y manejo de cookie HttpOnly
+- Mapear 401 (sesión expirada / inactive) y errores de validación a la UX existente
+- App shell por rol usando la proyección de `/api/auth/session` (Admin → Users en nav; Seller/Mechanic shells ya montados)
+- Mechanic: sin datos comerciales en la sesión HTTP
+- Route guards UX complementarios (la seguridad sigue en el servidor)
 - Verificación en browser obligatoria
+- Default de desarrollo puede seguir en mock hasta que este milestone esté verde; entonces auth R1 usa API real
 
 **Pruebas:**
-- Browser: login/logout por 3 roles
+- Browser: login/logout por 3 roles con usuarios de bootstrap/M8 (no las credenciales demo del mock)
 - Mechanic no ve nav admin/comercial
+- Perfil propio persiste tras recargar
 
 **Definición de terminado:**
-- Checklist frontend parcial (login/logout/session/nav) completo en local.
+- Checklist frontend Feature 01 de login/logout/session/nav/perfil contra API local.
+- Inventario, ventas, clientes, OT, etc. **siguen en mock**.
+
+**Integración web (este milestone):** **Hacer el swap de auth.** No swap de `UserRepository` si M8 no está cerrado.
 
 ---
 
-## Milestone 11 — Frontend usuarios + exit gate Release 1
+## Milestone 11 — Integrar users HTTP + exit gate Release 1
 
-**Objetivo:** UI de gestión de usuarios + cierre de Release 1 en entorno local.
+**Objetivo:** Sustituir el mock de `UserRepository` por la API de M8 y cerrar Release 1 en local.
 
 **Alcance:**
+- `HttpUserRepository`: list → `GET /api/admin/users`; create → `POST`; update/deactivate/role → `PATCH /api/admin/users/:id`
 - Listado: `name`, `username`, rol, estado, phone/email si existen
-- Crear/editar/desactivar/cambiar rol
-- Errores 409/403/validation
+- Errores 409/403/validation en la UI existente (`UserFormModal` / toasts)
 - Actualizar checklists Feature 01 y slice R1 de Feature 14
+- Confirmar que history `USER_*` se escribe (tests/API), sin pantalla nueva de historial
 
 **Pruebas:**
 - Browser E2E local: Admin crea Seller, desactiva, login falla
@@ -355,7 +444,9 @@ flowchart TD
 - Access and Users completamente funcional y probado en **entorno local**.
 - Roles autentican localmente; requests directos no autorizados fallan.
 - Migraciones limpias en BD local fresca.
-- **Último milestone de Release 1.** No iniciar Release 2 hasta aprobación explícita.
+- **Último milestone de Release 1.** No iniciar implementación de API de Release 2 hasta aprobación explícita. Las pantallas R2+ del prototipo permanecen mock.
+
+**Integración web (este milestone):** **Hacer el swap de usuarios.** Nada de clientes, facturas ni inventario.
 
 ---
 
@@ -363,7 +454,9 @@ flowchart TD
 
 Secuencial: **M1 → M2 → M3 → M4 → M5 → M6 → M7 → M8 → M9 → M10 → M11**.
 
-M10 puede iniciarse tras M7; se recomienda esperar M8 para usuarios demo reales.
+El prototipo web no es dependencia: M10/M11 son swaps HTTP. En la secuencia de este plan, M10 va **después de M8** para poder verificar Administrator, Seller y Mechanic con cuentas de PostgreSQL (el CLI de M5 solo crea el primer Administrator). M11 espera M8 + M10; M9 debe estar hecho para el exit gate (eventos), no para pintar `/users`.
+
+Tras **cerrar Release 1**, la siguiente integración web de negocio es Release 2 (clientes/facturas), no un cableado anticipado del prototipo.
 
 ## Qué NO planificar aquí
 
@@ -372,9 +465,11 @@ M10 puede iniciarse tras M7; se recomienda esperar M8 para usuarios demo reales.
 
 ## Próximo paso
 
-**Milestone 3:** Errores, logging, validación HTTP — pendiente de aprobación para iniciar.
+**Milestone 4:** Test harness + CI baseline (smoke R1) — pendiente de aprobación para iniciar.
 
-Antes de M3, asegúrate de tener `.env` con un `DATABASE_URL` válido, la base `truck_parts_dev` creada, y haber corrido:
+No integrar Access/Users a la web: el prototipo permanece en mock hasta M10–M11.
+
+Antes de seguir, asegúrate de tener `.env` con un `DATABASE_URL` válido, la base `truck_parts_dev` creada, y haber corrido:
 
 ```bash
 npm run db:migrate:deploy

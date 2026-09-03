@@ -2,6 +2,7 @@ import './infrastructure/config/load-env.js';
 
 import { createApp } from './app.js';
 import { disconnectPrisma } from './infrastructure/database/index.js';
+import { logger } from './infrastructure/logging/index.js';
 
 const DEFAULT_PORT = 3000;
 
@@ -10,18 +11,18 @@ const port = Number(process.env.PORT ?? DEFAULT_PORT);
 const app = createApp();
 
 const server = app.listen(port, () => {
-  console.log(`API listening on http://localhost:${port}`);
+  logger.info({ port }, 'API listening');
 });
 
 async function shutdown(signal: string): Promise<void> {
-  console.log(`Received ${signal}. Shutting down gracefully...`);
+  logger.info({ signal }, 'Shutting down gracefully');
 
   server.close(async () => {
     try {
       await disconnectPrisma();
       process.exit(0);
     } catch (error) {
-      console.error('Error during Prisma disconnect', error);
+      logger.error({ err: error }, 'Error during Prisma disconnect');
       process.exit(1);
     }
   });

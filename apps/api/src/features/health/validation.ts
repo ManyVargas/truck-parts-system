@@ -1,5 +1,6 @@
 /**
- * Health endpoints accept no request body in Milestone 2.
- * Runtime request validation arrives in Milestone 3.
+ * Health endpoints accept no request body.
+ * Runtime request validation lives in infrastructure/http/validate.ts
+ * and is attached per route when a feature has input.
  */
 export {};

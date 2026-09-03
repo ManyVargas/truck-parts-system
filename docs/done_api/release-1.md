@@ -2,7 +2,7 @@
 
 **Release:** Application Foundation and Access (Local Development)  
 **Plan de referencia:** [`../plans_api/plan-001.md`](../plans_api/plan-001.md)  
-**Estado:** en progreso (Milestones 1–2 completados)
+**Estado:** en progreso (Milestones 1–3 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 1, a medida que se completan.  
 No sustituye a `plan-001.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -145,9 +145,63 @@ Si `npm run db:generate` falla con `EPERM` al renombrar `query_engine-windows.dl
 
 ## Milestone 3 — Errores, logging, validación HTTP
 
-**Estado:** pendiente
+**Estado:** completado  
+**Fecha:** 2026-09-03
 
-*(Se documentará al completar el milestone.)*
+### Objetivo cumplido
+
+Instalar infraestructura transversal de errores de aplicación, logging estructurado, validación runtime (Zod) y un contrato HTTP estable. Sin Access/Users ni integración web.
+
+### Qué se entregó
+
+#### Taxonomía y mapper
+- `apps/api/src/infrastructure/errors/` — `AppError` + `mapErrorToHttp`
+- Códigos: `VALIDATION`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `CONFLICT`, `INTERNAL`
+- Envelope: `{ "error": { "code", "message", "errorId?", "details?" } }`
+- `errorId` **solo** en 500; mensaje de 500 genérico (sin stack ni SQL)
+- JSON malformado → 400 `VALIDATION`
+- Cuerpo demasiado grande (body-parser) → 413 `PAYLOAD_TOO_LARGE` (cliente, sin log unexpected)
+- Charset/encoding JSON no admitido → 415 `UNSUPPORTED_MEDIA_TYPE`
+
+#### Middleware HTTP
+- Request ID (`X-Request-Id` entrante o UUID generado)
+- `requestPath` capturado a la entrada (antes de que los routers recorten `req.path`)
+- Helmet
+- Logger de request (método, `requestPath`, status, duración, requestId; sin bodies)
+- `validate()` con Zod en routes
+- 404 de ruta desconocida con el mismo envelope
+- Error handler Express de 4 argumentos
+
+#### Logging
+- Pino; `LOG_LEVEL` (`silent` en `NODE_ENV=test`)
+- 500 registra `requestId` + `errorId` + error interno
+
+#### Tests
+- Unit: mapeo error → status/código
+- Integration: 400 Zod (router **solo de tests**), 413/415, snapshot de path, 409, 404, 500 + `errorId`, Helmet, `X-Request-Id`
+- `createApp({ extraRouters })` es el seam de tests; no hay endpoint público de probe
+
+### Decisiones de implementación (cerradas con el owner)
+
+| Decisión | Elección |
+|---|---|
+| Envelope | Anidado bajo `error` |
+| `errorId` | Solo 500 |
+| Headers | Helmet |
+| Cómo probar 400 | Router/schema solo en tests |
+| Rutas inexistentes | 404 `NOT_FOUND` con el envelope |
+| 413 / 415 | Códigos propios (`PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`) |
+
+### Validación
+
+- `npm run typecheck` / tests unit + integration del contrato de errores
+- Health live/ready **no** cambian de payload (503 de BD sigue siendo readiness, no `AppError`)
+
+### Fuera de alcance (intencional)
+
+- Login, User/Session, policies, CI GitHub Actions (M4)
+- Swap `VITE_USE_MOCK_API`
+- Mensajes de error en español (el `code` es el contrato para M10)
 
 ---
 

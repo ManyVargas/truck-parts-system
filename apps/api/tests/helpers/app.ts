@@ -1,5 +1,5 @@
-import { createApp } from '../../src/app.js';
+import { createApp, type CreateAppOptions } from '../../src/app.js';
 
-export function createTestApp() {
-  return createApp();
+export function createTestApp(options?: CreateAppOptions) {
+  return createApp(options);
 }
