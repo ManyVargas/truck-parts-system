@@ -1,25 +1,28 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import type { Category } from '../../api/contracts/entities';
 import type { InventoryListFilters, InventoryListRow } from '../../api/contracts/inventory';
 import type { AppError } from '../../shared/auth/types';
 import { categoryRepository, inventoryRepository } from '../../api/repositories';
+import {
+  inventoryFiltersFromSearch,
+  inventorySearchFromFilters,
+} from './inventory-list-search';
 
 type CatalogQuery =
   | { status: 'loading' }
   | { status: 'error'; error: AppError }
   | { status: 'ready'; rows: InventoryListRow[] };
 
-const DEFAULT_FILTERS: InventoryListFilters = {
-  query: '',
-  includeSold: false,
-};
-
 /**
- * Loads the unified inventory catalog. Features never import seed or services.
+ * Loads the unified inventory catalog. Filter state lives in the URL so
+ * dashboard KPI links (`?available=1`) apply on the first load.
  */
 export function useInventoryCatalog() {
-  const [filters, setFilters] = useState<InventoryListFilters>(DEFAULT_FILTERS);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchKey = searchParams.toString();
+  const filters = useMemo(() => inventoryFiltersFromSearch(searchKey), [searchKey]);
   const [result, setResult] = useState<CatalogQuery>({ status: 'loading' });
   const [categories, setCategories] = useState<Category[]>([]);
   const [reloadToken, setReloadToken] = useState(0);
@@ -54,9 +57,19 @@ export function useInventoryCatalog() {
     };
   }, [filters, reloadToken]);
 
-  const patchFilters = useCallback((patch: Partial<InventoryListFilters>) => {
-    setFilters((current) => ({ ...current, ...patch }));
-  }, []);
+  const patchFilters = useCallback(
+    (patch: Partial<InventoryListFilters>) => {
+      setSearchParams(
+        (current) => {
+          const next = { ...inventoryFiltersFromSearch(current.toString()), ...patch };
+          const encoded = inventorySearchFromFilters(next);
+          return new URLSearchParams(encoded.startsWith('?') ? encoded.slice(1) : encoded);
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
   const refresh = useCallback(() => setReloadToken((current) => current + 1), []);
 

@@ -170,6 +170,96 @@ describe('buildInventoryCatalog', () => {
     const rows = buildInventoryCatalog(state, { categoryId: 'CAT-OIL' });
     expect(rows.map((row) => row.id)).toEqual(['QTY-OIL-15W40']);
   });
+
+  it('hides sold items when Disponible is set even if includeSold is true', () => {
+    const rows = buildInventoryCatalog(state, {
+      includeSold: true,
+      quick: ['available'],
+    });
+    expect(rows.some((row) => row.id === 'TUR-009')).toBe(false);
+    expect(rows.some((row) => row.commercialState === 'SOLD')).toBe(false);
+    expect(rows.some((row) => row.id === 'FIL-001')).toBe(true);
+  });
+
+  it('combines available and independent with AND and excludes qty and installed rows', () => {
+    const ids = buildInventoryCatalog(state, { quick: ['available', 'independent'] }).map(
+      (row) => row.id,
+    );
+    expect(ids).toContain('MOT-002');
+    expect(ids).toContain('FIL-001');
+    expect(ids).not.toContain('ALT-004');
+    expect(ids).not.toContain('QTY-OIL-15W40');
+  });
+
+  it('returns only quantity products for the quantity quick filter', () => {
+    const rows = buildInventoryCatalog(state, { quick: ['quantity'] });
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((row) => row.kind === 'QTY')).toBe(true);
+  });
+
+  it('does not match quantity products for installed, independent, assemblies or incomplete', () => {
+    expect(buildInventoryCatalog(state, { quick: ['quantity', 'installed'] })).toEqual([]);
+    expect(buildInventoryCatalog(state, { quick: ['quantity', 'independent'] })).toEqual([]);
+    expect(buildInventoryCatalog(state, { quick: ['quantity', 'assemblies'] })).toEqual([]);
+    expect(buildInventoryCatalog(state, { quick: ['quantity', 'incomplete'] })).toEqual([]);
+  });
+
+  it('excludes qty rows when a condition is set and matches item condition', () => {
+    const rows = buildInventoryCatalog(state, { condition: 'NEW' });
+    expect(rows.every((row) => row.kind === 'ITEM')).toBe(true);
+    expect(rows.map((row) => row.id)).toEqual(['FIL-001']);
+  });
+
+  it('matches location against effectiveLocation including inherited warehouse text', () => {
+    const ids = buildInventoryCatalog(state, { location: 'patio a' }).map((row) => row.id);
+    expect(ids).toEqual(expect.arrayContaining(['CAM-001', 'MOT-001', 'ALT-004']));
+    expect(ids).not.toContain('FIL-001');
+    expect(ids).not.toContain('QTY-OIL-15W40');
+  });
+
+  it('filters reserved items including quantity products with reserved stock', () => {
+    const ids = buildInventoryCatalog(state, { quick: ['reserved'] }).map((row) => row.id);
+    expect(ids).toContain('ALT-004');
+    expect(ids).toContain('QTY-OIL-15W40');
+  });
+
+  it('filters assemblies and incomplete assemblies', () => {
+    const assemblies = buildInventoryCatalog(state, { quick: ['assemblies'] }).map((row) => row.id);
+    expect(assemblies).toEqual(expect.arrayContaining(['CAM-001', 'MOT-001', 'MOT-002', 'MOT-003']));
+    expect(assemblies.every((id) => !id.startsWith('QTY-'))).toBe(true);
+
+    const incomplete = buildInventoryCatalog(state, { quick: ['incomplete'] }).map((row) => row.id);
+    expect(incomplete).toEqual(expect.arrayContaining(['CAM-001', 'MOT-002']));
+    expect(incomplete).not.toContain('MOT-001');
+  });
+
+  it('filters by kind and commercial state', () => {
+    const qty = buildInventoryCatalog(state, { kind: 'QTY' });
+    expect(qty.every((row) => row.kind === 'QTY')).toBe(true);
+
+    const items = buildInventoryCatalog(state, { kind: 'ITEM' });
+    expect(items.every((row) => row.kind === 'ITEM')).toBe(true);
+
+    const sold = buildInventoryCatalog(state, { includeSold: true, commercialState: 'SOLD' });
+    expect(sold.map((row) => row.id).sort()).toEqual(['ARR-002', 'TUR-009']);
+  });
+
+  it('restricts the list to pending-catalog parent items', () => {
+    const withReviews = {
+      ...state,
+      pendingCatalogReviews: [
+        {
+          id: 'PCR-TEST',
+          parentId: 'MOT-001',
+          expectedComponentName: 'Bomba de aceite',
+          kind: 'PENDING_NA' as const,
+        },
+      ],
+    };
+    expect(buildInventoryCatalog(withReviews, { pendingCatalog: true }).map((row) => row.id)).toEqual(
+      ['MOT-001'],
+    );
+  });
 });
 
 describe('detail projections', () => {
@@ -263,7 +353,7 @@ describe('inventory commands', () => {
       name: 'Alternador de prueba',
       categoryId: 'CAT-ALT',
       condition: 'USED',
-      attributes: { voltaje: '24V' },
+      attributes: { voltage: '24V' },
       photos: ['frente.jpg'],
     });
 
@@ -271,12 +361,62 @@ describe('inventory commands', () => {
     expect(state.items.find((item) => item.id === 'ALT-012')).toMatchObject({
       commercialState: 'AVAILABLE',
       physicalRelationship: 'INDEPENDENT',
-      attributes: { voltaje: '24V' },
+      attributes: { voltage: '24V' },
     });
     expect(state.items.find((item) => item.id === 'ALT-012')).not.toHaveProperty(
       'acquisitionCostDop',
     );
     expect(state.itemCodeSeq['CAT-ALT']).toBe(13);
+  });
+
+  it('rejects arbitrary attributes and missing category minimums', () => {
+    const state = createInitialState();
+    const unknown = registerItem(state, SELLER, {
+      name: 'Alternador libre',
+      categoryId: 'CAT-ALT',
+      condition: 'USED',
+      attributes: { voltaje: '24V' },
+    });
+    const incompleteTire = registerItem(state, SELLER, {
+      name: 'Goma incompleta',
+      categoryId: 'CAT-TIR',
+      condition: 'USED',
+      attributes: { tireType: 'Radial' },
+    });
+    const tire = registerItem(state, SELLER, {
+      name: 'Goma 11R22.5',
+      categoryId: 'CAT-TIR',
+      condition: 'USED',
+      attributes: { tireType: 'Radial', size: '11R22.5', diameter: '22.5' },
+    });
+
+    expect(unknown.ok).toBe(false);
+    expect(incompleteTire.ok).toBe(false);
+    expect(tire.ok).toBe(true);
+    if (tire.ok) {
+      expect(tire.value.attributes).toEqual({
+        tireType: 'Radial',
+        size: '11R22.5',
+        diameter: '22.5',
+      });
+    }
+  });
+
+  it('keeps historical attributes when the category schema no longer includes them', () => {
+    const state = createInitialState();
+    const engine = state.categories.find((category) => category.id === 'CAT-ENG')!;
+    engine.attributes = [];
+    const result = updateItemDetails(state, SELLER, {
+      itemId: 'MOT-001',
+      name: 'Detroit DD15 Completo',
+      condition: 'USED',
+      attributes: {},
+    });
+
+    expect(result.ok).toBe(true);
+    expect(state.items.find((item) => item.id === 'MOT-001')?.attributes).toEqual({
+      displacement: '14.8L',
+    });
   });
 
   it('registers quantity inventory with initial stock and zero reservation', () => {
@@ -1026,7 +1166,6 @@ describe('quantity stock receipt and adjustment', () => {
       location: 'Estante 4',
       notes: 'Foto de etiqueta ilegible',
       photos: ['filtro-frente.jpg', 'filtro-etiqueta.jpg'],
-      attributes: { rosca: '1-12 UNF' },
     });
 
     expect(result.ok).toBe(true);
@@ -1041,7 +1180,7 @@ describe('quantity stock receipt and adjustment', () => {
       physicalRelationship: 'INDEPENDENT',
       photos: ['filtro-frente.jpg', 'filtro-etiqueta.jpg'],
     });
-    expect(item.attributes).toEqual({ rosca: '1-12 UNF' });
+    expect(item.attributes).toBeUndefined();
     expect(state.events.filter((event) => event.type === 'ITEM_REGISTERED')).toHaveLength(
       registeredEvents.length,
     );
