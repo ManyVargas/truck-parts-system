@@ -1,5 +1,6 @@
 import type { MechanicWorkOrderView, WorkOrderType } from '../../api/contracts/entities';
 import type { AppError } from '../../shared/auth/types';
+import { UX_TERMS } from '../../shared/copy/glossary';
 
 const HTTP_STATUS = /^HTTP\s+(\d+)/i;
 const NETWORK_HINT = /failed to fetch|network|timeout|ECONNRESET|ERR_NETWORK/i;
@@ -36,13 +37,19 @@ export function toMechanicUserMessage(error: AppError): string {
 }
 
 export function completeActionLabel(type: WorkOrderType): string {
-  return type === 'INSTALLATION' ? 'Completar instalación' : 'Completar desarme';
+  return type === 'INSTALLATION'
+    ? 'Completar instalación'
+    : `Completar ${UX_TERMS.dismantling.toLowerCase()}`;
 }
 
 /** Visible next step for the current order — one line, no commercial language. */
 export function mechanicNextAction(order: MechanicWorkOrderView): string {
   if (order.status === 'COMPLETED') {
     return 'Trabajo terminado. La evidencia queda en el historial.';
+  }
+
+  if (order.status === 'CANCELLED') {
+    return 'Esta orden fue cancelada. Ya no se puede completar ni agregar evidencia.';
   }
 
   if (order.status === 'PENDING') {
@@ -56,7 +63,7 @@ export function mechanicNextAction(order: MechanicWorkOrderView): string {
   if (order.actions.canComplete) {
     return order.type === 'INSTALLATION'
       ? 'Cuando termine, complete la instalación.'
-      : 'Cuando termine, complete el desarme.';
+      : `Cuando termine, complete el ${UX_TERMS.dismantling.toLowerCase()}.`;
   }
 
   if (order.actions.canAddEvidence) {
@@ -71,7 +78,7 @@ export function mechanicCardActionLabel(order: MechanicWorkOrderView, canTakeHer
     return 'Tomar orden';
   }
 
-  if (order.status === 'COMPLETED') {
+  if (order.status === 'COMPLETED' || order.status === 'CANCELLED') {
     return 'Ver historial';
   }
 

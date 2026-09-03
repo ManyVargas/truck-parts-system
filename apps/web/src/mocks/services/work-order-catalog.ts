@@ -177,13 +177,13 @@ export function isAssignedTo(order: WorkOrder, mechanicId: string): boolean {
   return order.assignedMechanicId === mechanicId;
 }
 
-/** Pending queue plus the mechanic's own active/completed work (WO-003 / WO-004). */
+/**
+ * Pending queue plus this mechanic's assigned work (WO-003 / WO-004).
+ * CANCELLED is visible only if they had the order; cancelled-before-take stays hidden.
+ */
 export function isVisibleToMechanic(order: WorkOrder, mechanicId: string): boolean {
   if (order.status === 'PENDING') {
     return true;
-  }
-  if (order.status === 'CANCELLED') {
-    return false;
   }
   return isAssignedTo(order, mechanicId);
 }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { WOStatusChip, WOTypeChip } from '../../shared/domain';
-import { Button, Card, Field, Info, Input, Mono, useToast } from '../../shared/ui';
+import { Button, Card, Field, Info, Input, Mono, Skeleton, useToast } from '../../shared/ui';
 import { EvidencePanel } from './EvidencePanel';
 import {
   completeActionLabel,
@@ -39,11 +39,7 @@ export function MechanicOrderView() {
   }
 
   if (result.status === 'loading') {
-    return (
-      <p className="text-base text-navy-400" aria-live="polite">
-        Cargando orden…
-      </p>
-    );
+    return <Skeleton label="Cargando orden" size="lg" lines={5} />;
   }
 
   const order = result.order;
@@ -54,7 +50,8 @@ export function MechanicOrderView() {
     ? `${order.destinationParentName} (${order.destinationParentId})`
     : order.destinationParentId;
   const nextAction = mechanicNextAction(order);
-  const showComplete = order.actions.canAddEvidence;
+  const isCancelled = order.status === 'CANCELLED';
+  const showComplete = order.actions.canAddEvidence || isCancelled;
 
   async function handleAdd(kind: 'BEFORE' | 'AFTER', fileName: string) {
     const response = await addPhoto({ workOrderId: order.id, kind, fileName });
@@ -120,6 +117,12 @@ export function MechanicOrderView() {
         </Info>
       )}
 
+      {isCancelled && (
+        <Info tone="warning" title="Orden cancelada">
+          Esta orden fue cancelada y ya no se modifica.
+        </Info>
+      )}
+
       {!order.actions.canAddEvidence && order.status === 'IN_PROGRESS' && (
         <Info tone="warning" title="Orden de otro mecánico">
           Puede consultar el contexto técnico, pero no puede cargar evidencia ni completar.
@@ -179,13 +182,16 @@ export function MechanicOrderView() {
             size="lg"
             className="w-full"
             disabled={isMutating || !order.actions.canComplete}
+            busy={isCompleting}
             onClick={() => void handleComplete()}
           >
             {isCompleting ? 'Completando…' : completeActionLabel(order.type)}
           </Button>
           {!order.actions.canComplete && (
             <p className="mt-2 text-sm text-navy-400">
-              Falta evidencia de antes o de después para completar.
+              {isCancelled
+                ? 'Esta orden fue cancelada. No se puede completar.'
+                : 'Falta evidencia de antes o de después para completar.'}
             </p>
           )}
         </div>
