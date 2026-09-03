@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 
-import { Empty, useToast } from '../../shared/ui';
+import { Empty, Skeleton, useToast } from '../../shared/ui';
 import { MechanicOrderCard } from './MechanicOrderCard';
 import { MechanicQueryError } from './MechanicQueryError';
 import { toMechanicUserMessage } from './mechanic-copy';
@@ -25,11 +25,7 @@ export function MechanicPendingPage() {
   }
 
   if (result.status === 'loading') {
-    return (
-      <p className="text-base text-navy-400" aria-live="polite">
-        Cargando pendientes…
-      </p>
-    );
+    return <Skeleton label="Cargando pendientes" size="lg" lines={4} />;
   }
 
   const pending = result.orders.filter((order) => order.status === 'PENDING');

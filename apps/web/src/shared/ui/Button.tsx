@@ -6,6 +6,8 @@ type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  /** Disables the control and sets aria-busy to prevent double submit. */
+  busy?: boolean;
 };
 
 const variantClasses: Record<ButtonVariant, string> = {
@@ -27,6 +29,8 @@ export function Button({
   size = 'md',
   className = '',
   type = 'button',
+  busy = false,
+  disabled,
   ...props
 }: ButtonProps) {
   return (
@@ -34,6 +38,8 @@ export function Button({
       type={type}
       className={`inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50 ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...props}
+      disabled={Boolean(disabled) || busy}
+      aria-busy={busy || undefined}
     />
   );
 }

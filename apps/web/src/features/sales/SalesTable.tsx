@@ -11,7 +11,7 @@ export function SalesTable({ rows, hasQuery = false }: SalesTableProps) {
   if (rows.length === 0) {
     return (
       <Empty
-        title={hasQuery ? 'Sin resultados' : 'No hay facturas en esta vista'}
+        title={hasQuery ? 'Sin resultados' : 'No hay facturas en esta pestaña'}
         description={
           hasQuery
             ? 'Pruebe otro número, cliente o cambie de pestaña.'

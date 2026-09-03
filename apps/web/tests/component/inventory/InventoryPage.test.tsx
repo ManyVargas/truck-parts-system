@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -40,7 +40,8 @@ describe('InventoryPage', () => {
     expect(screen.queryByText('Motor Detroit DD15')).not.toBeInTheDocument();
 
     await user.clear(screen.getByLabelText('Buscar inventario'));
-    await user.click(screen.getByRole('checkbox', { name: 'Mostrar vendidos' }));
+    await user.click(screen.getByText('Más filtros'));
+    await user.click(screen.getByRole('checkbox', { name: 'Vendidos' }));
     expect(await screen.findByText('Turbo Garrett')).toBeVisible();
   });
 
@@ -63,14 +64,31 @@ describe('InventoryPage', () => {
     const dialog = screen.getByRole('dialog');
     await user.type(within(dialog).getByLabelText('Nombre'), 'Alternador de mostrador');
     await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-ALT');
-    expect(within(dialog).getByLabelText('Código interno')).toHaveValue('ALT');
+    expect(within(dialog).getByText('Código interno')).toBeVisible();
+    expect(within(dialog).getByText('Se asignará al guardar con prefijo ALT.')).toBeVisible();
     await user.click(within(dialog).getByRole('button', { name: 'Registrar' }));
 
     expect(await screen.findByText('Alternador de mostrador')).toBeVisible();
     expect(await screen.findByText('ALT-012 quedó registrado')).toBeVisible();
     expect(within(dialog).getByText(/Aún puede completar:/)).toBeVisible();
+    expect(within(dialog).getByRole('button', { name: 'Ver pieza' })).toBeVisible();
     await user.click(within(dialog).getByRole('button', { name: 'Volver al listado' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('shows category-defined attribute fields instead of a free-text box', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<InventoryPage />, { route: '/inventory' });
+    await screen.findByText('Filtro de aceite HD');
+
+    await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
+    const dialog = screen.getByRole('dialog');
+    await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-TIR');
+
+    expect(within(dialog).getByLabelText('Tipo')).toBeVisible();
+    expect(within(dialog).getByLabelText('Medida')).toBeVisible();
+    expect(within(dialog).getByLabelText('Diámetro')).toBeVisible();
+    expect(within(dialog).queryByLabelText('Atributos (opcional)')).not.toBeInTheDocument();
   });
 
   it('registers quantity inventory from the Por cantidad mode', async () => {
@@ -91,6 +109,8 @@ describe('InventoryPage', () => {
 
     expect(await screen.findByText('Filtro por caja')).toBeVisible();
     expect(screen.getByText('8 disponibles / 8 en existencia')).toBeVisible();
+    expect(within(dialog).getByRole('button', { name: 'Ver producto' })).toBeVisible();
+    expect(within(dialog).queryByRole('button', { name: 'Ver pieza' })).not.toBeInTheDocument();
   });
 
   it('captures a truck, a present engine and the engine baseline in one wizard', async () => {
@@ -137,7 +157,11 @@ describe('InventoryPage', () => {
     await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
     const dialog = screen.getByRole('dialog');
 
-    expect(within(dialog).getByLabelText('Código interno')).toBeVisible();
+    expect(within(dialog).getByText('Código interno')).toBeVisible();
+    expect(within(dialog).getByText('Se generará automáticamente al registrar.')).toBeVisible();
+    expect(within(dialog).getByRole('group', { name: 'Identificación' })).toBeVisible();
+    expect(within(dialog).getByRole('group', { name: 'Inventario' })).toBeVisible();
+    expect(within(dialog).getByRole('group', { name: 'Evidencia' })).toBeVisible();
     expect(within(dialog).getByLabelText('Condición')).toBeVisible();
     expect(within(dialog).getByLabelText('Costo en pesos (opcional)')).toBeVisible();
     expect(within(dialog).queryByText('Paso 1 de 2 — Información del ensamblaje')).not.toBeInTheDocument();
@@ -164,7 +188,7 @@ describe('InventoryPage', () => {
     await user.click(within(motorGroup).getByLabelText('Presente'));
     await user.click(within(dialog).getByRole('button', { name: 'Atrás' }));
     expect(within(dialog).getByLabelText('Nombre')).toHaveValue('Camión para volver atrás');
-    expect(within(dialog).getByLabelText('Código interno')).toHaveValue('CAM');
+    expect(within(dialog).getByText('Se asignará al guardar con prefijo CAM.')).toBeVisible();
     await user.click(within(dialog).getByRole('button', { name: 'Continuar' }));
     const motorPresent = within(within(dialog).getByRole('group', { name: 'Motor' })).getAllByRole(
       'radio',
@@ -187,8 +211,9 @@ describe('InventoryPage', () => {
     expect(engineRow).not.toBeNull();
     expect(engineRow).toHaveClass('cursor-pointer');
     expect(engineName).toHaveAttribute('href', '/inventory/MOT-001');
-    expect(within(engineRow!).getByText('Comercial')).toBeVisible();
-    expect(within(engineRow!).getByText('Físico')).toBeVisible();
+    expect(screen.getByRole('columnheader', { name: 'Disponibilidad' })).toBeVisible();
+    expect(screen.getByRole('columnheader', { name: 'Relación' })).toBeVisible();
+    expect(within(engineRow!).getByText('Disponible')).toBeVisible();
     expect(within(engineRow!).getByText('Instalado en Freightliner Cascadia 2018')).toBeVisible();
     expect(within(engineRow!).queryByText('Independiente')).not.toBeInTheDocument();
     expect(within(engineRow!).queryByText(/^Completo$/)).not.toBeInTheDocument();
@@ -208,5 +233,52 @@ describe('InventoryPage', () => {
 
     await user.click(within(engineRow!).getByText('Patio A'));
     expect(await screen.findByText('Detalle de pieza')).toBeVisible();
+  });
+
+  it('applies available=1 from the URL on load', async () => {
+    renderWithProviders(<InventoryPage />, { route: '/inventory?available=1' });
+
+    expect(await screen.findByRole('button', { name: 'Disponible' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(await screen.findByText('Filtro de aceite HD')).toBeVisible();
+    expect(screen.getByText('Filtros activos:')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Quitar filtro Disponible' })).toBeVisible();
+    expect(screen.queryByText('Turbo Garrett')).not.toBeInTheDocument();
+  });
+
+  it('hides sold items when Disponible is on even if Vendidos is checked', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<InventoryPage />, { route: '/inventory' });
+    await screen.findByText('Filtro de aceite HD');
+
+    await user.click(screen.getByRole('button', { name: 'Disponible' }));
+    await user.click(screen.getByText('Más filtros'));
+    await user.click(screen.getByRole('checkbox', { name: 'Vendidos' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Filtro de aceite HD')).toBeVisible();
+    });
+    expect(screen.queryByText('Turbo Garrett')).not.toBeInTheDocument();
+  });
+
+  it('combines search and quick filters on the list without opening another screen', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<InventoryPage />, { route: '/inventory' });
+    await screen.findByText('Filtro de aceite HD');
+
+    expect(screen.getByLabelText('Categoría')).not.toBeVisible();
+    expect(screen.getByRole('checkbox', { name: 'Vendidos' })).not.toBeVisible();
+
+    await user.type(screen.getByLabelText('Buscar inventario'), 'Alternador');
+    await user.click(screen.getByRole('button', { name: 'Disponible' }));
+    await user.click(screen.getByRole('button', { name: 'Independiente' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Alternador Cummins')).toBeVisible();
+      expect(screen.queryByText('Alternador 24V')).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: 'Limpiar filtros' })).toBeVisible();
   });
 });

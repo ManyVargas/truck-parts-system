@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import type { SaveCategoryInput, SaveServiceInput } from '../../api/contracts/catalogs';
 import type { Category, Service } from '../../api/contracts/entities';
-import { Button, Info, useToast } from '../../shared/ui';
+import { Button, Info, Skeleton, toPageLoadMessage, useToast } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
 import { Tabs } from '../../shared/layout/Tabs';
 import { CategoryFormModal } from './CategoryFormModal';
@@ -109,7 +109,7 @@ export function CatalogsPage() {
   if (loadError) {
     return (
       <Info tone="error" title="No se pudo cargar los catálogos">
-        {loadError.message}
+        {toPageLoadMessage(loadError.message, 'No pudimos cargar los catálogos.')}
       </Info>
     );
   }
@@ -141,9 +141,7 @@ export function CatalogsPage() {
         onChange={setTab}
         panels={{
           categories: isLoading ? (
-            <p className="text-sm text-navy-400" aria-live="polite">
-              Cargando catálogos…
-            </p>
+            <Skeleton label="Cargando catálogos" />
           ) : categories.status === 'ready' ? (
             <CategoryList
               rows={categories.rows}
@@ -155,9 +153,7 @@ export function CatalogsPage() {
             />
           ) : null,
           services: isLoading ? (
-            <p className="text-sm text-navy-400" aria-live="polite">
-              Cargando catálogos…
-            </p>
+            <Skeleton label="Cargando catálogos" />
           ) : services.status === 'ready' ? (
             <ServiceList
               rows={services.rows}

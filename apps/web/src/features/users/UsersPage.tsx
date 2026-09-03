@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import type { ManagedUser, SaveUserInput } from '../../api/contracts/users';
-import { Button, Info, SearchInput, useToast } from '../../shared/ui';
+import { Button, Info, SearchInput, Skeleton, toPageLoadMessage, useToast } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
 import { UserFormModal } from './UserFormModal';
 import { UserTable } from './UserTable';
@@ -67,7 +67,7 @@ export function UsersPage() {
   if (result.status === 'error') {
     return (
       <Info tone="error" title="No se pudo cargar los usuarios">
-        {result.error.message}
+        {toPageLoadMessage(result.error.message, 'No pudimos cargar los usuarios.')}
       </Info>
     );
   }
@@ -95,9 +95,7 @@ export function UsersPage() {
       </div>
 
       {result.status === 'loading' ? (
-        <p className="text-sm text-navy-400" aria-live="polite">
-          Cargando usuarios…
-        </p>
+        <Skeleton label="Cargando usuarios" />
       ) : (
         <UserTable
           rows={result.rows}
