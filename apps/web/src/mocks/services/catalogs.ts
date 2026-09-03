@@ -1,6 +1,7 @@
 import type { SaveCategoryInput, SaveServiceInput } from '../../api/contracts/catalogs';
 import type { AppState, Category, Service } from '../../api/contracts/entities';
 import { err, ok, type Result } from '../../shared/auth/types';
+import { normalizeCodePrefix } from './item-code';
 
 function optionalText(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
@@ -107,6 +108,23 @@ export function prepareCategorySave(
     return err({ code: 'NOT_FOUND', message: 'Categoría no encontrada' });
   }
 
+  let codePrefix: string;
+  if (existing) {
+    codePrefix = existing.codePrefix;
+  } else {
+    const prefixResult = normalizeCodePrefix(input.codePrefix);
+    if (!prefixResult.ok) {
+      return prefixResult;
+    }
+    codePrefix = prefixResult.value;
+    const duplicatePrefix = categories.some(
+      (category) => category.codePrefix.toLocaleUpperCase() === codePrefix,
+    );
+    if (duplicatePrefix) {
+      return err({ code: 'CONFLICT', message: `El prefijo ${codePrefix} ya está en uso` });
+    }
+  }
+
   const duplicateName = categories.some(
     (category) =>
       category.id !== input.id && catalogNameKey(category.name) === catalogNameKey(name),
@@ -147,6 +165,7 @@ export function prepareCategorySave(
   return ok({
     id: existing?.id ?? nextCategoryId(categories, name),
     name,
+    codePrefix,
     isAssembly: input.isAssembly,
     expectedComponents: input.isAssembly ? expectedComponents : undefined,
   });
@@ -180,6 +199,7 @@ export function prepareCategoryStateChange(
   if (!previous) {
     const staged = structuredClone(state);
     staged.categories.push(category);
+    staged.itemCodeSeq = { ...staged.itemCodeSeq, [category.id]: 1 };
     return ok(staged);
   }
 

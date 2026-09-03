@@ -25,9 +25,11 @@ export function TotalsPanel({ totals, currency, fiscal }: TotalsPanelProps) {
           {money(totals.itbis, currency)}
         </dd>
       </div>
-      <div className="flex justify-between border-t border-navy-100 pt-2 text-base">
-        <dt className="font-semibold text-navy">Total</dt>
-        <dd className="font-semibold text-navy">{money(totals.gross, currency)}</dd>
+      <div className="flex justify-between border-t border-navy-100 pt-3 text-lg">
+        <dt className="font-semibold text-navy">Total a cobrar</dt>
+        <dd className="font-semibold text-navy" data-testid="pos-total">
+          {money(totals.gross, currency)}
+        </dd>
       </div>
     </dl>
   );

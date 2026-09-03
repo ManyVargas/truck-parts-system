@@ -7,29 +7,64 @@ import {
   isNavItemActive,
   isRouteAllowedForRole,
   layoutAccessDecision,
+  navGroupsForRole,
   navItemsForRole,
+  shouldShowNavGroupHeadings,
 } from '../../../../src/shared/layout/navigation';
+import { CAPABILITY_PRESETS } from '../../../../src/shared/config/capabilities';
+
+const prototype = CAPABILITY_PRESETS.prototype;
 
 describe('role navigation', () => {
   it('shows nine desktop entries to administrators and four to sellers', () => {
-    expect(navItemsForRole('ADMINISTRATOR')).toHaveLength(9);
-    expect(navItemsForRole('SELLER').map((item) => item.id)).toEqual([
+    expect(navItemsForRole('ADMINISTRATOR', prototype)).toHaveLength(9);
+    expect(navItemsForRole('SELLER', prototype).map((item) => item.id)).toEqual([
       'dashboard',
       'inventory',
       'sales',
       'customers',
     ]);
-    expect(navItemsForRole('MECHANIC')).toEqual([]);
+    expect(navItemsForRole('MECHANIC', prototype)).toEqual([]);
+  });
+
+  it('groups administrator items by work intent and omits empty groups', () => {
+    const adminGroups = navGroupsForRole('ADMINISTRATOR', prototype);
+
+    expect(adminGroups.map((group) => group.id)).toEqual([
+      'operation',
+      'administration',
+      'finance',
+    ]);
+    expect(adminGroups[0]?.items.map((item) => item.id)).toEqual([
+      'dashboard',
+      'inventory',
+      'sales',
+      'customers',
+      'work-orders',
+    ]);
+    expect(shouldShowNavGroupHeadings(adminGroups)).toBe(true);
+
+    const sellerGroups = navGroupsForRole('SELLER', prototype);
+    expect(sellerGroups.map((group) => group.id)).toEqual(['operation']);
+    expect(shouldShowNavGroupHeadings(sellerGroups)).toBe(false);
+    expect(navGroupsForRole('MECHANIC', prototype)).toEqual([]);
+
+    const releaseOneAdmin = navGroupsForRole('ADMINISTRATOR', CAPABILITY_PRESETS['release-1']);
+    expect(releaseOneAdmin.map((group) => group.id)).toEqual(['operation', 'administration']);
+    expect(releaseOneAdmin.flatMap((group) => group.items.map((item) => item.id))).toEqual([
+      'dashboard',
+      'users',
+    ]);
   });
 
   it('maps every role to its correct home', () => {
-    expect(defaultPathForRole('ADMINISTRATOR')).toBe('/dashboard');
-    expect(defaultPathForRole('SELLER')).toBe('/dashboard');
-    expect(defaultPathForRole('MECHANIC')).toBe('/mechanic');
+    expect(defaultPathForRole('ADMINISTRATOR', prototype)).toBe('/dashboard');
+    expect(defaultPathForRole('SELLER', prototype)).toBe('/dashboard');
+    expect(defaultPathForRole('MECHANIC', prototype)).toBe('/mechanic');
   });
 
   it('recognizes registered route patterns and rejects typos', () => {
-    expect(isKnownDesktopRoute('/inventory/ENG-001')).toBe(true);
+    expect(isKnownDesktopRoute('/inventory/MOT-001')).toBe(true);
     expect(isKnownDesktopRoute('/sales/draft/INV-DRAFT-01')).toBe(true);
     expect(isKnownDesktopRoute('/work-orders/OD-DEMO-060')).toBe(true);
     expect(isKnownDesktopRoute('/profile')).toBe(true);
@@ -40,19 +75,28 @@ describe('role navigation', () => {
   });
 
   it('activates only the matching known navigation section', () => {
-    expect(isNavItemActive('/inventory/ENG-001', '/inventory')).toBe(true);
+    expect(isNavItemActive('/inventory/MOT-001', '/inventory')).toBe(true);
     expect(isNavItemActive('/sales/draft/INV-DRAFT-01', '/sales')).toBe(true);
     expect(isNavItemActive('/work-orders/OD-DEMO-060', '/work-orders')).toBe(true);
-    expect(isNavItemActive('/inventory/ENG-001', '/sales')).toBe(false);
+    expect(isNavItemActive('/inventory/MOT-001', '/sales')).toBe(false);
     expect(isNavItemActive('/inventory/nope/extra', '/inventory')).toBe(false);
   });
 
   it('enforces administrator-only desktop sections', () => {
-    expect(isRouteAllowedForRole('/customers', 'SELLER')).toBe(true);
-    expect(isRouteAllowedForRole('/work-orders', 'SELLER')).toBe(false);
-    expect(isRouteAllowedForRole('/work-orders/OD-DEMO-060', 'SELLER')).toBe(false);
-    expect(isRouteAllowedForRole('/users', 'SELLER')).toBe(false);
-    expect(isRouteAllowedForRole('/profitability', 'ADMINISTRATOR')).toBe(true);
+    expect(isRouteAllowedForRole('/customers', 'SELLER', prototype)).toBe(true);
+    expect(isRouteAllowedForRole('/work-orders', 'SELLER', prototype)).toBe(false);
+    expect(isRouteAllowedForRole('/work-orders/OD-DEMO-060', 'SELLER', prototype)).toBe(false);
+    expect(isRouteAllowedForRole('/users', 'SELLER', prototype)).toBe(false);
+    expect(isRouteAllowedForRole('/profitability', 'ADMINISTRATOR', prototype)).toBe(true);
+  });
+
+  it('blocks a role-permitted URL when its capability is disabled', () => {
+    expect(isRouteAllowedForRole('/inventory', 'ADMINISTRATOR', CAPABILITY_PRESETS['release-1'])).toBe(
+      false,
+    );
+    expect(isRouteAllowedForRole('/users', 'ADMINISTRATOR', CAPABILITY_PRESETS['release-1'])).toBe(
+      true,
+    );
   });
 });
 

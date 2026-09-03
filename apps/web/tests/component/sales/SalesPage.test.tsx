@@ -30,6 +30,11 @@ describe('SalesPage', () => {
     const partialRow = screen.getByText('FAC-000099').closest('tr');
     expect(unpaidRow && within(unpaidRow).getByText('Sin pagar')).toBeTruthy();
     expect(partialRow && within(partialRow).getByText('Pago parcial')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'FAC-000098' })).toHaveAttribute(
+      'href',
+      '/sales/INV-098',
+    );
+    expect(unpaidRow).toHaveClass('cursor-pointer');
   });
 
   it('filters drafts in the Borrador tab', async () => {
@@ -37,7 +42,7 @@ describe('SalesPage', () => {
     renderWithProviders(<SalesPage />, { route: '/sales', auth: createAuthValue('SELLER') });
     await screen.findByText('FAC-000098');
 
-    await user.click(screen.getByRole('tab', { name: 'Borrador' }));
+    await user.click(screen.getByRole('button', { name: 'Borrador' }));
 
     expect(await screen.findByText(/Borrador INV-DRAFT-01/)).toBeVisible();
     expect(screen.queryByText('FAC-000098')).not.toBeInTheDocument();
@@ -47,5 +52,16 @@ describe('SalesPage', () => {
     renderWithProviders(<SalesPage />, { route: '/sales', auth: createAuthValue('SELLER') });
     await screen.findByText('FAC-000098');
     expect(screen.getByRole('button', { name: 'Nuevo borrador' })).toBeVisible();
+  });
+
+  it('filters the list by invoice number so a previous sale can be found', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SalesPage />, { route: '/sales', auth: createAuthValue('SELLER') });
+    await screen.findByText('FAC-000098');
+
+    await user.type(screen.getByLabelText('Buscar por número o cliente'), 'FAC-000099');
+
+    expect(screen.getByText('FAC-000099')).toBeVisible();
+    expect(screen.queryByText('FAC-000098')).not.toBeInTheDocument();
   });
 });

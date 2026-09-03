@@ -59,7 +59,10 @@ describe('buildDashboardSnapshot', () => {
     });
 
     expect(snapshot.recentInvoices[0]?.number).toBe('FAC-000099');
-    expect(snapshot.activity[0]?.id).toBe('EV-003');
+    expect(snapshot.activity[0]).toMatchObject({
+      id: 'EV-003',
+      actorName: 'Laura Pérez',
+    });
   });
 
   it('omits profitability fields for Seller projections', () => {
@@ -93,7 +96,7 @@ describe('buildDashboardSnapshot', () => {
     expect(adminSnapshot.pendingCatalogReviews).toHaveLength(3);
     expect(adminSnapshot.pendingCatalogReviews?.every((row) => row.kind === 'PENDING_NA')).toBe(true);
     expect(adminSnapshot.kpis.pendingCatalogValidations).toBe(3);
-    expect(adminSnapshot.pendingCatalogReviews?.some((row) => row.itemId === 'ENG-001')).toBe(true);
+    expect(adminSnapshot.pendingCatalogReviews?.some((row) => row.itemId === 'MOT-001')).toBe(true);
     expect(sellerSnapshot.pendingCatalogReviews).toBeUndefined();
     expect(sellerSnapshot.kpis.pendingCatalogValidations).toBeUndefined();
   });

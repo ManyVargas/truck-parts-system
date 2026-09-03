@@ -1,14 +1,7 @@
 import { Link } from 'react-router-dom';
 
 import type { HierarchyNode } from '../../api/contracts/inventory';
-import {
-  AssemblyKindChip,
-  CommercialChip,
-  CompleteChip,
-  NoDesarmarChip,
-  PhysicalWorkChip,
-  RelationChip,
-} from '../../shared/domain';
+import { InventoryStatusCluster, PhysicalWorkChip } from '../../shared/domain';
 import { Mono } from '../../shared/ui';
 
 function MissingSlotRow({
@@ -65,14 +58,23 @@ function TreeNode({
           {node.name}
         </Link>
         <Mono className="text-xs text-navy-400">{node.id}</Mono>
-        <AssemblyKindChip isAssembly={node.isAssembly} />
-        {!node.isAssembly && <CommercialChip state={node.commercialState} />}
-        {!node.isAssembly && (
-          <RelationChip relationship={node.physicalRelationship} parentName={node.parentName} />
-        )}
-        <CompleteChip complete={node.complete} />
-        <PhysicalWorkChip type={node.activeWork?.type} status={node.activeWork?.status} />
-        <NoDesarmarChip active={node.noDesarmar} rootId={node.protectedRootId} />
+        <InventoryStatusCluster
+          commercialState={node.commercialState}
+          physicalRelationship={node.physicalRelationship}
+          parentName={node.parentName}
+          isAssembly={node.isAssembly}
+          complete={node.complete}
+          reserved={false}
+          noDesarmar={node.noDesarmar}
+          protectedRootId={node.protectedRootId}
+          compact
+          layout="inline"
+          extra={
+            node.activeWork ? (
+              <PhysicalWorkChip type={node.activeWork.type} status={node.activeWork.status} />
+            ) : undefined
+          }
+        />
       </div>
       {(node.children.length > 0 || node.missingSlots.length > 0) && (
         <ul>

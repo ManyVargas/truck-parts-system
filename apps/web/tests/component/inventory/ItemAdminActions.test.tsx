@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ItemAdminActions } from '../../../src/features/inventory/ItemAdminActions';
+import { CAPABILITY_PRESETS } from '../../../src/shared/config/capabilities';
 import { createInitialState } from '../../../src/mocks/data/seed';
 import { backfillPendingExpectedComponents } from '../../../src/mocks/services/catalogs-reviews';
 import { buildItemDetail } from '../../../src/mocks/services/inventory-catalog';
@@ -24,7 +25,7 @@ function handlers() {
 describe('ItemAdminActions', () => {
   it('shows baseline validation failures inside the active modal', async () => {
     const user = userEvent.setup();
-    const detail = buildItemDetail(createInitialState(), 'ENG-002')!;
+    const detail = buildItemDetail(createInitialState(), 'MOT-002')!;
     const callbacks = handlers();
     callbacks.onCorrectBaseline.mockResolvedValue('Seleccione al menos un faltante');
     renderWithProviders(<ItemAdminActions detail={detail} isMutating={false} {...callbacks} />);
@@ -39,7 +40,7 @@ describe('ItemAdminActions', () => {
 
   it('submits null when the administrator clears cost provenance', async () => {
     const user = userEvent.setup();
-    const detail = buildItemDetail(createInitialState(), 'FLT-001')!;
+    const detail = buildItemDetail(createInitialState(), 'FIL-001')!;
     detail.costProvenance = 'Factura original';
     const callbacks = handlers();
     renderWithProviders(<ItemAdminActions detail={detail} isMutating={false} {...callbacks} />);
@@ -59,7 +60,7 @@ describe('ItemAdminActions', () => {
   });
 
   it('does not offer No desarmar for a unique part', () => {
-    const detail = buildItemDetail(createInitialState(), 'FLT-001')!;
+    const detail = buildItemDetail(createInitialState(), 'FIL-001')!;
 
     renderWithProviders(<ItemAdminActions detail={detail} isMutating={false} {...handlers()} />);
 
@@ -72,7 +73,7 @@ describe('ItemAdminActions', () => {
     const admin = state.users[0]!;
     const engine = state.categories.find((category) => category.id === 'CAT-ENG')!;
     backfillPendingExpectedComponents(state, admin, engine, ['Bomba de aceite']);
-    const detail = buildItemDetail(state, 'ENG-001')!;
+    const detail = buildItemDetail(state, 'MOT-001')!;
     const callbacks = handlers();
     renderWithProviders(<ItemAdminActions detail={detail} isMutating={false} {...callbacks} />);
 
@@ -99,11 +100,12 @@ describe('ItemAdminActions', () => {
     state.categories.push({
       id: 'CAT-AUX-ENG',
       name: 'Motor auxiliar',
+      codePrefix: 'AUX',
       isAssembly: true,
       expectedComponents: ['Alternador'],
     });
     backfillPendingExpectedComponents(state, admin, truckCategory, ['Motor auxiliar']);
-    const detail = buildItemDetail(state, 'TRK-001')!;
+    const detail = buildItemDetail(state, 'CAM-001')!;
     const callbacks = handlers();
     renderWithProviders(<ItemAdminActions detail={detail} isMutating={false} {...callbacks} />);
 
@@ -111,19 +113,28 @@ describe('ItemAdminActions', () => {
     const dialog = screen.getByRole('dialog', { name: 'Registrar Motor auxiliar presente' });
     expect(within(dialog).getByText('Baseline de recepción')).toBeVisible();
     expect(within(dialog).getByText('Alternador')).toBeVisible();
-    await user.type(within(dialog).getByLabelText('ID'), 'ENG-AUX-UI');
+    expect(within(dialog).getByText('AUX')).toBeVisible();
     await user.click(within(dialog).getByRole('button', { name: 'Registrar en el árbol' }));
 
     expect(callbacks.onResolveCatalogReview).toHaveBeenCalledWith({
       expectedComponentName: 'Motor auxiliar',
       decision: 'PRESENT',
       item: {
-        id: 'ENG-AUX-UI',
         name: 'Motor auxiliar',
         categoryId: 'CAT-AUX-ENG',
         condition: 'USED',
       },
       baseline: [{ expectedComponentName: 'Alternador', status: 'MISSING' }],
     });
+  });
+
+  it('hides manual work-order creation when workOrders is disabled', () => {
+    const detail = buildItemDetail(createInitialState(), 'FIL-001')!;
+
+    renderWithProviders(<ItemAdminActions detail={detail} isMutating={false} {...handlers()} />, {
+      capabilities: CAPABILITY_PRESETS['release-4'],
+    });
+
+    expect(screen.queryByRole('button', { name: 'Orden de trabajo manual' })).not.toBeInTheDocument();
   });
 });

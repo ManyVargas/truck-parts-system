@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 
+import { Button } from './Button';
 import { ToastContext, type Toast, type ToastTone, useToast } from './toast-context';
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -51,14 +52,15 @@ export function Toaster() {
         >
           <div className="flex items-start justify-between gap-3">
             <span>{toast.message}</span>
-            <button
-              type="button"
-              className="text-navy-400 hover:text-navy"
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 text-navy-400 hover:text-navy"
               onClick={() => dismissToast(toast.id)}
               aria-label="Cerrar notificación"
             >
               ✕
-            </button>
+            </Button>
           </div>
         </div>
       ))}

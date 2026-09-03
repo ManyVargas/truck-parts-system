@@ -2,6 +2,7 @@
 
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { InventoryPage } from '../../../src/features/inventory/InventoryPage';
@@ -60,13 +61,16 @@ describe('InventoryPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
     const dialog = screen.getByRole('dialog');
-    await user.type(within(dialog).getByLabelText('ID interno'), 'ALT-020');
     await user.type(within(dialog).getByLabelText('Nombre'), 'Alternador de mostrador');
     await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-ALT');
+    expect(within(dialog).getByLabelText('Código interno')).toHaveValue('ALT');
     await user.click(within(dialog).getByRole('button', { name: 'Registrar' }));
 
     expect(await screen.findByText('Alternador de mostrador')).toBeVisible();
-    expect(await screen.findByText('ALT-020 registrado correctamente')).toBeVisible();
+    expect(await screen.findByText('ALT-012 quedó registrado')).toBeVisible();
+    expect(within(dialog).getByText(/Aún puede completar:/)).toBeVisible();
+    await user.click(within(dialog).getByRole('button', { name: 'Volver al listado' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('registers quantity inventory from the Por cantidad mode', async () => {
@@ -76,8 +80,8 @@ describe('InventoryPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
     const dialog = screen.getByRole('dialog');
-    await user.click(within(dialog).getByLabelText('Por cantidad'));
-    await user.type(within(dialog).getByLabelText('ID interno'), 'QTY-FIL-NEW');
+    await user.click(within(dialog).getByLabelText('Producto por cantidad'));
+    await user.type(within(dialog).getByLabelText('Código de producto'), 'QTY-FIL-NEW');
     await user.type(within(dialog).getByLabelText('Nombre'), 'Filtro por caja');
     await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-FIL');
     await user.clear(within(dialog).getByLabelText('Existencia inicial'));
@@ -96,20 +100,17 @@ describe('InventoryPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
     const dialog = screen.getByRole('dialog');
-    await user.type(within(dialog).getByLabelText('ID interno'), 'TRK-020');
     await user.type(within(dialog).getByLabelText('Nombre'), 'Camión con motor recibido');
     await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-TRK');
     await user.click(within(dialog).getByRole('button', { name: 'Continuar' }));
 
     const motorGroup = within(dialog).getByRole('group', { name: 'Motor' });
     await user.click(within(motorGroup).getByLabelText('Presente'));
-    await user.type(within(motorGroup).getByLabelText('ID del componente'), 'ENG-020');
     await user.clear(within(motorGroup).getByLabelText('Nombre'));
     await user.type(within(motorGroup).getByLabelText('Nombre'), 'Motor dentro del camión');
 
     const alternatorGroup = within(motorGroup).getByRole('group', { name: 'Alternador' });
     await user.click(within(alternatorGroup).getByLabelText('Presente'));
-    await user.type(within(alternatorGroup).getByLabelText('ID del componente'), 'ALT-020');
     const starterGroup = within(motorGroup).getByRole('group', { name: 'Motor de arranque' });
     await user.click(within(starterGroup).getByLabelText('No aplica'));
     const transmissionGroup = within(dialog).getByRole('group', { name: 'Transmisión' });
@@ -117,13 +118,95 @@ describe('InventoryPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Registrar ensamblaje' }));
 
     expect(await screen.findByText('Camión con motor recibido')).toBeVisible();
-    expect(getMockState().items.find((item) => item.id === 'ENG-020')).toMatchObject({
-      parentId: 'TRK-020',
+    expect(getMockState().items.find((item) => item.id === 'MOT-004')).toMatchObject({
+      parentId: 'CAM-002',
       complete: false,
     });
-    expect(getMockState().items.find((item) => item.id === 'ALT-020')?.parentId).toBe('ENG-020');
+    expect(getMockState().items.find((item) => item.id === 'ALT-012')?.parentId).toBe('MOT-004');
     expect(getMockState().knownMissing).toContainEqual(
-      expect.objectContaining({ parentId: 'ENG-020', expectedComponentName: 'Turbo' }),
+      expect.objectContaining({ parentId: 'MOT-004', expectedComponentName: 'Turbo' }),
     );
+    expect(await screen.findByText('CAM-002 quedó registrado')).toBeVisible();
+  });
+
+  it('keeps enrichment fields collapsed until the operator opens them', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<InventoryPage />, { route: '/inventory' });
+    await screen.findByText('Filtro de aceite HD');
+
+    await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
+    const dialog = screen.getByRole('dialog');
+
+    expect(within(dialog).getByLabelText('Código interno')).toBeVisible();
+    expect(within(dialog).getByLabelText('Condición')).toBeVisible();
+    expect(within(dialog).getByLabelText('Costo en pesos (opcional)')).toBeVisible();
+    expect(within(dialog).queryByText('Paso 1 de 2 — Información del ensamblaje')).not.toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Serial (opcional)')).not.toBeVisible();
+
+    await user.click(within(dialog).getByText('Información adicional (opcional)'));
+    expect(within(dialog).getByLabelText('Serial (opcional)')).toBeVisible();
+  });
+
+  it('announces both assembly steps and keeps checklist data after going back', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<InventoryPage />, { route: '/inventory' });
+    await screen.findByText('Filtro de aceite HD');
+
+    await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Nombre'), 'Camión para volver atrás');
+    await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-TRK');
+    expect(within(dialog).getByText('Paso 1 de 2 — Información del ensamblaje')).toBeVisible();
+    await user.click(within(dialog).getByRole('button', { name: 'Continuar' }));
+
+    expect(within(dialog).getByText('Paso 2 de 2 — Componentes iniciales')).toBeVisible();
+    const motorGroup = within(dialog).getByRole('group', { name: 'Motor' });
+    await user.click(within(motorGroup).getByLabelText('Presente'));
+    await user.click(within(dialog).getByRole('button', { name: 'Atrás' }));
+    expect(within(dialog).getByLabelText('Nombre')).toHaveValue('Camión para volver atrás');
+    expect(within(dialog).getByLabelText('Código interno')).toHaveValue('CAM');
+    await user.click(within(dialog).getByRole('button', { name: 'Continuar' }));
+    const motorPresent = within(within(dialog).getByRole('group', { name: 'Motor' })).getAllByRole(
+      'radio',
+      { name: 'Presente' },
+    )[0];
+    expect(motorPresent).toBeChecked();
+  });
+
+  it('ranks inventory states and opens detail from the row or the named link', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route path="/inventory" element={<InventoryPage />} />
+        <Route path="/inventory/:id" element={<p>Detalle de pieza</p>} />
+      </Routes>,
+      { route: '/inventory' },
+    );
+    const engineName = await screen.findByRole('link', { name: /Detroit DD15 Completo/ });
+    const engineRow = engineName.closest('tr');
+    expect(engineRow).not.toBeNull();
+    expect(engineRow).toHaveClass('cursor-pointer');
+    expect(engineName).toHaveAttribute('href', '/inventory/MOT-001');
+    expect(within(engineRow!).getByText('Comercial')).toBeVisible();
+    expect(within(engineRow!).getByText('Físico')).toBeVisible();
+    expect(within(engineRow!).getByText('Instalado en Freightliner Cascadia 2018')).toBeVisible();
+    expect(within(engineRow!).queryByText('Independiente')).not.toBeInTheDocument();
+    expect(within(engineRow!).queryByText(/^Completo$/)).not.toBeInTheDocument();
+
+    const reservedRow = screen.getByRole('link', { name: /Alternador 24V/ }).closest('tr');
+    expect(reservedRow).not.toBeNull();
+    expect(within(reservedRow!).getByText('Reservado')).toBeVisible();
+
+    const incompleteRow = screen.getByRole('link', { name: /Cummins ISX Incompleto/ }).closest('tr');
+    expect(incompleteRow).not.toBeNull();
+    expect(within(incompleteRow!).getByText('Independiente')).toBeVisible();
+    expect(within(incompleteRow!).getByText('Incompleto')).toBeVisible();
+
+    const protectedRow = screen.getByRole('link', { name: /Detroit DD13 Protegido/ }).closest('tr');
+    expect(protectedRow).not.toBeNull();
+    expect(within(protectedRow!).getByText('No desarmar')).toBeVisible();
+
+    await user.click(within(engineRow!).getByText('Patio A'));
+    expect(await screen.findByText('Detalle de pieza')).toBeVisible();
   });
 });

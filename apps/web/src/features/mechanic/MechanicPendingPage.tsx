@@ -1,25 +1,32 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
-import { Empty, Info, useToast } from '../../shared/ui';
+import { Empty, useToast } from '../../shared/ui';
 import { MechanicOrderCard } from './MechanicOrderCard';
+import { MechanicQueryError } from './MechanicQueryError';
+import { toMechanicUserMessage } from './mechanic-copy';
 import { useMechanicOrders } from './useMechanicOrders';
 
+const emptyLinkClass =
+  'inline-flex min-h-12 items-center justify-center rounded-lg bg-brand px-5 text-base font-medium text-white';
+
 export function MechanicPendingPage() {
-  const { result, isMutating, takeOrder } = useMechanicOrders();
+  const { result, isMutating, takeOrder, reload } = useMechanicOrders();
   const { pushToast } = useToast();
   const navigate = useNavigate();
 
   if (result.status === 'error') {
     return (
-      <Info tone="error" title="No se pudo cargar la cola">
-        {result.error.message}
-      </Info>
+      <MechanicQueryError
+        title="No se pudo cargar la cola"
+        error={result.error}
+        onRetry={reload}
+      />
     );
   }
 
   if (result.status === 'loading') {
     return (
-      <p className="text-sm text-navy-400" aria-live="polite">
+      <p className="text-base text-navy-400" aria-live="polite">
         Cargando pendientes…
       </p>
     );
@@ -30,7 +37,7 @@ export function MechanicPendingPage() {
   async function handleTake(workOrderId: string) {
     const response = await takeOrder(workOrderId);
     if (!response.ok) {
-      pushToast(response.error.message, 'error');
+      pushToast(toMechanicUserMessage(response.error), 'error');
       return;
     }
     pushToast('Orden tomada', 'success');
@@ -41,7 +48,7 @@ export function MechanicPendingPage() {
     <div className="space-y-4">
       <header>
         <h1 className="text-xl font-bold">Pendientes</h1>
-        <p className="mt-1 text-sm text-navy-400">
+        <p className="mt-1 text-base text-navy-400">
           Cola compartida. Al tomar una orden queda asignada a usted.
         </p>
       </header>
@@ -50,6 +57,11 @@ export function MechanicPendingPage() {
         <Empty
           title="No hay órdenes pendientes"
           description="Las nuevas órdenes de desarme o instalación aparecerán aquí."
+          action={
+            <Link to="/mechanic/mine" className={emptyLinkClass}>
+              Ver mis órdenes
+            </Link>
+          }
         />
       ) : (
         <ul className="space-y-3">

@@ -21,6 +21,8 @@ import type {
   RegisterQtyProductInput,
   ReceiveQtyStockInput,
   AdjustQtyStockInput,
+  UpdateItemDetailsInput,
+  UpdateQtyProductDetailsInput,
 } from './inventory';
 import type {
   ProfitabilitySnapshot,
@@ -96,8 +98,10 @@ export type InventoryRepository = {
   resolveCatalogReview(input: ResolveCatalogReviewInput): Promise<Result<Item>>;
   createManualWorkOrder(input: ManualWorkOrderInput): Promise<Result<WorkOrder>>;
   registerItem(input: RegisterItemInput): Promise<Result<Item>>;
+  updateItemDetails(input: UpdateItemDetailsInput): Promise<Result<Item>>;
   registerAssembly(input: RegisterAssemblyInput): Promise<Result<RegisterAssemblyResult>>;
   registerQtyProduct(input: RegisterQtyProductInput): Promise<Result<QtyProduct>>;
+  updateQtyProductDetails(input: UpdateQtyProductDetailsInput): Promise<Result<QtyProduct>>;
   receiveQtyStock(input: ReceiveQtyStockInput): Promise<Result<QtyProduct>>;
   adjustQtyStock(input: AdjustQtyStockInput): Promise<Result<QtyProduct>>;
 };

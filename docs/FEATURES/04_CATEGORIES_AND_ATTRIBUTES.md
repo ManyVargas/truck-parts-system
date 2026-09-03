@@ -38,6 +38,8 @@ Controllers translate HTTP only. Business rules belong in services. Prisma/datab
 
 Administrator maintains category definitions and small controlled options. Categories describe what data is required/allowed; they do not create physical inventory.
 
+Each category that can receive individually tracked items has a unique immutable `codePrefix` used only to mint public item codes (`MOT` → `MOT-000042`). Creating a category does not create stock and does not consume item numbers. Quantity-stock SKUs do not use this prefix sequence.
+
 Use a practical shared inventory base plus a controlled category-specific structure. A JSONB payload is acceptable for a small bounded set of category attributes if it is validated by category-specific schemas and not exposed as arbitrary user-defined metadata.
 
 Assembly categories may own general Expected Component Definitions. These are templates/checklist definitions only. On receipt, the concrete assembly baseline evaluates each definition as `PRESENT`, `MISSING`, or `NOT_APPLICABLE`; definitions themselves never receive inventory IDs.
@@ -64,7 +66,7 @@ Tire and Rim keep their validated specific fields rather than being forced into 
 - [ ] Implement Tire and Rim specific validation.
 
 ### Frontend
-- [x] Administrator category management. Prototype mock: `/catalogs`, `catalogs.manage` (WM11).
+- [x] Administrator category management. Prototype mock: `/catalogs`, `catalogs.manage` (WM11). Category create requires `codePrefix`; edits keep the existing prefix.
 - [x] Expected-component definition management. Assembly categories require at least one expected component name; definitions do not create inventory. Adding a name backfills unsold assemblies with a provisional NA pending Administrator confirm/missing.
 - [x] Mechanical/service catalog remains handled by Sales/Admin integration as specified. Inactive services are omitted from POS `buildPosDraftView` and rejected in `addDraftLine`.
 - [x] Dynamic but bounded registration fields based on selected category.

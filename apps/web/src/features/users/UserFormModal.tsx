@@ -85,6 +85,11 @@ export function UserFormModal({
   return (
     <Modal open={open} title={isEdit ? 'Editar usuario' : 'Nuevo usuario'} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <Info tone="error" title="No se pudo guardar">
+            {error}
+          </Info>
+        )}
         <Field label="Nombre" htmlFor="user-name">
           <Input
             id="user-name"
@@ -165,12 +170,6 @@ export function UserFormModal({
           />
           Cuenta activa
         </label>
-
-        {error && (
-          <Info tone="error" title="No se pudo guardar">
-            {error}
-          </Info>
-        )}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>

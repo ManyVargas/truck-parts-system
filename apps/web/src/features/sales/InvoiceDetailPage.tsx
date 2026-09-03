@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { useAuth } from '../auth/useAuth';
 import { InvoiceStatusChip, PaymentChip } from '../../shared/domain';
+import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
 import { Button, Card, Chip, Info, money, Mono } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
 import { CancelInvoiceModal } from './CancelInvoiceModal';
@@ -18,6 +19,7 @@ import { useInvoiceDetail } from './useInvoiceDetail';
 export function InvoiceDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
+  const capabilities = useAppCapabilities();
   const { result, isMutating, addPayment, cancelInvoice, correctCurrency } = useInvoiceDetail(id);
   const [payOpen, setPayOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -27,7 +29,7 @@ export function InvoiceDetailPage() {
 
   if (result.status === 'error') {
     return (
-      <Info tone="error" title="No se pudo cargar el detalle">
+      <Info tone="error" title="No se pudo cargar la factura">
         {result.error.message}
       </Info>
     );
@@ -55,7 +57,7 @@ export function InvoiceDetailPage() {
                 Vista previa del documento
               </Button>
             )}
-            {detail.actions.canPay && (
+            {detail.actions.canPay && capabilities.payments && (
               <Button
                 onClick={() => {
                   setActionError(null);
@@ -76,7 +78,7 @@ export function InvoiceDetailPage() {
                 Corregir moneda
               </Button>
             )}
-            {detail.actions.canCancel && (
+            {detail.actions.canCancel && capabilities.invoiceCancellation && (
               <Button
                 variant="danger"
                 onClick={() => {
@@ -93,7 +95,9 @@ export function InvoiceDetailPage() {
 
       <div className="mb-6 flex flex-wrap items-center gap-2">
         <InvoiceStatusChip status={detail.status} />
-        {detail.status !== 'DRAFT' && <PaymentChip state={detail.paymentState} />}
+        {detail.status !== 'DRAFT' && capabilities.payments && (
+          <PaymentChip state={detail.paymentState} />
+        )}
         {detail.fiscal ? <Chip tone="brand">Fiscal</Chip> : <Chip>Sin comprobante fiscal</Chip>}
         <Chip>{detail.currency}</Chip>
         <Link to="/sales" className="text-sm text-brand hover:underline">
@@ -149,7 +153,7 @@ export function InvoiceDetailPage() {
         </section>
       )}
 
-      {detail.linkedWorkOrders.length > 0 && (
+      {detail.linkedWorkOrders.length > 0 && capabilities.workOrders && (
         <section className="mb-8">
           <p className="mb-2 text-sm font-medium text-navy">Órdenes de trabajo vinculadas</p>
           <ul className="space-y-1 text-sm text-navy-400">
@@ -169,11 +173,13 @@ export function InvoiceDetailPage() {
         </section>
       )}
 
-      <div className="mb-8">
-        <PaymentHistory payments={detail.payments} currency={detail.currency} />
-      </div>
+      {capabilities.payments && (
+        <div className="mb-8">
+          <PaymentHistory payments={detail.payments} currency={detail.currency} />
+        </div>
+      )}
 
-      {detail.profitability && (
+      {detail.profitability && capabilities.profitability && (
         <div className="mb-8">
           <ProfitabilityPanel view={detail.profitability} />
         </div>

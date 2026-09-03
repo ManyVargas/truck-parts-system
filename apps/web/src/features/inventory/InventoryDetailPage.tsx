@@ -3,14 +3,17 @@ import { useParams } from 'react-router-dom';
 
 import { useAuth } from '../auth/useAuth';
 import { Button, Info, useToast } from '../../shared/ui';
+import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
 import { ItemAdminActions } from './ItemAdminActions';
 import { ItemDetailViewPanel } from './ItemDetailView';
+import { ItemDetailsEditor } from './ItemDetailsEditor';
 import { QtyProductDetail } from './QtyProductDetail';
 import { useInventoryDetail } from './useInventoryDetail';
 
 export function InventoryDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
+  const capabilities = useAppCapabilities();
   const { pushToast } = useToast();
   const query = useInventoryDetail(id);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -26,7 +29,7 @@ export function InventoryDetailPage() {
 
   if (query.result.status === 'error') {
     return (
-      <Info tone="error" title="No se pudo cargar el detalle">
+      <Info tone="error" title="No se pudo cargar el detalle del inventario">
         {query.result.error.message}
       </Info>
     );
@@ -45,7 +48,11 @@ export function InventoryDetailPage() {
     pushToast('Abriendo punto de venta', 'success');
   }
 
-  const draftButton = (
+  const canAddToDraft =
+    capabilities.sales &&
+    (detail.kind === 'QTY' ? capabilities.quantitySales : capabilities.inventorySales);
+
+  const draftButton = canAddToDraft ? (
     <div className="flex flex-col items-stretch gap-2 sm:items-end">
       {actionError && (
         <Info tone="error" title="No se agregó al borrador">
@@ -65,17 +72,31 @@ export function InventoryDetailPage() {
         <p className="max-w-sm text-right text-xs text-navy-400">{detail.draftEligibility.reason}</p>
       )}
     </div>
-  );
+  ) : null;
+
+  const canEditDetails = user?.role === 'SELLER' || user?.role === 'ADMINISTRATOR';
 
   if (detail.kind === 'QTY') {
-    const canReceive = user?.role === 'SELLER' || user?.role === 'ADMINISTRATOR';
+    const canReceive = canEditDetails;
     return (
       <QtyProductDetail
         detail={detail}
         actions={draftButton}
+        canEdit={canEditDetails}
         canReceive={canReceive}
         canAdjust={isAdmin}
         isMutating={query.isMutating}
+        onEdit={async (input) => {
+          const response = await query.updateQtyProductDetails({
+            qtyProductId: detail.id,
+            ...input,
+          });
+          if (!response.ok) {
+            return response.error.message;
+          }
+          pushToast('Datos actualizados', 'success');
+          return null;
+        }}
         onReceive={async (input) => {
           const response = await query.receiveQtyStock({ qtyProductId: detail.id, ...input });
           if (!response.ok) {
@@ -102,6 +123,20 @@ export function InventoryDetailPage() {
       actions={
         <div className="flex flex-col items-stretch gap-3 sm:items-end">
           {draftButton}
+          {canEditDetails && (
+            <ItemDetailsEditor
+              detail={detail}
+              isMutating={query.isMutating}
+              onSave={async (input) => {
+                const response = await query.updateItemDetails({ itemId: detail.id, ...input });
+                if (!response.ok) {
+                  return response.error.message;
+                }
+                pushToast('Datos actualizados', 'success');
+                return null;
+              }}
+            />
+          )}
           {isAdmin && (
             <ItemAdminActions
               detail={detail}

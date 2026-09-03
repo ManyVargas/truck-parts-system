@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Info, useToast } from '../../shared/ui';
+import { Button, Info } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
 import { InventoryFilters } from './InventoryFilters';
 import { InventoryTable } from './InventoryTable';
@@ -9,7 +9,6 @@ import { RegisterItemWizard } from './RegisterItemWizard';
 export function InventoryPage() {
   const { filters, patchFilters, result, categories, refresh } = useInventoryCatalog();
   const [registerOpen, setRegisterOpen] = useState(false);
-  const { pushToast } = useToast();
 
   if (result.status === 'error') {
     return (
@@ -41,10 +40,8 @@ export function InventoryPage() {
         open={registerOpen}
         categories={categories}
         onClose={() => setRegisterOpen(false)}
-        onRegistered={(id) => {
-          setRegisterOpen(false);
+        onRegistered={() => {
           refresh();
-          pushToast(`${id} registrado correctamente`, 'success');
         }}
       />
     </>

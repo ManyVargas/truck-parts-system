@@ -34,6 +34,7 @@ export type ActivityRow = {
   type: string;
   description: string;
   createdAt: string;
+  actorName?: string;
 };
 
 export type CatalogReviewAlert = {

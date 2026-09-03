@@ -62,6 +62,11 @@ export function ServiceFormModal({
   return (
     <Modal open={open} title={isEdit ? 'Editar servicio' : 'Nuevo servicio'} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <Info tone="error" title="No se pudo guardar">
+            {error}
+          </Info>
+        )}
         <Field label="Nombre" htmlFor="service-name">
           <Input
             id="service-name"
@@ -83,12 +88,6 @@ export function ServiceFormModal({
           />
           Activo (visible en el punto de venta)
         </label>
-
-        {error && (
-          <Info tone="error" title="No se pudo guardar">
-            {error}
-          </Info>
-        )}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>

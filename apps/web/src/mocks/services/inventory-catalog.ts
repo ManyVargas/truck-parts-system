@@ -7,7 +7,6 @@ import type {
   QtyProductDetailView,
 } from '../../api/contracts/inventory';
 import type {
-  AppEvent,
   AppState,
   Category,
   Item,
@@ -25,6 +24,7 @@ import {
   protectedAncestor,
   reservationEffect,
 } from './inventory-helpers';
+import { toHistoryEventView } from './history-view';
 
 function categoryName(categories: Category[], categoryId: string): string {
   return categories.find((entry) => entry.id === categoryId)?.name ?? categoryId;
@@ -230,10 +230,15 @@ function buildFocusedTree(state: AppState, focus: Item): HierarchyNode {
   return tree;
 }
 
-function eventsForItem(events: AppEvent[], itemId: string): AppEvent[] {
-  return events
-    .filter((event) => event.metadata?.itemId === itemId)
-    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+function eventsForSubject(
+  state: AppState,
+  metadataKey: 'itemId' | 'qtyProductId',
+  subjectId: string,
+) {
+  return state.events
+    .filter((event) => event.metadata?.[metadataKey] === subjectId)
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+    .map((event) => toHistoryEventView(event, state.users));
 }
 
 function workOrdersForPiece(orders: WorkOrder[], pieceId: string): WorkOrder[] {
@@ -366,7 +371,7 @@ export function buildItemDetail(state: AppState, id: string): ItemDetailView | u
     })),
     tree: buildFocusedTree(state, item),
     workOrders: workOrdersForPiece(state.workOrders, item.id),
-    events: eventsForItem(state.events, item.id),
+    events: eventsForSubject(state, 'itemId', item.id),
     draftEligibility: itemDraftEligibility(state, item),
   };
 }
@@ -397,5 +402,6 @@ export function buildQtyProductDetail(
     availableToReserve: available,
     commercialState: available > 0 ? 'AVAILABLE' : 'UNAVAILABLE',
     draftEligibility: qtyDraftEligibility(product),
+    events: eventsForSubject(state, 'qtyProductId', product.id),
   };
 }

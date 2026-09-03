@@ -13,6 +13,8 @@ import type {
   ReceiveQtyStockInput,
   AdjustQtyStockInput,
   ResolveCatalogReviewInput,
+  UpdateItemDetailsInput,
+  UpdateQtyProductDetailsInput,
 } from '../../api/contracts/inventory';
 import type {
   AppEvent,
@@ -38,10 +40,38 @@ import {
   protectedAncestor,
   syncDirectParentCompleteness,
 } from './inventory-helpers';
+import { allocateItemCode } from './item-code';
 
 function optionalText(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+function normalizePhotos(photos: string[] | undefined): string[] {
+  return [...new Set((photos ?? []).map((photo) => photo.trim()).filter(Boolean))];
+}
+
+function normalizeAttributes(
+  attributes: Record<string, string> | undefined,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(attributes ?? {})
+      .map(([key, value]) => [key.trim(), value.trim()])
+      .filter(([key, value]) => key && value),
+  );
+}
+
+function assignOptionalText<T extends object>(
+  target: T,
+  key: keyof T,
+  value: string | undefined,
+): void {
+  const next = optionalText(value);
+  if (next) {
+    (target as Record<string, unknown>)[key as string] = next;
+  } else {
+    delete (target as Record<string, unknown>)[key as string];
+  }
 }
 
 function nextNumericId(ids: string[], prefix: string, pad: number): string {
@@ -100,19 +130,25 @@ function validateFiniteNonNegative(value: number | undefined, label: string): Re
   return ok(undefined);
 }
 
+function takenInventoryIds(state: AppState, extra: Iterable<string> = []): string[] {
+  return [
+    ...state.items.map((entry) => entry.id),
+    ...state.qtyProducts.map((entry) => entry.id),
+    ...extra,
+  ];
+}
+
 function buildRegisteredItem(
   state: AppState,
+  seq: Record<string, number>,
+  extraTakenIds: Iterable<string>,
   input: RegisterItemInput,
   relationship: Item['physicalRelationship'],
   parentId?: string,
 ): Result<Item> {
-  const id = normalizeText(input.id);
   const name = normalizeText(input.name);
-  if (!id || !name || !normalizeText(input.categoryId)) {
-    return err({ code: 'VALIDATION', message: 'ID, nombre y categoría son obligatorios' });
-  }
-  if (inventoryIdExists(state, id)) {
-    return err({ code: 'CONFLICT', message: `El ID ${id} ya existe` });
+  if (!name || !normalizeText(input.categoryId)) {
+    return err({ code: 'VALIDATION', message: 'Nombre y categoría son obligatorios' });
   }
 
   const category = state.categories.find((entry) => entry.id === input.categoryId);
@@ -125,12 +161,19 @@ function buildRegisteredItem(
     return costValidation;
   }
 
-  const attributes = Object.fromEntries(
-    Object.entries(input.attributes ?? {})
-      .map(([key, value]) => [key.trim(), value.trim()])
-      .filter(([key, value]) => key && value),
+  const allocated = allocateItemCode(
+    state.categories,
+    seq,
+    takenInventoryIds(state, extraTakenIds),
+    category.id,
   );
-  const photos = [...new Set((input.photos ?? []).map((photo) => photo.trim()).filter(Boolean))];
+  if (!allocated.ok) {
+    return allocated;
+  }
+  const id = allocated.value;
+
+  const attributes = normalizeAttributes(input.attributes);
+  const photos = normalizePhotos(input.photos);
   const item: Item = {
     id,
     name,
@@ -169,15 +212,17 @@ function buildRegisteredItem(
 }
 
 export function registerItem(state: AppState, actor: User, input: RegisterItemInput): Result<Item> {
-  const built = buildRegisteredItem(state, input, 'INDEPENDENT');
-  if (!built.ok) {
-    return built;
-  }
-  if (isAssemblyItem(built.value, state.categories)) {
+  const category = state.categories.find((entry) => entry.id === input.categoryId);
+  if (category?.isAssembly) {
     return err({
       code: 'VALIDATION',
       message: 'Los ensamblajes requieren completar el checklist de recepción',
     });
+  }
+
+  const built = buildRegisteredItem(state, state.itemCodeSeq, [], input, 'INDEPENDENT');
+  if (!built.ok) {
+    return built;
   }
 
   state.items.push(built.value);
@@ -243,6 +288,134 @@ export function registerQtyProduct(
   return ok(product);
 }
 
+type FieldChange = { before: unknown; after: unknown };
+
+function recordChange(
+  changes: Record<string, FieldChange>,
+  field: string,
+  before: unknown,
+  after: unknown,
+): void {
+  if (JSON.stringify(before ?? null) === JSON.stringify(after ?? null)) {
+    return;
+  }
+  changes[field] = { before: before ?? null, after: after ?? null };
+}
+
+/**
+ * INV-005: update current descriptive fields without rewriting identity,
+ * protected cost, hierarchy, or completed sale snapshots.
+ */
+export function updateItemDetails(
+  state: AppState,
+  actor: User,
+  input: UpdateItemDetailsInput,
+): Result<Item> {
+  const item = itemById(state.items, input.itemId);
+  if (!item) {
+    return err({ code: 'NOT_FOUND', message: 'Ítem no encontrado' });
+  }
+
+  const name = normalizeText(input.name);
+  if (!name) {
+    return err({ code: 'VALIDATION', message: 'El nombre es obligatorio' });
+  }
+
+  const requestedLocation = optionalText(input.location);
+  if (item.physicalRelationship === 'INSTALLED' && requestedLocation) {
+    return err({
+      code: 'VALIDATION',
+      message: 'La ubicación de una pieza instalada se hereda del padre independiente',
+    });
+  }
+
+  const photos = input.photos !== undefined ? normalizePhotos(input.photos) : [...item.photos];
+  const attributes =
+    input.attributes !== undefined ? normalizeAttributes(input.attributes) : { ...(item.attributes ?? {}) };
+  const brand = optionalText(input.brand);
+  const model = optionalText(input.model);
+  const serial = optionalText(input.serial);
+  const partNumber = optionalText(input.partNumber);
+  const notes = optionalText(input.notes);
+
+  const changes: Record<string, FieldChange> = {};
+  recordChange(changes, 'name', item.name, name);
+  recordChange(changes, 'brand', item.brand, brand);
+  recordChange(changes, 'model', item.model, model);
+  recordChange(changes, 'serial', item.serial, serial);
+  recordChange(changes, 'partNumber', item.partNumber, partNumber);
+  recordChange(changes, 'condition', item.condition, input.condition);
+  recordChange(changes, 'notes', item.notes, notes);
+  recordChange(changes, 'photos', item.photos, photos);
+  recordChange(changes, 'attributes', item.attributes ?? {}, attributes);
+  if (item.physicalRelationship === 'INDEPENDENT') {
+    recordChange(changes, 'location', item.location, requestedLocation);
+  }
+
+  if (Object.keys(changes).length === 0) {
+    return ok(item);
+  }
+
+  item.name = name;
+  item.condition = input.condition;
+  assignOptionalText(item, 'brand', brand);
+  assignOptionalText(item, 'model', model);
+  assignOptionalText(item, 'serial', serial);
+  assignOptionalText(item, 'partNumber', partNumber);
+  assignOptionalText(item, 'notes', notes);
+  item.photos = photos;
+  if (Object.keys(attributes).length > 0) {
+    item.attributes = attributes;
+  } else {
+    delete item.attributes;
+  }
+  if (item.physicalRelationship === 'INDEPENDENT') {
+    assignOptionalText(item, 'location', requestedLocation);
+  }
+
+  appendEvent(state, 'ITEM_EDITED', `Datos descriptivos de ${item.id} actualizados`, actor, {
+    itemId: item.id,
+    changes,
+  });
+  return ok(item);
+}
+
+export function updateQtyProductDetails(
+  state: AppState,
+  actor: User,
+  input: UpdateQtyProductDetailsInput,
+): Result<QtyProduct> {
+  const product = state.qtyProducts.find((entry) => entry.id === input.qtyProductId);
+  if (!product) {
+    return err({ code: 'NOT_FOUND', message: 'Producto no encontrado' });
+  }
+
+  const name = normalizeText(input.name);
+  if (!name) {
+    return err({ code: 'VALIDATION', message: 'El nombre es obligatorio' });
+  }
+
+  const brand = optionalText(input.brand);
+  const location = optionalText(input.location);
+  const changes: Record<string, FieldChange> = {};
+  recordChange(changes, 'name', product.name, name);
+  recordChange(changes, 'brand', product.brand, brand);
+  recordChange(changes, 'location', product.location, location);
+
+  if (Object.keys(changes).length === 0) {
+    return ok(product);
+  }
+
+  product.name = name;
+  assignOptionalText(product, 'brand', brand);
+  assignOptionalText(product, 'location', location);
+  appendEvent(state, 'QTY_EDITED', `Datos descriptivos de ${product.id} actualizados`, actor, {
+    qtyProductId: product.id,
+    changes,
+  });
+  return ok(product);
+}
+
 export function registerAssembly(
   state: AppState,
   actor: User,
@@ -262,6 +435,7 @@ export function registerAssembly(
   const stagedItems: Item[] = [];
   const missingComponents: KnownMissingComponent[] = [];
   const pendingIds = new Set<string>();
+  const seq = { ...state.itemCodeSeq };
 
   const stageNode = (
     itemInput: RegisterItemInput,
@@ -270,7 +444,7 @@ export function registerAssembly(
     parentId?: string,
     expectedCategoryName?: string,
   ): Result<{ item: Item; snapshot: BaselineSnapshot }> => {
-    const built = buildRegisteredItem(state, itemInput, relationship, parentId);
+    const built = buildRegisteredItem(state, seq, pendingIds, itemInput, relationship, parentId);
     if (!built.ok) {
       return built;
     }
@@ -400,6 +574,7 @@ export function registerAssembly(
   // Commit only after every nested node and checklist has passed validation.
   state.items.push(...stagedItems);
   state.knownMissing.push(...missingComponents);
+  state.itemCodeSeq = seq;
   appendEvent(state, 'ASSEMBLY_REGISTERED', `${parent.id} registrado con baseline inicial`, actor, {
     itemId: parent.id,
     receiptTree: rootResult.value.snapshot,
@@ -806,7 +981,7 @@ export function resolveCatalogReview(
       registered.value.parent.location = undefined;
       childId = registered.value.parent.id;
     } else {
-      const built = buildRegisteredItem(state, input.item, 'INSTALLED', item.id);
+      const built = buildRegisteredItem(state, state.itemCodeSeq, [], input.item, 'INSTALLED', item.id);
       if (!built.ok) {
         return built;
       }

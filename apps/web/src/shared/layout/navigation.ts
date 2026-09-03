@@ -1,72 +1,140 @@
 import type { Role } from '../../api/contracts/entities';
+import {
+  getAppCapabilities,
+  type AppCapabilities,
+  type AppCapability,
+} from '../config/capabilities';
+
+/** Work-intent groupings for the commercial sidebar — not nested menus. */
+export const NAV_GROUPS = [
+  { id: 'operation', label: 'Operación' },
+  { id: 'administration', label: 'Administración' },
+  { id: 'finance', label: 'Finanzas y control' },
+] as const;
+
+export type NavGroupId = (typeof NAV_GROUPS)[number]['id'];
 
 export type NavItem = {
   id: string;
   label: string;
   path: string;
   roles: Role[];
+  group: NavGroupId;
+  /** When set, the item is hidden and its URLs are blocked unless the capability is on. */
+  capability?: AppCapability;
 };
 
-/** Desktop sidebar entries — Admin sees 9, Seller sees the first 4. */
+export type NavGroup = {
+  id: NavGroupId;
+  label: string;
+  items: NavItem[];
+};
+
+/** Desktop sidebar entries — Admin sees 9, Seller sees the first 4 when all capabilities are on. */
 export const DESKTOP_NAV_ITEMS: NavItem[] = [
   {
     id: 'dashboard',
     label: 'Inicio',
     path: '/dashboard',
     roles: ['ADMINISTRATOR', 'SELLER'],
+    group: 'operation',
   },
   {
     id: 'inventory',
     label: 'Inventario',
     path: '/inventory',
     roles: ['ADMINISTRATOR', 'SELLER'],
+    group: 'operation',
+    capability: 'inventory',
   },
   {
     id: 'sales',
     label: 'Ventas y Facturas',
     path: '/sales',
     roles: ['ADMINISTRATOR', 'SELLER'],
+    group: 'operation',
+    capability: 'sales',
   },
   {
     id: 'customers',
     label: 'Clientes',
     path: '/customers',
     roles: ['ADMINISTRATOR', 'SELLER'],
+    group: 'operation',
+    capability: 'customers',
   },
   {
     id: 'work-orders',
     label: 'Órdenes de Trabajo',
     path: '/work-orders',
     roles: ['ADMINISTRATOR'],
+    group: 'operation',
+    capability: 'workOrders',
   },
   {
     id: 'catalogs',
     label: 'Catálogos',
     path: '/catalogs',
     roles: ['ADMINISTRATOR'],
+    group: 'administration',
+    capability: 'catalogs',
   },
   {
     id: 'users',
     label: 'Usuarios',
     path: '/users',
     roles: ['ADMINISTRATOR'],
+    group: 'administration',
+    capability: 'users',
   },
   {
     id: 'profitability',
     label: 'Rentabilidad',
     path: '/profitability',
     roles: ['ADMINISTRATOR'],
+    group: 'finance',
+    capability: 'profitability',
   },
   {
     id: 'recovery',
     label: 'Administración y Recuperación',
     path: '/recovery',
     roles: ['ADMINISTRATOR'],
+    group: 'finance',
+    capability: 'recovery',
   },
 ];
 
-export function navItemsForRole(role: Role): NavItem[] {
-  return DESKTOP_NAV_ITEMS.filter((item) => item.roles.includes(role));
+function isNavItemEnabled(item: NavItem, capabilities: AppCapabilities): boolean {
+  return !item.capability || capabilities[item.capability];
+}
+
+export function navItemsForRole(
+  role: Role,
+  capabilities: AppCapabilities = getAppCapabilities(),
+): NavItem[] {
+  return DESKTOP_NAV_ITEMS.filter(
+    (item) => item.roles.includes(role) && isNavItemEnabled(item, capabilities),
+  );
+}
+
+/** Visible groups only — empty groups stay out of the sidebar when capabilities hide their items. */
+export function navGroupsForRole(
+  role: Role,
+  capabilities: AppCapabilities = getAppCapabilities(),
+): NavGroup[] {
+  const items = navItemsForRole(role, capabilities);
+
+  return NAV_GROUPS.map((group) => ({
+    id: group.id,
+    label: group.label,
+    items: items.filter((item) => item.group === group.id),
+  })).filter((group) => group.items.length > 0);
+}
+
+/** A single group (typical Seller menu) does not need a heading of its own. */
+export function shouldShowNavGroupHeadings(groups: NavGroup[]): boolean {
+  return groups.length > 1;
 }
 
 /** Registered desktop routes — unknown paths should 404, not unauthorized. */
@@ -155,7 +223,11 @@ export function isNavItemActive(pathname: string, itemPath: string): boolean {
   return false;
 }
 
-export function isRouteAllowedForRole(pathname: string, role: Role): boolean {
+export function isRouteAllowedForRole(
+  pathname: string,
+  role: Role,
+  capabilities: AppCapabilities = getAppCapabilities(),
+): boolean {
   const match = DESKTOP_NAV_ITEMS.find(
     (item) => pathname === item.path || pathname.startsWith(`${item.path}/`),
   );
@@ -164,7 +236,23 @@ export function isRouteAllowedForRole(pathname: string, role: Role): boolean {
     return true;
   }
 
-  return match.roles.includes(role);
+  return match.roles.includes(role) && isNavItemEnabled(match, capabilities);
+}
+
+/** Mechanic queue/order URLs require workOrders; profile remains available. */
+export function isMechanicPathAllowed(
+  pathname: string,
+  capabilities: AppCapabilities = getAppCapabilities(),
+): boolean {
+  if (!isKnownMechanicRoute(pathname)) {
+    return true;
+  }
+
+  if (pathname === '/mechanic' || pathname === '/mechanic/profile') {
+    return true;
+  }
+
+  return capabilities.workOrders;
 }
 
 export function getRouteLabel(pathname: string): string | undefined {
@@ -175,10 +263,13 @@ export function getRouteLabel(pathname: string): string | undefined {
   return match?.label;
 }
 
-export function defaultPathForRole(role: Role): string {
+export function defaultPathForRole(
+  role: Role,
+  capabilities: AppCapabilities = getAppCapabilities(),
+): string {
   switch (role) {
     case 'MECHANIC':
-      return '/mechanic';
+      return capabilities.workOrders ? '/mechanic' : '/mechanic/profile';
     case 'ADMINISTRATOR':
     case 'SELLER':
       return '/dashboard';

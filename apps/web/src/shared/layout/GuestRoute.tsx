@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 
 import { useAuth } from '../../features/auth/useAuth';
+import { useAppCapabilities } from '../config/CapabilitiesProvider';
 import { defaultPathForRole } from './navigation';
 
 export type GuestRouteProps = {
@@ -30,6 +31,7 @@ function resolveReturnPath(state: unknown): string | null {
 export function GuestRoute({ children }: GuestRouteProps) {
   const { user, isLoading } = useAuth();
   const location = useLocation();
+  const capabilities = useAppCapabilities();
 
   if (isLoading) {
     return (
@@ -40,7 +42,7 @@ export function GuestRoute({ children }: GuestRouteProps) {
   }
 
   if (user) {
-    const returnPath = resolveReturnPath(location.state) ?? defaultPathForRole(user.role);
+    const returnPath = resolveReturnPath(location.state) ?? defaultPathForRole(user.role, capabilities);
     return <Navigate to={returnPath} replace />;
   }
 

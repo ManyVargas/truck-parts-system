@@ -27,6 +27,7 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Ganancia bruta en pesos')).toBeVisible();
     expect(screen.getByText('Tasa de cambio pendiente')).toBeVisible();
     expect(screen.getByText('RD$8,900.00')).toBeVisible();
+    expect(screen.getAllByText(/por Laura Pérez/).length).toBeGreaterThan(0);
   });
 
   it('shows draft count instead of profitability to sellers', async () => {
@@ -57,7 +58,7 @@ describe('DashboardPage', () => {
       await screen.findByText('Catálogo: ensamblajes afectados por un componente nuevo'),
     ).toBeVisible();
     expect(screen.getByText('Componentes por validar')).toBeVisible();
-    expect(screen.getByRole('link', { name: /Detroit DD15 Completo \(ENG-001\)/ })).toBeVisible();
+    expect(screen.getByRole('link', { name: /Detroit DD15 Completo \(MOT-001\)/ })).toBeVisible();
     expect(screen.getAllByText(/ahora motor espera Bomba de aceite/i).length).toBeGreaterThan(0);
   });
 

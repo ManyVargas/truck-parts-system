@@ -1,13 +1,14 @@
 import type { AppState } from '../../api/contracts/entities';
+import { buildItemCodeSeq } from '../services/item-code';
 
 const SEED_PASSWORD = 'demo1234';
 const ISO = (value: string) => value;
 
 /**
  * Builds the full in-memory demo dataset.
- * Ported from prototype intent: 4 users, TRK hierarchy, 2 qty products,
+ * Ported from prototype intent: 4 users, CAM hierarchy, 2 qty products,
  * 3 customers, 5 invoices, 4 work orders, fxAvailable + facSeq.
- * Hierarchy: one engine in TRK-001; ENG-002/ENG-003 independent in the yard.
+ * Hierarchy: one engine in CAM-001; MOT-002/MOT-003 independent in the yard.
  */
 export function createInitialState(): AppState {
   const users = [
@@ -50,51 +51,59 @@ export function createInitialState(): AppState {
     {
       id: 'CAT-TRK',
       name: 'Camión',
+      codePrefix: 'CAM',
       isAssembly: true,
       expectedComponents: ['Motor', 'Transmisión'],
     },
     {
       id: 'CAT-ENG',
       name: 'Motor',
+      codePrefix: 'MOT',
       isAssembly: true,
       expectedComponents: ['Alternador', 'Turbo', 'Motor de arranque'],
     },
     {
       id: 'CAT-TRANS',
       name: 'Transmisión',
+      codePrefix: 'TRA',
       isAssembly: true,
       expectedComponents: ['Engranaje', 'Rodamientos', 'Piñon'],
     },
     {
       id: 'CAT-ALT',
       name: 'Alternador',
+      codePrefix: 'ALT',
       isAssembly: false,
     },
     {
       id: 'CAT-TUR',
       name: 'Turbo',
+      codePrefix: 'TUR',
       isAssembly: false,
     },
     {
       id: 'CAT-STA',
       name: 'Motor de arranque',
+      codePrefix: 'ARR',
       isAssembly: false,
     },
     {
       id: 'CAT-FIL',
       name: 'Filtros',
+      codePrefix: 'FIL',
       isAssembly: false,
     },
     {
       id: 'CAT-OIL',
       name: 'Lubricantes',
+      codePrefix: 'LUB',
       isAssembly: false,
     },
   ];
 
   const items = [
     {
-      id: 'TRK-001',
+      id: 'CAM-001',
       name: 'Freightliner Cascadia 2018',
       categoryId: 'CAT-TRK',
       brand: 'Freightliner',
@@ -108,7 +117,7 @@ export function createInitialState(): AppState {
       photos: [],
     },
     {
-      id: 'ENG-001',
+      id: 'MOT-001',
       name: 'Detroit DD15 Completo',
       categoryId: 'CAT-ENG',
       brand: 'Detroit',
@@ -119,7 +128,7 @@ export function createInitialState(): AppState {
       location: 'Patio A',
       commercialState: 'AVAILABLE' as const,
       physicalRelationship: 'INSTALLED' as const,
-      parentId: 'TRK-001',
+      parentId: 'CAM-001',
       complete: true,
       photos: [],
       attributes: { displacement: '14.8L' },
@@ -134,7 +143,7 @@ export function createInitialState(): AppState {
       acquisitionCostDop: 18_500,
       commercialState: 'AVAILABLE' as const,
       physicalRelationship: 'INSTALLED' as const,
-      parentId: 'ENG-001',
+      parentId: 'MOT-001',
       complete: true,
       reservedByDraftId: 'INV-DRAFT-01',
       photos: [],
@@ -149,26 +158,26 @@ export function createInitialState(): AppState {
       acquisitionCostDop: 42_000,
       commercialState: 'SOLD' as const,
       physicalRelationship: 'INSTALLED' as const,
-      parentId: 'ENG-001',
+      parentId: 'MOT-001',
       complete: true,
       photos: [],
     },
     {
-      id: 'STA-002',
+      id: 'ARR-002',
       name: 'Motor de arranque 24V',
       categoryId: 'CAT-STA',
       brand: 'Delco',
-      partNumber: 'STA-24V-002',
+      partNumber: 'ARR-24V-002',
       condition: 'REMANUFACTURED' as const,
       acquisitionCostDop: 12_800,
       commercialState: 'SOLD' as const,
       physicalRelationship: 'INSTALLED' as const,
-      parentId: 'ENG-001',
+      parentId: 'MOT-001',
       complete: true,
       photos: [],
     },
     {
-      id: 'ENG-002',
+      id: 'MOT-002',
       name: 'Cummins ISX Incompleto',
       categoryId: 'CAT-ENG',
       brand: 'Cummins',
@@ -195,7 +204,7 @@ export function createInitialState(): AppState {
       photos: [],
     },
     {
-      id: 'ENG-003',
+      id: 'MOT-003',
       name: 'Detroit DD13 Protegido',
       categoryId: 'CAT-ENG',
       brand: 'Detroit',
@@ -220,12 +229,12 @@ export function createInitialState(): AppState {
       acquisitionCostDop: 17_400,
       commercialState: 'AVAILABLE' as const,
       physicalRelationship: 'INSTALLED' as const,
-      parentId: 'ENG-003',
+      parentId: 'MOT-003',
       complete: true,
       photos: [],
     },
     {
-      id: 'FLT-001',
+      id: 'FIL-001',
       name: 'Filtro de aceite HD',
       categoryId: 'CAT-FIL',
       brand: 'Fleetguard',
@@ -243,19 +252,19 @@ export function createInitialState(): AppState {
   const knownMissing = [
     {
       id: 'KM-001',
-      parentId: 'ENG-002',
+      parentId: 'MOT-002',
       expectedComponentName: 'Turbo',
       origin: 'MISSING_AT_RECEIPT' as const,
     },
     {
       id: 'KM-002',
-      parentId: 'TRK-001',
+      parentId: 'CAM-001',
       expectedComponentName: 'Transmisión',
       origin: 'MISSING_AT_RECEIPT' as const,
     },
     {
       id: 'KM-003',
-      parentId: 'ENG-002',
+      parentId: 'MOT-002',
       expectedComponentName: 'Alternador',
       origin: 'REMOVED_AFTER_BASELINE' as const,
       formerItemId: 'ALT-010',
@@ -406,7 +415,7 @@ export function createInitialState(): AppState {
           id: 'L-98-1',
           type: 'ITEM' as const,
           description: 'Motor de arranque 24V',
-          itemId: 'STA-002',
+          itemId: 'ARR-002',
           quantity: 1,
           unitPrice: 19_500,
           taxable: true,
@@ -443,6 +452,7 @@ export function createInitialState(): AppState {
           amount: 3_600,
           method: 'CASH' as const,
           createdAt: ISO('2026-08-25T11:00:00.000Z'),
+          actorId: 'U-LAURA',
         },
       ],
       paymentState: 'PARTIALLY_PAID' as const,
@@ -474,6 +484,7 @@ export function createInitialState(): AppState {
           amount: 5_500,
           method: 'CASH' as const,
           createdAt: ISO('2026-08-22T16:00:00.000Z'),
+          actorId: 'U-LAURA',
         },
       ],
       paymentState: 'PAID' as const,
@@ -488,7 +499,7 @@ export function createInitialState(): AppState {
       type: 'DISMANTLING' as const,
       status: 'IN_PROGRESS' as const,
       pieceId: 'TUR-009',
-      sourceParentId: 'ENG-001',
+      sourceParentId: 'MOT-001',
       assignedMechanicId: 'U-PEDRO',
       invoiceId: 'INV-096',
       notes: 'Desarme por venta instalada',
@@ -500,8 +511,8 @@ export function createInitialState(): AppState {
       id: 'OD-DEMO-061',
       type: 'DISMANTLING' as const,
       status: 'PENDING' as const,
-      pieceId: 'STA-002',
-      sourceParentId: 'ENG-001',
+      pieceId: 'ARR-002',
+      sourceParentId: 'MOT-001',
       invoiceId: 'INV-098',
       notes: 'Pendiente de asignación',
       beforePhotos: [],
@@ -512,8 +523,8 @@ export function createInitialState(): AppState {
       id: 'OD-DEMO-062',
       type: 'INSTALLATION' as const,
       status: 'PENDING' as const,
-      pieceId: 'FLT-001',
-      destinationParentId: 'ENG-002',
+      pieceId: 'FIL-001',
+      destinationParentId: 'MOT-002',
       notes: 'Instalación manual admin',
       beforePhotos: [],
       afterPhotos: [],
@@ -524,7 +535,7 @@ export function createInitialState(): AppState {
       type: 'DISMANTLING' as const,
       status: 'COMPLETED' as const,
       pieceId: 'ALT-010',
-      sourceParentId: 'ENG-002',
+      sourceParentId: 'MOT-002',
       assignedMechanicId: 'U-CARLOS',
       beforePhotos: ['before-alt.jpg'],
       afterPhotos: ['after-alt.jpg'],
@@ -558,12 +569,12 @@ export function createInitialState(): AppState {
       id: 'EV-004',
       type: 'DISMANTLING_COMPLETED',
       description:
-        'ALT-010 retirado de ENG-002 (OD-DEMO-063). Queda independiente; el motor registra el faltante.',
+        'ALT-010 retirado de MOT-002 (OD-DEMO-063). Queda independiente; el motor registra el faltante.',
       actorId: 'U-CARLOS',
       createdAt: ISO('2026-08-18T12:00:00.000Z'),
       metadata: {
         itemId: 'ALT-010',
-        parentId: 'ENG-002',
+        parentId: 'MOT-002',
         workOrderId: 'OD-DEMO-063',
       },
     },
@@ -584,5 +595,9 @@ export function createInitialState(): AppState {
     fxAvailable: false,
     fxRateDopPerUsd: 61.5,
     facSeq: 100,
+    itemCodeSeq: buildItemCodeSeq(
+      categories,
+      items.map((item) => item.id),
+    ),
   };
 }

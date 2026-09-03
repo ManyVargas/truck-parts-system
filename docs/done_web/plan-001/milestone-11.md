@@ -1,11 +1,11 @@
-# Milestone 11 — WM11: Catálogos y usuarios (admin)
+﻿# Milestone 11 — WM11: Catálogos y usuarios (admin)
 
 | Campo          | Valor                                                           |
 | -------------- | --------------------------------------------------------------- |
 | **ID plan**    | WM11                                                            |
 | **Estado**     | Completado                                                      |
 | **Fecha**      | 2026-09-01                                                      |
-| **Referencia** | [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM11 |
+| **Referencia** | [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM11 |
 | **Alcance**    | Categorías (ensamblaje + componentes esperados), servicios mecánicos, CRUD de usuarios |
 | **Siguiente**  | — (plan 001 frontend cerrado) |
 

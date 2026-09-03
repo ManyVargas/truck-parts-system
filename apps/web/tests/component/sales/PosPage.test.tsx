@@ -6,18 +6,20 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Route, Routes } from 'react-router-dom';
 
 import { PosPage } from '../../../src/features/sales/PosPage';
+import { CAPABILITY_PRESETS, type AppCapabilities } from '../../../src/shared/config/capabilities';
 import { mockCustomerRepository } from '../../../src/mocks/repositories/MockCustomerRepository';
-import { resetMockState } from '../../../src/mocks/state';
+import { mockSalesRepository } from '../../../src/mocks/repositories/MockSalesRepository';
+import { reloadMockStateFromStorage, resetMockState } from '../../../src/mocks/state';
 import { renderWithProviders } from '../../support/render';
 import { signInAs } from '../../support/session';
 import '../../support/dom';
 
-function renderPos(draftId = 'INV-DRAFT-01') {
+function renderPos(draftId = 'INV-DRAFT-01', capabilities?: AppCapabilities) {
   return renderWithProviders(
     <Routes>
       <Route path="/sales/draft/:id" element={<PosPage />} />
     </Routes>,
-    { route: `/sales/draft/${draftId}` },
+    { route: `/sales/draft/${draftId}`, capabilities },
   );
 }
 
@@ -38,6 +40,56 @@ describe('PosPage', () => {
     expect(screen.getByText('Aceite 15W-40 Galón')).toBeVisible();
     expect(screen.getByTestId('pos-itbis')).toHaveTextContent('RD$0.00');
     expect(screen.getByText('Transportes del Caribe SRL', { exact: false })).toBeVisible();
+
+    const addLine = screen.getByRole('button', { name: 'Agregar línea' });
+    const discardDraft = screen.getByRole('button', { name: 'Descartar borrador' });
+    const confirmSale = screen.getByRole('button', { name: 'Confirmar venta' });
+    expect(addLine.className).toEqual(expect.stringContaining('text-sm'));
+    expect(discardDraft.className).toEqual(expect.stringContaining('text-sm'));
+    expect(addLine.className).toEqual(expect.stringContaining('min-h-11'));
+    expect(discardDraft.className).toEqual(expect.stringContaining('min-h-11'));
+    expect(confirmSale.className).toEqual(expect.stringContaining('text-base'));
+    expect(confirmSale.className).toEqual(expect.stringContaining('min-h-12'));
+    expect(discardDraft.className).toEqual(expect.stringContaining('bg-transparent'));
+    expect(confirmSale.className).toEqual(expect.stringContaining('bg-brand'));
+    expect(screen.getByTestId('pos-total')).toBeVisible();
+  });
+
+  it('asks for confirmation before discarding a draft with lines', async () => {
+    const user = userEvent.setup();
+    renderPos();
+    await screen.findByText('Alternador 24V');
+
+    await user.click(screen.getByRole('button', { name: 'Descartar borrador' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Descartar borrador' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Seguir editando' }));
+    expect(screen.queryByRole('dialog', { name: 'Descartar borrador' })).not.toBeInTheDocument();
+    expect(screen.getByText('Alternador 24V')).toBeVisible();
+  });
+
+  it('hides inventory line types and reservation copy in Release 2', async () => {
+    const user = userEvent.setup();
+    renderPos('INV-DRAFT-01', CAPABILITY_PRESETS['release-2']);
+    await screen.findByText('Alternador 24V');
+
+    expect(
+      screen.getByText('Edite el borrador, asigne precios y confirme la factura.'),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/Las piezas de inventario quedan reservadas/),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
+    const type = screen.getByLabelText('Tipo de línea');
+    expect(type).not.toHaveTextContent('Artículo de inventario');
+    expect(type).not.toHaveTextContent('Producto por cantidad');
+    expect(type).toHaveTextContent('Mercancía genérica');
+
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmar venta' }));
+    expect(screen.queryByLabelText('Pago inicial')).not.toBeInTheDocument();
+    expect(screen.queryByText(/orden de desarme pendiente/i)).not.toBeInTheDocument();
   });
 
   it('recalculates included ITBIS when fiscal mode is enabled', async () => {
@@ -82,5 +134,20 @@ describe('PosPage', () => {
     expect(screen.getByRole('option', { name: 'Instalación mecánica' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Desarme especializado' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Diagnóstico electrónico' })).not.toBeInTheDocument();
+  });
+
+  it('keeps an open draft after a simulated page reload', async () => {
+    const created = await mockSalesRepository.createDraft();
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    await Promise.resolve();
+    reloadMockStateFromStorage();
+    renderPos(created.value.draftId);
+
+    expect(await screen.findByRole('heading', { name: 'Punto de venta' })).toBeVisible();
+    expect(screen.queryByText('Borrador no encontrado')).not.toBeInTheDocument();
   });
 });

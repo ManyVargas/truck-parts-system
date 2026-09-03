@@ -1,31 +1,37 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { QtyProductDetailView } from '../../api/contracts/inventory';
-import { CommercialChip, ReservationChip } from '../../shared/domain';
-import { Button, Card, Field, Info, Input, Modal, Mono, SectionTitle, Textarea, money } from '../../shared/ui';
+import { InventoryStatusCluster } from '../../shared/domain';
+import { Button, Card, EventTimeline, Field, Info, Input, Modal, Mono, SectionTitle, Textarea, money } from '../../shared/ui';
 import { PhotoGrid } from './PhotoGrid';
 
 export function QtyProductDetail({
   detail,
   actions,
+  canEdit,
   canReceive,
   canAdjust,
   isMutating,
+  onEdit,
   onReceive,
   onAdjust,
 }: {
   detail: QtyProductDetailView;
   actions: ReactNode;
+  canEdit: boolean;
   canReceive: boolean;
   canAdjust: boolean;
   isMutating: boolean;
+  onEdit: (input: { name: string; brand?: string; location?: string }) => Promise<string | null>;
   onReceive: (input: { quantity: number; unitCostDop: number }) => Promise<string | null>;
   onAdjust: (input: { difference: number; reason: string }) => Promise<string | null>;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
+  const actionErrorVisible = error && !editOpen && !receiveOpen && !adjustOpen;
 
   return (
     <div className="space-y-6">
@@ -46,12 +52,25 @@ export function QtyProductDetail({
         </div>
         <div className="flex flex-col items-stretch gap-2 sm:items-end">
           {actions}
-          {(canReceive || canAdjust) && (
+          {(canEdit || canReceive || canAdjust) && (
             <div className="flex flex-col gap-2">
-              {error && !receiveOpen && !adjustOpen && (
+              {actionErrorVisible && (
                 <Info tone="error" title="No se pudo completar la acción">
                   {error}
                 </Info>
+              )}
+              {canEdit && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={isMutating}
+                  onClick={() => {
+                    setError(null);
+                    setEditOpen(true);
+                  }}
+                >
+                  Editar datos
+                </Button>
               )}
               {canReceive && (
                 <Button
@@ -87,9 +106,14 @@ export function QtyProductDetail({
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <SectionTitle title="Existencia" />
-          <div className="mb-4 flex flex-wrap gap-1.5">
-            <CommercialChip state={detail.commercialState} />
-            <ReservationChip reserved={detail.reserved > 0} />
+          <div className="mb-4">
+            <InventoryStatusCluster
+              commercialState={detail.commercialState}
+              reserved={detail.reserved > 0}
+              noDesarmar={false}
+              includePhysicalContext={false}
+              layout="stack"
+            />
           </div>
           <dl className="grid gap-3 text-sm sm:grid-cols-3">
             <div>
@@ -119,6 +143,51 @@ export function QtyProductDetail({
         </Card>
         <PhotoGrid photos={detail.photos} />
       </div>
+
+      <Card>
+        <EventTimeline
+          title="Historial"
+          subtitle="Quién registró entradas, ajustes y ediciones de este producto."
+          emptyTitle="Aún no hay eventos con este producto."
+          events={detail.events}
+        />
+      </Card>
+
+      <Modal
+        open={editOpen}
+        title="Editar datos del producto"
+        onClose={() => {
+          setError(null);
+          setEditOpen(false);
+        }}
+      >
+        <div className="space-y-3">
+          {error && (
+            <Info tone="error" title="No se pudieron guardar los datos">
+              {error}
+            </Info>
+          )}
+          <QtyDetailsForm
+            name={detail.name}
+            brand={detail.brand}
+            location={detail.location}
+            disabled={isMutating}
+            onCancel={() => {
+              setError(null);
+              setEditOpen(false);
+            }}
+            onSubmit={async (input) => {
+              const message = await onEdit(input);
+              if (message) {
+                setError(message);
+                return;
+              }
+              setError(null);
+              setEditOpen(false);
+            }}
+          />
+        </div>
+      </Modal>
 
       <Modal
         open={receiveOpen}
@@ -188,6 +257,81 @@ export function QtyProductDetail({
         </div>
       </Modal>
     </div>
+  );
+}
+
+function QtyDetailsForm({
+  name,
+  brand,
+  location,
+  disabled,
+  onCancel,
+  onSubmit,
+}: {
+  name: string;
+  brand?: string;
+  location?: string;
+  disabled: boolean;
+  onCancel: () => void;
+  onSubmit: (input: { name: string; brand?: string; location?: string }) => Promise<void>;
+}) {
+  const [nextName, setNextName] = useState(name);
+  const [nextBrand, setNextBrand] = useState(brand ?? '');
+  const [nextLocation, setNextLocation] = useState(location ?? '');
+
+  useEffect(() => {
+    setNextName(name);
+    setNextBrand(brand ?? '');
+    setNextLocation(location ?? '');
+  }, [name, brand, location]);
+
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void onSubmit({
+          name: nextName,
+          brand: nextBrand,
+          location: nextLocation,
+        });
+      }}
+    >
+      <p className="text-sm text-navy-400">
+        El SKU, el costo promedio y la existencia no se editan aquí. Las facturas confirmadas
+        conservan la descripción original.
+      </p>
+      <Field label="Nombre" htmlFor="edit-qty-name">
+        <Input
+          id="edit-qty-name"
+          required
+          value={nextName}
+          onChange={(event) => setNextName(event.target.value)}
+        />
+      </Field>
+      <Field label="Marca" htmlFor="edit-qty-brand">
+        <Input
+          id="edit-qty-brand"
+          value={nextBrand}
+          onChange={(event) => setNextBrand(event.target.value)}
+        />
+      </Field>
+      <Field label="Ubicación" htmlFor="edit-qty-location">
+        <Input
+          id="edit-qty-location"
+          value={nextLocation}
+          onChange={(event) => setNextLocation(event.target.value)}
+        />
+      </Field>
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={disabled}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={disabled}>
+          Guardar
+        </Button>
+      </div>
+    </form>
   );
 }
 

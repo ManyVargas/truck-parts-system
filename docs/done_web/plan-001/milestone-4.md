@@ -1,11 +1,11 @@
-# Milestone 4 — WM4: Clientes
+﻿# Milestone 4 — WM4: Clientes
 
 | Campo | Valor |
 |---|---|
 | **ID plan** | WM4 |
 | **Estado** | Completado |
 | **Fecha** | 2026-08-28 |
-| **Referencia** | [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM4 |
+| **Referencia** | [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM4 |
 | **Alcance** | CRUD de clientes: búsqueda, listado con conteo de facturas, modal crear/editar, C0 protegido |
 | **Siguiente** | WM5 — Inventario: listado, búsqueda y detalle |
 
@@ -136,6 +136,6 @@ Listo para implementar `features/inventory/` (listado unificado, búsqueda, deta
 
 ## 10. Referencias
 
-- [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM4
-- [`docs/done_web/milestone-3.md`](./milestone-3.md)
-- [`docs/FEATURES/08_CUSTOMERS.md`](../FEATURES/08_CUSTOMERS.md) CUST-001, CUST-002
+- [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM4
+- [`docs/done_web/plan-001/milestone-3.md`](./milestone-3.md)
+- [`docs/FEATURES/08_CUSTOMERS.md`](../../FEATURES/08_CUSTOMERS.md) CUST-001, CUST-002

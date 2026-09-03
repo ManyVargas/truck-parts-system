@@ -24,8 +24,10 @@ export const REPOSITORY_ENDPOINT_MAP = {
     getDetail: 'GET /api/inventory/:id',
     addToDraft: 'POST /api/inventory/:id/draft',
     registerItem: 'POST /api/inventory/items',
+    updateItemDetails: 'PATCH /api/inventory/items/:id',
     registerAssembly: 'POST /api/inventory/assemblies',
     registerQtyProduct: 'POST /api/inventory/qty-products',
+    updateQtyProductDetails: 'PATCH /api/inventory/qty-products/:id',
   },
   CustomerRepository: {
     list: 'GET /api/customers',

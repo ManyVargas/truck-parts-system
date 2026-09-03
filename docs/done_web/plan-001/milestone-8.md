@@ -1,11 +1,11 @@
-# Milestone 8 — WM8: Punto de venta y borradores (POS)
+﻿# Milestone 8 — WM8: Punto de venta y borradores (POS)
 
 | Campo          | Valor                                                          |
 | -------------- | -------------------------------------------------------------- |
 | **ID plan**    | WM8                                                            |
 | **Estado**     | Completado                                                     |
 | **Fecha**      | 2026-09-01                                                     |
-| **Referencia** | [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM8 |
+| **Referencia** | [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM8 |
 | **Alcance**    | Editor de borrador, 6 tipos de línea, ITBIS fiscal, confirmación atómica |
 | **Siguiente**  | WM9 — Órdenes de trabajo (escritorio)                          |
 
@@ -81,7 +81,7 @@ apps/web/src/
 | --- | --- |
 | Borrador → confirmar → `FAC-` | ✅ `FAC-000100` tras el seed; el detalle WM7 puede cobrar |
 | Pieza instalada → OT Desarme Pendiente | ✅ ALT-004 + `OD-DEMO-064` |
-| Ensamblaje bloqueado si OT activa | ✅ ENG-001 / ENG-002 |
+| Ensamblaje bloqueado si OT activa | ✅ MOT-001 / MOT-002 |
 | `No desarmar` impide línea suelta | ✅ ALT-011 |
 | Precio pendiente bloquea confirmación | ✅ |
 | Fiscal + Cliente Contado bloqueado | ✅ |

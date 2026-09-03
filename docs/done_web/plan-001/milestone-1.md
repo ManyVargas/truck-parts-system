@@ -1,4 +1,4 @@
-# Milestone 1 — WM1: Fundación, diseño y capa mock
+﻿# Milestone 1 — WM1: Fundación, diseño y capa mock
 
 > **Plantilla de documentación de milestones web.**  
 > Cada milestone futuro puede replicar esta estructura: contexto → decisiones → entregables → flujo → verificación → pendientes.
@@ -8,7 +8,7 @@
 | **ID plan** | WM1 |
 | **Estado** | Completado |
 | **Fecha** | 2026-08-27 |
-| **Referencia** | [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM1 |
+| **Referencia** | [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM1 |
 | **Alcance** | Solo frontend (`apps/web`). Sin backend, sin pantallas de negocio. |
 | **Siguiente** | WM2 — Login, shell por rol, guards |
 
@@ -31,7 +31,7 @@ Antes de WM1, `apps/web` era un scaffold mínimo:
 - Sin Tailwind, sin routing, sin carpetas por feature
 - Sin datos mock ni contratos de dominio
 
-El plan web ([`plan-001.md`](../plans_web/plan-001.md)) define 12 milestones. WM1 es prerequisito de todos los demás.
+El plan web ([`plan-001.md`](../../plans_web/plan-001.md)) define 12 milestones. WM1 es prerequisito de todos los demás.
 
 ---
 
@@ -241,8 +241,8 @@ Contenido alineado con el plan y `USE_CASE_FLOWS.md`:
 | Entidad | Cantidad | Notas |
 |---|---|---|
 | Usuarios | 4 | `admin`, `laura`, `carlos`, `pedro` — pwd `demo1234` |
-| Ítems | 9 | Jerarquía TRK-001 → ENG-001/002/003 + piezas |
-| Known missing | 1 | Turbo faltante en ENG-002 |
+| Ítems | 9 | Jerarquía CAM-001 → MOT-001/002/003 + piezas |
+| Known missing | 1 | Turbo faltante en MOT-002 |
 | Productos cantidad | 2 | Aceite, filtro de aire |
 | Clientes | 3 | C0 Cliente Contado (default), C1, C2 |
 | Categorías | 7 | Camión, Motor, Alternador, Turbo, … |
@@ -254,7 +254,7 @@ Contenido alineado con el plan y `USE_CASE_FLOWS.md`:
 
 Casos de demo preparados para milestones posteriores:
 
-- **ENG-003:** `noDesarmar: true` → WM5/WM8
+- **MOT-003:** `noDesarmar: true` → WM5/WM8
 - **FAC-000096:** USD, `profitabilityPendingFx: true` → WM12
 - **FAC-000098:** sin pagar → WM7
 - **FAC-000099:** pago parcial → WM7
@@ -354,7 +354,7 @@ WM2 debe construir sobre estos puntos sin reescribir WM1:
 1. **`MockAuthRepository`** — implementar login/logout/getSession con estado de sesión en memoria
 2. **`AppLayout`** — añadir sidebar (9 ítems Admin / 4 Vendedor), header, user menu
 3. **`router.tsx`** — rutas `/login`, redirects por rol, `/mechanic/*`
-4. **`policies.ts`** — completar matriz según [`ROLES_AND_PERMISSIONS.md`](../ROLES_AND_PERMISSIONS.md)
+4. **`policies.ts`** — completar matriz según [`ROLES_AND_PERMISSIONS.md`](../../ROLES_AND_PERMISSIONS.md)
 5. **Features `auth/`** — `LoginPage`, `LoginForm`, `DemoCredentialsPanel`
 6. **Eliminar o redirigir** `FoundationPage` una vez verificado WM2
 
@@ -389,8 +389,8 @@ Al documentar WM2, WM3, … replicar estas secciones:
 
 ## 13. Referencias consultadas
 
-- [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) — alcance WM1, decisiones cerradas, arquitectura
-- [`docs/ARCHITECTURE_PLAN.md`](../ARCHITECTURE_PLAN.md) — dirección frontend SPA
-- [`docs/PROTOTYPE_PLAN.md`](../PROTOTYPE_PLAN.md) — intención UX (no implementación)
-- [`docs/ROLES_AND_PERMISSIONS.md`](../ROLES_AND_PERMISSIONS.md) — base para `policies.ts`
-- [`docs/USE_CASE_FLOWS.md`](../USE_CASE_FLOWS.md) — estados de dominio y ejemplos ENG-001/002
+- [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) — alcance WM1, decisiones cerradas, arquitectura
+- [`docs/ARCHITECTURE_PLAN.md`](../../ARCHITECTURE_PLAN.md) — dirección frontend SPA
+- [`docs/PROTOTYPE_PLAN.md`](../../PROTOTYPE_PLAN.md) — intención UX (no implementación)
+- [`docs/ROLES_AND_PERMISSIONS.md`](../../ROLES_AND_PERMISSIONS.md) — base para `policies.ts`
+- [`docs/USE_CASE_FLOWS.md`](../../USE_CASE_FLOWS.md) — estados de dominio y ejemplos MOT-001/002

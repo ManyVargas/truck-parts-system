@@ -2,16 +2,10 @@ import { useEffect, useState, type FormEvent } from 'react';
 
 import type { LineType } from '../../api/contracts/entities';
 import type { PosDraftView } from '../../api/contracts/sales';
-import { Button, Field, Input, Modal, Select } from '../../shared/ui';
-
-const LINE_TYPES: { value: LineType; label: string }[] = [
-  { value: 'ITEM', label: 'Artículo de inventario' },
-  { value: 'QTY', label: 'Producto por cantidad' },
-  { value: 'GENERIC', label: 'Mercancía genérica' },
-  { value: 'EXTERNAL', label: 'Reventa externa' },
-  { value: 'SERVICE', label: 'Servicio mecánico' },
-  { value: 'DELIVERY', label: 'Entrega' },
-];
+import { enabledPosLineTypes } from '../../shared/config/capabilities';
+import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
+import { Button, Field, Info, Input, Modal, Select } from '../../shared/ui';
+import { posAddLineReservationHint } from './pos-copy';
 
 type AddLineModalProps = {
   open: boolean;
@@ -39,7 +33,8 @@ export function AddLineModal({
   onClose,
   onSubmit,
 }: AddLineModalProps) {
-  const [type, setType] = useState<LineType>('GENERIC');
+  const lineTypes = enabledPosLineTypes(useAppCapabilities());
+  const [type, setType] = useState<LineType>(lineTypes[0]?.value ?? 'GENERIC');
   const [itemId, setItemId] = useState(draft.items[0]?.id ?? '');
   const [qtyProductId, setQtyProductId] = useState(draft.qtyProducts[0]?.id ?? '');
   const [serviceId, setServiceId] = useState(draft.services[0]?.id ?? '');
@@ -54,8 +49,19 @@ export function AddLineModal({
     }
   }, [draft.items, itemId]);
 
+  useEffect(() => {
+    if (!lineTypes.some((entry) => entry.value === type)) {
+      setType(lineTypes[0]?.value ?? 'GENERIC');
+    }
+  }, [lineTypes, type]);
+
+  const reservationHint = posAddLineReservationHint(type);
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (isSaving || lineTypes.length === 0) {
+      return;
+    }
     await onSubmit({
       type,
       itemId: type === 'ITEM' ? itemId : undefined,
@@ -72,23 +78,25 @@ export function AddLineModal({
     <Modal open={open} title="Agregar línea" onClose={onClose} size="lg">
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
         {error && (
-          <p className="text-sm text-red-600" role="alert">
+          <Info tone="error" title="No se pudo agregar la línea">
             {error}
-          </p>
+          </Info>
         )}
         <Field htmlFor="line-type" label="Tipo de línea">
           <Select
             id="line-type"
             value={type}
+            disabled={lineTypes.length === 0}
             onChange={(event) => setType(event.target.value as LineType)}
           >
-            {LINE_TYPES.map((entry) => (
+            {lineTypes.map((entry) => (
               <option key={entry.value} value={entry.value}>
                 {entry.label}
               </option>
             ))}
           </Select>
         </Field>
+        {reservationHint && <p className="text-xs text-navy-400">{reservationHint}</p>}
 
         {type === 'ITEM' && (
           <Field htmlFor="line-item" label="Ítem">
@@ -201,7 +209,7 @@ export function AddLineModal({
           <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={isSaving}>
+          <Button type="submit" disabled={isSaving || lineTypes.length === 0}>
             {isSaving ? 'Agregando…' : 'Agregar'}
           </Button>
         </div>

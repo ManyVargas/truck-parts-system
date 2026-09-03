@@ -146,7 +146,7 @@ The prototype demonstrates a multi-step registration experience.
 
 Representative inputs include:
 
-- immutable internal ID;
+- immutable internal identity (assigned public code; production adds a UUID key);
 - name;
 - category;
 - condition;

@@ -28,20 +28,20 @@ describe('MockInventoryRepository', () => {
   it('lets sellers reserve inventory but denies administrative mutations', async () => {
     signInAs('SELLER');
 
-    const added = await mockInventoryRepository.addToDraft({ itemId: 'FLT-001' });
+    const added = await mockInventoryRepository.addToDraft({ itemId: 'FIL-001' });
     const noDesarmar = await mockInventoryRepository.setNoDesarmar({
-      itemId: 'ENG-002',
+      itemId: 'MOT-002',
       enabled: true,
     });
     const cost = await mockInventoryRepository.correctAcquisitionCost({
-      itemId: 'FLT-001',
+      itemId: 'FIL-001',
       acquisitionCostDop: 900,
       reason: 'Corrección',
     });
     const workOrder = await mockInventoryRepository.createManualWorkOrder({
       pieceId: 'ALT-010',
       type: 'INSTALLATION',
-      destinationParentId: 'ENG-002',
+      destinationParentId: 'MOT-002',
     });
 
     expect(added.ok).toBe(true);
@@ -50,15 +50,42 @@ describe('MockInventoryRepository', () => {
     expect(workOrder.ok).toBe(false);
   });
 
+  it('lets sellers edit ordinary item details and denies mechanics', async () => {
+    signInAs('SELLER');
+    const sellerResult = await mockInventoryRepository.updateItemDetails({
+      itemId: 'FIL-001',
+      name: 'Filtro HD',
+      brand: 'Fleetguard',
+      partNumber: 'LF9009',
+      condition: 'NEW',
+      location: 'Estante 3B',
+      photos: ['filtro.jpg'],
+    });
+    expect(sellerResult.ok).toBe(true);
+    expect(sellerResult.ok && sellerResult.value.location).toBe('Estante 3B');
+    expect(getMockState().items.find((item) => item.id === 'FIL-001')?.photos).toEqual(['filtro.jpg']);
+
+    signInAs('MECHANIC');
+    const mechanicResult = await mockInventoryRepository.updateItemDetails({
+      itemId: 'FIL-001',
+      name: 'No permitido',
+      condition: 'USED',
+    });
+    expect(mechanicResult.ok).toBe(false);
+    if (!mechanicResult.ok) {
+      expect(mechanicResult.error.code).toBe('FORBIDDEN');
+    }
+  });
+
   it('lets sellers register inventory and denies mechanics in the repository', async () => {
     signInAs('SELLER');
     const sellerResult = await mockInventoryRepository.registerItem({
-      id: 'ALT-020',
       name: 'Alternador registrado',
       categoryId: 'CAT-ALT',
       condition: 'USED',
     });
     expect(sellerResult.ok).toBe(true);
+    expect(sellerResult.ok && sellerResult.value.id).toBe('ALT-012');
 
     signInAs('MECHANIC');
     const mechanicResult = await mockInventoryRepository.registerQtyProduct({
@@ -70,7 +97,6 @@ describe('MockInventoryRepository', () => {
     });
     const mechanicAssembly = await mockInventoryRepository.registerAssembly({
       parent: {
-        id: 'ENG-DENIED',
         name: 'No permitido',
         categoryId: 'CAT-ENG',
         condition: 'USED',
@@ -84,14 +110,13 @@ describe('MockInventoryRepository', () => {
     expect(mechanicResult.ok).toBe(false);
     expect(mechanicAssembly.ok).toBe(false);
     expect(getMockState().qtyProducts.some((product) => product.id === 'QTY-TEST')).toBe(false);
-    expect(getMockState().items.some((item) => item.id === 'ENG-DENIED')).toBe(false);
+    expect(getMockState().items.some((item) => item.id === 'MOT-DENIED')).toBe(false);
   });
 
   it('persists authorized assembly and quantity registrations through the repository', async () => {
     signInAs('SELLER');
     const assembly = await mockInventoryRepository.registerAssembly({
       parent: {
-        id: 'ENG-020',
         name: 'Motor recibido',
         categoryId: 'CAT-ENG',
         condition: 'USED',
@@ -112,7 +137,7 @@ describe('MockInventoryRepository', () => {
 
     expect(assembly.ok).toBe(true);
     expect(quantity.ok).toBe(true);
-    expect(getMockState().items.some((item) => item.id === 'ENG-020')).toBe(true);
+    expect(getMockState().items.some((item) => item.id === 'MOT-004')).toBe(true);
     expect(
       getMockState().qtyProducts.find((product) => product.id === 'QTY-FIL-NEW'),
     ).toMatchObject({ onHand: 8, reserved: 0 });
@@ -122,7 +147,7 @@ describe('MockInventoryRepository', () => {
     signInAs('ADMINISTRATOR');
 
     const result = await mockInventoryRepository.setNoDesarmar({
-      itemId: 'FLT-001',
+      itemId: 'FIL-001',
       enabled: true,
     });
 
@@ -136,7 +161,7 @@ describe('MockInventoryRepository', () => {
     signInAs('ADMINISTRATOR');
 
     const result = await mockInventoryRepository.correctReceiptBaseline({
-      itemId: 'ENG-002',
+      itemId: 'MOT-002',
       reason: 'Intento incorrecto',
       markNotApplicable: ['Alternador'],
     });
@@ -154,7 +179,7 @@ describe('MockInventoryRepository', () => {
     signInAs('ADMINISTRATOR');
 
     const result = await mockInventoryRepository.correctAcquisitionCost({
-      itemId: 'FLT-001',
+      itemId: 'FIL-001',
       acquisitionCostDop: 900,
       costProvenance: 'Factura corregida',
       reason: 'Error de digitación',
@@ -163,7 +188,7 @@ describe('MockInventoryRepository', () => {
     expect(result.ok).toBe(true);
     const event = getMockState().events.find((entry) => entry.type === 'COST_CORRECTED');
     expect(event?.metadata).toMatchObject({
-      itemId: 'FLT-001',
+      itemId: 'FIL-001',
       reason: 'Error de digitación',
       after: 900,
       afterCostProvenance: 'Factura corregida',
@@ -174,7 +199,7 @@ describe('MockInventoryRepository', () => {
     signInAs('ADMINISTRATOR');
 
     const result = await mockInventoryRepository.correctReceiptBaseline({
-      itemId: 'ENG-002',
+      itemId: 'MOT-002',
       reason: 'El turbo no aplica a esta unidad',
       markNotApplicable: ['Turbo'],
     });
@@ -186,32 +211,32 @@ describe('MockInventoryRepository', () => {
     expect(
       getMockState().knownMissing.some((entry) => entry.expectedComponentName === 'Alternador'),
     ).toBe(true);
-    expect(getMockState().items.find((item) => item.id === 'ENG-002')?.complete).toBe(false);
+    expect(getMockState().items.find((item) => item.id === 'MOT-002')?.complete).toBe(false);
   });
 
   it('creates a pending manual work order without changing physical hierarchy', async () => {
     signInAs('ADMINISTRATOR');
 
     const result = await mockInventoryRepository.createManualWorkOrder({
-      pieceId: 'ENG-001',
+      pieceId: 'MOT-001',
       type: 'DISMANTLING',
     });
 
     expect(result.ok && result.value.status).toBe('PENDING');
-    const piece = getMockState().items.find((item) => item.id === 'ENG-001');
-    expect(piece?.parentId).toBe('TRK-001');
+    const piece = getMockState().items.find((item) => item.id === 'MOT-001');
+    expect(piece?.parentId).toBe('CAM-001');
     expect(piece?.physicalRelationship).toBe('INSTALLED');
   });
 
   it('returns defensive copies for catalog and detail reads', async () => {
     signInAs('SELLER');
 
-    const first = await mockInventoryRepository.getDetail('FLT-001');
+    const first = await mockInventoryRepository.getDetail('FIL-001');
     expect(first.ok).toBe(true);
     if (first.ok && first.value.kind === 'ITEM') {
       first.value.name = 'Mutación externa';
     }
-    const second = await mockInventoryRepository.getDetail('FLT-001');
+    const second = await mockInventoryRepository.getDetail('FIL-001');
 
     expect(second.ok && second.value.name).toBe('Filtro de aceite HD');
   });
@@ -226,18 +251,18 @@ describe('MockInventoryRepository', () => {
     });
 
     const confirmed = await mockInventoryRepository.resolveCatalogReview({
-      itemId: 'ENG-001',
+      itemId: 'MOT-001',
       expectedComponentName: 'Bomba de aceite',
       decision: 'NOT_APPLICABLE',
     });
     expect(confirmed.ok).toBe(true);
     expect(
-      getMockState().pendingCatalogReviews.some((entry) => entry.parentId === 'ENG-001'),
+      getMockState().pendingCatalogReviews.some((entry) => entry.parentId === 'MOT-001'),
     ).toBe(false);
 
     signInAs('SELLER');
     const denied = await mockInventoryRepository.resolveCatalogReview({
-      itemId: 'ENG-003',
+      itemId: 'MOT-003',
       expectedComponentName: 'Bomba de aceite',
       decision: 'MISSING',
     });
@@ -246,7 +271,7 @@ describe('MockInventoryRepository', () => {
       expect(denied.error.code).toBe('FORBIDDEN');
     }
     expect(
-      getMockState().pendingCatalogReviews.some((entry) => entry.parentId === 'ENG-003'),
+      getMockState().pendingCatalogReviews.some((entry) => entry.parentId === 'MOT-003'),
     ).toBe(true);
   });
 });

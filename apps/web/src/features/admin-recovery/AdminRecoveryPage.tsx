@@ -22,7 +22,7 @@ export function AdminRecoveryPage() {
 
   if (query.status === 'error') {
     return (
-      <Info tone="error" title="No se pudo cargar recuperación">
+      <Info tone="error" title="No se pudo cargar la recuperación">
         {query.error.message}
       </Info>
     );

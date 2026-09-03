@@ -33,7 +33,7 @@ describe('MockWorkOrderRepository', () => {
 
     const listed = await mockWorkOrderRepository.list();
     const created = await mockWorkOrderRepository.createManual({
-      pieceId: 'ENG-001',
+      pieceId: 'MOT-001',
       type: 'DISMANTLING',
     });
     const reassigned = await mockWorkOrderRepository.reassign({
@@ -59,7 +59,7 @@ describe('MockWorkOrderRepository', () => {
     signInAs('ADMINISTRATOR');
 
     const result = await mockWorkOrderRepository.createManual({
-      pieceId: 'ENG-001',
+      pieceId: 'MOT-001',
       type: 'DISMANTLING',
     });
 
@@ -67,8 +67,8 @@ describe('MockWorkOrderRepository', () => {
     if (result.ok) {
       expect(result.value.status).toBe('PENDING');
     }
-    const piece = getMockState().items.find((item) => item.id === 'ENG-001');
-    expect(piece?.parentId).toBe('TRK-001');
+    const piece = getMockState().items.find((item) => item.id === 'MOT-001');
+    expect(piece?.parentId).toBe('CAM-001');
     expect(piece?.physicalRelationship).toBe('INSTALLED');
   });
 

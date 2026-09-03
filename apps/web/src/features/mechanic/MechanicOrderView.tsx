@@ -4,6 +4,11 @@ import { Link, useParams } from 'react-router-dom';
 import { WOStatusChip, WOTypeChip } from '../../shared/domain';
 import { Button, Card, Field, Info, Input, Mono, useToast } from '../../shared/ui';
 import { EvidencePanel } from './EvidencePanel';
+import {
+  completeActionLabel,
+  mechanicNextAction,
+  toMechanicUserMessage,
+} from './mechanic-copy';
 import { useMechanicOrder } from './useMechanicOrders';
 
 function contextLine(type: 'DISMANTLING' | 'INSTALLATION', source?: string, destination?: string) {
@@ -15,22 +20,27 @@ function contextLine(type: 'DISMANTLING' | 'INSTALLATION', source?: string, dest
 
 export function MechanicOrderView() {
   const { id } = useParams();
-  const { result, isMutating, addPhoto, complete } = useMechanicOrder(id);
+  const { result, isMutating, isCompleting, addPhoto, complete, reload } = useMechanicOrder(id);
   const { pushToast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [location, setLocation] = useState('');
 
   if (result.status === 'error') {
     return (
-      <Info tone="error" title="No se pudo cargar la orden">
-        {result.error.message}
-      </Info>
+      <div className="space-y-3">
+        <Info tone="error" title="No se pudo cargar la orden">
+          {toMechanicUserMessage(result.error)}
+        </Info>
+        <Button type="button" variant="secondary" size="lg" className="w-full" onClick={reload}>
+          Reintentar
+        </Button>
+      </div>
     );
   }
 
   if (result.status === 'loading') {
     return (
-      <p className="text-sm text-navy-400" aria-live="polite">
+      <p className="text-base text-navy-400" aria-live="polite">
         Cargando orden…
       </p>
     );
@@ -43,15 +53,16 @@ export function MechanicOrderView() {
   const destinationLabel = order.destinationParentName
     ? `${order.destinationParentName} (${order.destinationParentId})`
     : order.destinationParentId;
+  const nextAction = mechanicNextAction(order);
+  const showComplete = order.actions.canAddEvidence;
 
   async function handleAdd(kind: 'BEFORE' | 'AFTER', fileName: string) {
-    setError(null);
     const response = await addPhoto({ workOrderId: order.id, kind, fileName });
     if (!response.ok) {
-      setError(response.error.message);
-      return;
+      return response.error;
     }
     pushToast(`Foto ${kind === 'BEFORE' ? 'de antes' : 'de después'} agregada`, 'success');
+    return null;
   }
 
   async function handleComplete() {
@@ -64,25 +75,27 @@ export function MechanicOrderView() {
       order.type,
     );
     if (!response.ok) {
-      setError(response.error.message);
+      setError(toMechanicUserMessage(response.error));
       return;
     }
-    pushToast('Orden completada', 'success');
   }
 
   return (
-    <div className="space-y-4">
-      <Link to="/mechanic/mine" className="text-sm font-medium text-brand">
-        ← Mis órdenes
+    <div className={showComplete ? 'space-y-4 pb-28' : 'space-y-4'}>
+      <Link
+        to={order.status === 'PENDING' ? '/mechanic/pending' : '/mechanic/mine'}
+        className="inline-flex min-h-11 items-center text-base font-medium text-brand"
+      >
+        {order.status === 'PENDING' ? '← Pendientes' : '← Mis órdenes'}
       </Link>
 
       <div className="flex items-start justify-between gap-2">
         <div>
           <h1 className="text-xl font-bold">
-            <Mono>{order.id}</Mono>
+            <Mono className="text-xl">{order.id}</Mono>
           </h1>
-          <p className="mt-1 text-sm text-navy">{order.pieceName}</p>
-          <p className="text-xs text-navy-400">
+          <p className="mt-1 text-base text-navy">{order.pieceName}</p>
+          <p className="text-sm text-navy-400">
             <Mono>{order.pieceId}</Mono>
           </p>
         </div>
@@ -92,12 +105,20 @@ export function MechanicOrderView() {
         </div>
       </div>
 
-      <Card className="space-y-2 text-sm">
+      <p className="text-base font-medium text-navy">{nextAction}</p>
+
+      <Card className="space-y-2 text-base">
         <p>{contextLine(order.type, sourceLabel, destinationLabel)}</p>
-        {order.effectiveLocation && <p>Ubicación efectiva: {order.effectiveLocation}</p>}
+        {order.effectiveLocation && <p>Ubicación: {order.effectiveLocation}</p>}
         {order.assignedMechanicName && <p>Asignado: {order.assignedMechanicName}</p>}
         {order.notes && <p>Notas: {order.notes}</p>}
       </Card>
+
+      {order.status === 'COMPLETED' && (
+        <Info tone="success" title="Orden completada">
+          Esta orden ya no se modifica. Vuelva a Pendientes si hay más trabajo.
+        </Info>
+      )}
 
       {!order.actions.canAddEvidence && order.status === 'IN_PROGRESS' && (
         <Info tone="warning" title="Orden de otro mecánico">
@@ -134,25 +155,40 @@ export function MechanicOrderView() {
           <Input
             id="post-dismantling-location"
             value={location}
+            enterKeyHint="done"
+            autoComplete="off"
+            inputMode="text"
             onChange={(event) => setLocation(event.target.value)}
-            className="min-h-12"
+            className="min-h-12 text-base"
           />
         </Field>
       )}
 
-      {order.actions.canAddEvidence && (
-        <Button
-          size="lg"
-          className="min-h-12 w-full"
-          disabled={isMutating || !order.actions.canComplete}
-          onClick={() => void handleComplete()}
+      {order.status === 'COMPLETED' && (
+        <Link
+          to="/mechanic/pending"
+          className="block min-h-12 rounded-lg bg-brand py-3 text-center text-base font-medium text-white"
         >
-          Completar {order.type === 'INSTALLATION' ? 'instalación' : 'desarme'}
-        </Button>
+          Ir a pendientes
+        </Link>
       )}
 
-      {order.actions.canAddEvidence && !order.actions.canComplete && (
-        <p className="text-xs text-navy-400">Falta evidencia de antes o de después para completar.</p>
+      {showComplete && (
+        <div className="sticky bottom-0 -mx-4 border-t border-navy-100 bg-white px-4 py-3">
+          <Button
+            size="lg"
+            className="w-full"
+            disabled={isMutating || !order.actions.canComplete}
+            onClick={() => void handleComplete()}
+          >
+            {isCompleting ? 'Completando…' : completeActionLabel(order.type)}
+          </Button>
+          {!order.actions.canComplete && (
+            <p className="mt-2 text-sm text-navy-400">
+              Falta evidencia de antes o de después para completar.
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

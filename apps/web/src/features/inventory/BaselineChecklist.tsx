@@ -63,7 +63,17 @@ export function BaselineChecklist({
                     onChange={() =>
                       update(expectedName, {
                         status: option.value,
-                        item: option.value === 'PRESENT' ? entry.item : undefined,
+                        item:
+                          option.value === 'PRESENT'
+                            ? (entry.item ??
+                              (category
+                                ? {
+                                    name: expectedName,
+                                    categoryId: category.id,
+                                    condition: 'USED',
+                                  }
+                                : undefined))
+                            : undefined,
                         baseline:
                           option.value === 'PRESENT' && category?.isAssembly
                             ? (entry.baseline ??

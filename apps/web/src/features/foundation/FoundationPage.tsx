@@ -107,7 +107,7 @@ export function FoundationPage() {
             <Button variant="ghost">Ghost</Button>
           </div>
           <p className="mt-4 text-sm text-navy-400">
-            Moneda: <Mono>{money(125_000)}</Mono> · ID: <Mono>ENG-001</Mono>
+            Moneda: <Mono>{money(125_000)}</Mono> · ID: <Mono>MOT-001</Mono>
           </p>
           <Button
             className="mt-4"

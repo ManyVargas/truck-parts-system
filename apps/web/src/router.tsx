@@ -7,6 +7,7 @@ import { DashboardPage } from './features/dashboard/DashboardPage';
 import { InventoryDetailPage } from './features/inventory/InventoryDetailPage';
 import { InvoiceDetailPage } from './features/sales/InvoiceDetailPage';
 import { InventoryPage } from './features/inventory/InventoryPage';
+import { MechanicHomeRedirect } from './features/mechanic/MechanicHomeRedirect';
 import { MechanicLayout } from './features/mechanic/MechanicLayout';
 import { MechanicMinePage } from './features/mechanic/MechanicMinePage';
 import { MechanicOrderView } from './features/mechanic/MechanicOrderView';
@@ -23,6 +24,7 @@ import { WorkOrdersPage } from './features/work-orders/WorkOrdersPage';
 import { AppShell } from './shared/layout/AppShell';
 import { CatchAllRoute } from './shared/layout/CatchAllRoute';
 import { GuestRoute } from './shared/layout/GuestRoute';
+import { MechanicRouteGuard } from './shared/layout/MechanicRouteGuard';
 import { ProtectedRoute } from './shared/layout/ProtectedRoute';
 import { RouteAccessGuard } from './shared/layout/RouteAccessGuard';
 
@@ -102,12 +104,17 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <Navigate to="/mechanic/pending" replace /> },
-      { path: 'pending', element: <MechanicPendingPage /> },
-      { path: 'mine', element: <MechanicMinePage /> },
-      { path: 'orders/:id', element: <MechanicOrderView /> },
-      { path: 'profile', element: <ProfilePage /> },
-      { path: '*', element: <NotFoundPage /> },
+      { index: true, element: <MechanicHomeRedirect /> },
+      {
+        element: <MechanicRouteGuard />,
+        children: [
+          { path: 'pending', element: <MechanicPendingPage /> },
+          { path: 'mine', element: <MechanicMinePage /> },
+          { path: 'orders/:id', element: <MechanicOrderView /> },
+          { path: 'profile', element: <ProfilePage /> },
+          { path: '*', element: <NotFoundPage /> },
+        ],
+      },
     ],
   },
   {

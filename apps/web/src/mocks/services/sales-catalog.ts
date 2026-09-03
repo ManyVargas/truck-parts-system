@@ -16,6 +16,7 @@ import {
   lineItbis,
 } from './invoice-money';
 import { profitabilityForInvoice } from './profitability-view';
+import { resolveActorName, toHistoryEventView } from './history-view';
 
 function customerName(state: AppState, invoice: Invoice): string {
   return (
@@ -119,6 +120,7 @@ export function buildInvoiceDetail(state: AppState, invoice: Invoice, actor: Use
       method: payment.method,
       createdAt: payment.createdAt,
       reference: payment.reference,
+      actorName: resolveActorName(state.users, payment.actorId),
     })),
     total: invoiceTotal(invoice),
     paid: invoicePaid(invoice),
@@ -143,13 +145,7 @@ export function buildInvoiceDetail(state: AppState, invoice: Invoice, actor: Use
     history: state.events
       .filter((event) => isLinkedInvoiceEvent(event, invoice))
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-      .map((event) => ({
-        id: event.id,
-        type: event.type,
-        description: event.description,
-        createdAt: event.createdAt,
-        actorName: state.users.find((user) => user.id === event.actorId)?.name,
-      })),
+      .map((event) => toHistoryEventView(event, state.users)),
     profitability: profitabilityForInvoice(state, invoice, actor),
     actions: {
       canPay: completed && can(actor, 'sales.manage') && invoiceBalance(invoice) > 0,

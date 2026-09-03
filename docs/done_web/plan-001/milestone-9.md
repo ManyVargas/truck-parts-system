@@ -1,11 +1,11 @@
-# Milestone 9 — WM9: Órdenes de trabajo (escritorio)
+﻿# Milestone 9 — WM9: Órdenes de trabajo (escritorio)
 
 | Campo          | Valor                                                          |
 | -------------- | -------------------------------------------------------------- |
 | **ID plan**    | WM9                                                            |
 | **Estado**     | Completado                                                     |
 | **Fecha**      | 2026-09-01                                                     |
-| **Referencia** | [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM9 |
+| **Referencia** | [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM9 |
 | **Alcance**    | Listado, detalle, OT manual, reasignación y cancelación admin  |
 | **Siguiente**  | WM10 — Experiencia Mecánico (móvil)                            |
 
@@ -67,7 +67,7 @@ apps/web/src/
 | Criterio | Estado |
 | --- | --- |
 | OT seed con estados correctos | ✅ 060 En proceso, 061/062 Pendiente, 063 Completada |
-| Crear desarme no cambia jerarquía | ✅ ENG-001 sigue instalado en TRK-001 |
+| Crear desarme no cambia jerarquía | ✅ MOT-001 sigue instalado en CAM-001 |
 | Reasignación/cancelación generan eventos | ✅ `WORK_ORDER_REASSIGNED` / `WORK_ORDER_CANCELLED` |
 | Vendedor bloqueado (ruta + servicio) | ✅ menú, `isRouteAllowedForRole`, `FORBIDDEN` en el repositorio |
 | Solo admin crea/reasigna/cancela | ✅ `workOrders.manage` |
@@ -86,9 +86,9 @@ Resultado: 33 archivos de prueba frontend y 209 pruebas aprobadas.
 
 1. Login `admin` / `demo1234` → Órdenes de Trabajo → ver las 4 OT seed.
 2. Filtro En proceso → solo `OD-DEMO-060` (Pedro, `FAC-000096`).
-3. Nueva OT → Desarme de `ENG-001` → detalle pendiente; en Inventario el motor sigue instalado en TRK-001.
+3. Nueva OT → Desarme de `MOT-001` → detalle pendiente; en Inventario el motor sigue instalado en CAM-001.
 4. Detalle `OD-DEMO-061` → Reasignar a Pedro con motivo → En proceso.
-5. Detalle `OD-DEMO-062` → Cancelar con motivo → Cancelada; `FLT-001` no cambia de relación.
+5. Detalle `OD-DEMO-062` → Cancelar con motivo → Cancelada; `FIL-001` no cambia de relación.
 6. `OD-DEMO-063` sin botones de reasignar/cancelar; evidencia BEFORE/AFTER visible.
 7. Login `laura` → `/work-orders` muestra acceso no autorizado.
 

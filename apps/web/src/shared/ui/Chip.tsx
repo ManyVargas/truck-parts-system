@@ -10,9 +10,9 @@ export type ChipProps = HTMLAttributes<HTMLSpanElement> & {
 const toneClasses: Record<ChipTone, string> = {
   neutral: 'bg-navy-50 text-navy-700 border-navy-100',
   brand: 'bg-brand/10 text-brand-dark border-brand/30',
-  amber: 'bg-amber-50 text-amber-800 border-amber-200',
-  success: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-  danger: 'bg-red-50 text-red-800 border-red-200',
+  amber: 'bg-amber-50 text-amber-900 border-amber-200',
+  success: 'bg-emerald-50 text-emerald-900 border-emerald-200',
+  danger: 'bg-red-50 text-red-900 border-red-200',
 };
 
 export function Chip({ children, tone = 'neutral', className = '', ...props }: ChipProps) {

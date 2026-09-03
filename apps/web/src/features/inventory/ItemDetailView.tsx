@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { ItemDetailView } from '../../api/contracts/inventory';
-import { Card, Mono, SectionTitle, money } from '../../shared/ui';
+import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
+import { Card, EventTimeline, Mono, SectionTitle, money } from '../../shared/ui';
 import { HierarchyTree } from './HierarchyTree';
 import { PhotoGrid } from './PhotoGrid';
 import { StatusPanel } from './StatusPanel';
@@ -26,6 +27,7 @@ export function ItemDetailViewPanel({
   detail: ItemDetailView;
   actions: ReactNode;
 }) {
+  const { workOrders } = useAppCapabilities();
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -47,7 +49,7 @@ export function ItemDetailViewPanel({
           </p>
           <h1 className="mt-1 text-3xl font-bold text-navy">{detail.name}</h1>
           <p className="mt-1 text-navy-400">
-            {detail.categoryName}
+            {detail.isAssembly ? 'Ensamblaje' : 'Pieza'} · {detail.categoryName}
             {detail.brand ? ` · ${detail.brand}` : ''}
             {detail.model ? ` ${detail.model}` : ''}
           </p>
@@ -108,40 +110,34 @@ export function ItemDetailViewPanel({
           {detail.notes && <p className="mt-3 text-sm text-navy-400">{detail.notes}</p>}
         </Card>
 
-        <Card>
-          <SectionTitle title="Órdenes de trabajo" />
-          {detail.workOrders.length === 0 ? (
-            <p className="text-sm text-navy-400">Sin órdenes de trabajo ligadas a esta pieza.</p>
-          ) : (
-            <ul className="space-y-2 text-sm">
-              {detail.workOrders.map((order) => (
-                <li key={order.id} className="rounded-lg bg-navy-50 px-3 py-2">
-                  <Mono>{order.id}</Mono>
-                  <span className="ml-2">
-                    {WO_TYPE[order.type]} · {WO_STATUS[order.status]}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        {workOrders && (
+          <Card>
+            <SectionTitle title="Órdenes de trabajo" />
+            {detail.workOrders.length === 0 ? (
+              <p className="text-sm text-navy-400">Sin órdenes de trabajo ligadas a esta pieza.</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {detail.workOrders.map((order) => (
+                  <li key={order.id} className="rounded-lg bg-navy-50 px-3 py-2">
+                    <Mono>{order.id}</Mono>
+                    <span className="ml-2">
+                      {WO_TYPE[order.type]} · {WO_STATUS[order.status]}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        )}
       </div>
 
       <Card>
-        <SectionTitle title="Historial" subtitle="Eventos auditados de esta pieza." />
-        {detail.events.length === 0 ? (
-          <p className="text-sm text-navy-400">Aún no hay eventos con esta pieza.</p>
-        ) : (
-          <ol className="space-y-2 text-sm">
-            {detail.events.map((event) => (
-              <li key={event.id}>
-                <span className="text-navy-400">{event.createdAt.slice(0, 10)}</span>
-                {' · '}
-                {event.description}
-              </li>
-            ))}
-          </ol>
-        )}
+        <EventTimeline
+          title="Historial"
+          subtitle="Quién realizó cada cambio auditado de esta pieza."
+          emptyTitle="Aún no hay eventos con esta pieza."
+          events={detail.events}
+        />
       </Card>
     </div>
   );

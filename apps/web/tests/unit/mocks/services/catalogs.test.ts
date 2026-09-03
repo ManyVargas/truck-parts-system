@@ -21,6 +21,7 @@ describe('prepareCategorySave', () => {
 
     const result = prepareCategorySave(seedCategories, {
       name: '  Rin  ',
+      codePrefix: 'rin',
       isAssembly: true,
       expectedComponents: ['Disco', '  Tuerca  ', ''],
     });
@@ -30,11 +31,30 @@ describe('prepareCategorySave', () => {
       expect(result.value).toEqual({
         id: 'CAT-RIN',
         name: 'Rin',
+        codePrefix: 'RIN',
         isAssembly: true,
         expectedComponents: ['Disco', 'Tuerca'],
       });
     }
     expect(createInitialState().items).toHaveLength(createInitialState().items.length);
+  });
+
+  it('rejects a missing or duplicate item-code prefix on create', () => {
+    const missing = prepareCategorySave(seedCategories, {
+      name: 'Bomba',
+      isAssembly: false,
+    });
+    const duplicate = prepareCategorySave(seedCategories, {
+      name: 'Motor usado',
+      codePrefix: 'mot',
+      isAssembly: false,
+    });
+
+    expect(missing.ok).toBe(false);
+    expect(duplicate.ok).toBe(false);
+    if (!duplicate.ok) {
+      expect(duplicate.error.message).toContain('MOT');
+    }
   });
 
   it('rejects a duplicate expected-component name on save', () => {
@@ -73,6 +93,7 @@ describe('prepareCategorySave', () => {
   it('rejects an assembly without expected components', () => {
     const result = prepareCategorySave(seedCategories, {
       name: 'Caja',
+      codePrefix: 'CAJ',
       isAssembly: true,
       expectedComponents: ['  '],
     });
@@ -94,6 +115,7 @@ describe('prepareCategorySave', () => {
     if (result.ok) {
       expect(result.value.id).toBe('CAT-FIL');
       expect(result.value.name).toBe('Filtros HD');
+      expect(result.value.codePrefix).toBe('FIL');
       expect(result.value.expectedComponents).toBeUndefined();
     }
   });
@@ -177,12 +199,12 @@ describe('catalog expected-component backfill', () => {
     const engine = state.categories.find((category) => category.id === 'CAT-ENG')!;
     const created = backfillPendingExpectedComponents(state, admin, engine, ['Bomba de aceite']);
 
-    expect(created.map((entry) => entry.parentId).sort()).toEqual(['ENG-001', 'ENG-002', 'ENG-003']);
+    expect(created.map((entry) => entry.parentId).sort()).toEqual(['MOT-001', 'MOT-002', 'MOT-003']);
     expect(
-      isComplete(state.items.find((item) => item.id === 'ENG-001')!, state.knownMissing, state.categories),
+      isComplete(state.items.find((item) => item.id === 'MOT-001')!, state.knownMissing, state.categories),
     ).toBe(true);
     expect(
-      isComplete(state.items.find((item) => item.id === 'ENG-002')!, state.knownMissing, state.categories),
+      isComplete(state.items.find((item) => item.id === 'MOT-002')!, state.knownMissing, state.categories),
     ).toBe(false);
     expect(
       state.knownMissing.some((entry) => entry.expectedComponentName === 'Bomba de aceite'),
@@ -192,7 +214,7 @@ describe('catalog expected-component backfill', () => {
 
   it('skips sold assemblies and slots already present or missing', () => {
     const state = createInitialState();
-    const sold = state.items.find((item) => item.id === 'ENG-003')!;
+    const sold = state.items.find((item) => item.id === 'MOT-003')!;
     sold.commercialState = 'SOLD';
     const engine = state.categories.find((category) => category.id === 'CAT-ENG')!;
 
@@ -201,21 +223,21 @@ describe('catalog expected-component backfill', () => {
       'Alternador',
     ]);
 
-    expect(created.every((entry) => entry.parentId !== 'ENG-003')).toBe(true);
+    expect(created.every((entry) => entry.parentId !== 'MOT-003')).toBe(true);
     expect(
       created
         .filter((entry) => entry.expectedComponentName === 'Bomba de aceite')
         .map((entry) => entry.parentId)
         .sort(),
-    ).toEqual(['ENG-001', 'ENG-002']);
+    ).toEqual(['MOT-001', 'MOT-002']);
     expect(
       created.find(
-        (entry) => entry.parentId === 'ENG-001' && entry.expectedComponentName === 'Alternador',
+        (entry) => entry.parentId === 'MOT-001' && entry.expectedComponentName === 'Alternador',
       ),
     ).toMatchObject({ kind: 'ALREADY_PRESENT', matchedChildId: 'ALT-004' });
     expect(
       created.some(
-        (entry) => entry.parentId === 'ENG-002' && entry.expectedComponentName === 'Alternador',
+        (entry) => entry.parentId === 'MOT-002' && entry.expectedComponentName === 'Alternador',
       ),
     ).toBe(false);
   });
@@ -226,11 +248,11 @@ describe('catalog expected-component backfill', () => {
     const engine = state.categories.find((category) => category.id === 'CAT-ENG')!;
     const created = backfillPendingExpectedComponents(state, admin, engine, ['Alternador']);
 
-    expect(created.find((entry) => entry.parentId === 'ENG-001')).toMatchObject({
+    expect(created.find((entry) => entry.parentId === 'MOT-001')).toMatchObject({
       kind: 'ALREADY_PRESENT',
       matchedChildId: 'ALT-004',
     });
-    expect(state.items.find((item) => item.id === 'ALT-004')?.parentId).toBe('ENG-001');
+    expect(state.items.find((item) => item.id === 'ALT-004')?.parentId).toBe('MOT-001');
     expect(state.events.some((event) => event.type === 'CATALOG_EXPECTED_MATCHED')).toBe(true);
   });
 });

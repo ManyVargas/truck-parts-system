@@ -1,11 +1,11 @@
-# Milestone 10 — WM10: Experiencia Mecánico (móvil)
+﻿# Milestone 10 — WM10: Experiencia Mecánico (móvil)
 
 | Campo          | Valor                                                           |
 | -------------- | --------------------------------------------------------------- |
 | **ID plan**    | WM10                                                            |
 | **Estado**     | Completado                                                      |
 | **Fecha**      | 2026-09-01                                                      |
-| **Referencia** | [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM10 |
+| **Referencia** | [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM10 |
 | **Alcance**    | Cola móvil, claim atómico, evidencia BEFORE/AFTER, completar desarme/instalación |
 | **Siguiente**  | WM11 — Catálogos y usuarios (admin)                             |
 
@@ -89,7 +89,7 @@ Resultado: 34 archivos de prueba frontend y 224 pruebas aprobadas.
 
 1. Login `pedro` / `demo1234` → Pendientes muestra `OD-DEMO-061` y `OD-DEMO-062` (sin números `FAC-`).
 2. Mis órdenes muestra `OD-DEMO-060` (Turbo Garrett, En proceso).
-3. Abrir `060` → agregar foto AFTER → Completar desarme (ubicación opcional). En inventario admin, `TUR-009` queda Vendido + Independiente y `ENG-001` incompleto.
+3. Abrir `060` → agregar foto AFTER → Completar desarme (ubicación opcional). En inventario admin, `TUR-009` queda Vendido + Independiente y `MOT-001` incompleto.
 4. Pendientes → Tomar `061` → pasa a Mis órdenes En proceso. Un segundo take (simulado) falla.
 5. Login `laura` → `/mechanic` no autorizado.
 

@@ -1,13 +1,5 @@
 import type { ItemDetailView } from '../../api/contracts/inventory';
-import {
-  AssemblyKindChip,
-  CommercialChip,
-  CompleteChip,
-  NoDesarmarChip,
-  PhysicalWorkChip,
-  RelationChip,
-  ReservationChip,
-} from '../../shared/domain';
+import { InventoryStatusCluster, PhysicalWorkChip } from '../../shared/domain';
 import { Card, Info } from '../../shared/ui';
 
 const CONDITION_LABEL: Record<ItemDetailView['condition'], string> = {
@@ -17,22 +9,29 @@ const CONDITION_LABEL: Record<ItemDetailView['condition'], string> = {
 };
 
 export function StatusPanel({ detail }: { detail: ItemDetailView }) {
+  const activeWork = detail.workOrders.find(
+    (order) => order.status === 'PENDING' || order.status === 'IN_PROGRESS',
+  );
+
   return (
     <Card>
-      <h2 className="mb-3 text-lg font-semibold text-navy">Estado</h2>
-      <div className="mb-4 flex flex-wrap gap-1.5">
-        <CommercialChip state={detail.commercialState} />
-        <AssemblyKindChip isAssembly={detail.isAssembly} />
-        <RelationChip relationship={detail.physicalRelationship} parentName={detail.parentName} />
-        {detail.isAssembly && <CompleteChip complete={detail.complete} />}
-        <PhysicalWorkChip
-          type={detail.workOrders.find((order) => order.status === 'PENDING' || order.status === 'IN_PROGRESS')?.type}
-          status={detail.workOrders.find((order) => order.status === 'PENDING' || order.status === 'IN_PROGRESS')?.status}
-        />
-        <ReservationChip reserved={detail.reserved} draftId={detail.reservedByDraftId} />
-        <NoDesarmarChip active={detail.noDesarmar} rootId={detail.protectedRootId} />
-      </div>
-      <dl className="grid gap-3 text-sm sm:grid-cols-2">
+      <h2 className="mb-4 text-lg font-semibold text-navy">Estado</h2>
+      <InventoryStatusCluster
+        commercialState={detail.commercialState}
+        physicalRelationship={detail.physicalRelationship}
+        parentName={detail.parentName}
+        isAssembly={detail.isAssembly}
+        complete={detail.isAssembly ? detail.complete : undefined}
+        reserved={detail.reserved}
+        reservedByDraftId={detail.reservedByDraftId}
+        noDesarmar={detail.noDesarmar}
+        protectedRootId={detail.protectedRootId}
+        layout="panel"
+        extra={
+          activeWork ? <PhysicalWorkChip type={activeWork.type} status={activeWork.status} /> : undefined
+        }
+      />
+      <dl className="mt-5 grid gap-3 border-t border-navy-100 pt-4 text-sm sm:grid-cols-2">
         <div>
           <dt className="text-navy-400">Condición</dt>
           <dd className="font-medium text-navy">{CONDITION_LABEL[detail.condition]}</dd>
@@ -47,10 +46,6 @@ export function StatusPanel({ detail }: { detail: ItemDetailView }) {
             <dd className="text-navy">{detail.ownLocation}</dd>
           </div>
         )}
-        <div>
-          <dt className="text-navy-400">Padre actual</dt>
-          <dd className="text-navy">{detail.parentName ?? 'Ninguno (independiente)'}</dd>
-        </div>
       </dl>
       {detail.formerInstallation && (
         <div className="mt-4">

@@ -69,7 +69,7 @@ Photo bytes live in private S3-compatible object storage; PostgreSQL stores meta
 - [x] Inventory search/results.
 - [x] Installed/independent/quantity state display.
 - [x] Historical filter/view.
-- [ ] Free-text location edit/display.
+- [x] Free-text location edit/display.
 - [ ] Photo gallery, upload, primary selection, edit/remove rules.
 
 ### Tests
@@ -89,7 +89,7 @@ The blocks below are the final reconciled requirements retained from the previou
 **Name:** Find inventory by known information  
 **Status:** CONFIRMED  
 **Actors:** Seller, Administrator  
-**Requirement:** Search must use practical identifiers and descriptions, including internal ID, name, category, part number, serial, brand, and applicable truck/engine/category attributes.  
+**Requirement:** Search must use practical identifiers and descriptions, including the public internal code, name, category, part number, serial, brand, and applicable truck/engine/category attributes. Production lookup may accept the public code in the URL while resolving to the UUID primary key.  
 **Business Reason:** Staff often know only one fragment of a used part's identity.  
 **Main Flow:** User enters a term or filter; matching inventory is returned.  
 **Business Rules:** Searchable fields follow approved category formats.  

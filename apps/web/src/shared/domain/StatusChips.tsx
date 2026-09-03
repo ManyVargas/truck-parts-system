@@ -1,37 +1,53 @@
+import type { ReactNode } from 'react';
+
 import { Chip } from '../ui';
+import {
+  assemblyKindLabel,
+  commercialAvailabilityLabel,
+  commercialAvailabilityLayer,
+  completenessLabel,
+  isIncompleteException,
+  physicalRelationLabel,
+  type CommercialDisplayState,
+  type PhysicalDisplayRelationship,
+} from './status-hierarchy';
+
+function ContextText({ children }: { children: string }) {
+  return <span className="text-xs text-navy-500">{children}</span>;
+}
 
 export function CommercialChip({
   state,
+  size = 'sm',
 }: {
-  state: 'AVAILABLE' | 'SOLD' | 'UNAVAILABLE';
+  state: CommercialDisplayState;
+  size?: 'sm' | 'md';
 }) {
+  const label = commercialAvailabilityLabel(state);
+
+  if (commercialAvailabilityLayer(state) === 'primary') {
+    return (
+      <span className={size === 'md' ? 'text-lg font-semibold text-navy' : 'text-sm font-semibold text-navy'}>
+        {label}
+      </span>
+    );
+  }
+
   if (state === 'SOLD') {
-    return <Chip tone="danger">Vendido</Chip>;
+    return <Chip tone="danger">{label}</Chip>;
   }
-  if (state === 'UNAVAILABLE') {
-    return <Chip tone="neutral">No disponible</Chip>;
-  }
-  return <Chip tone="success">Disponible</Chip>;
+
+  return <Chip tone="amber">{label}</Chip>;
 }
 
 export function RelationChip({
   relationship,
   parentName,
 }: {
-  relationship?: 'INDEPENDENT' | 'INSTALLED';
+  relationship?: PhysicalDisplayRelationship;
   parentName?: string;
 }) {
-  if (!relationship) {
-    return <Chip tone="neutral">Por cantidad</Chip>;
-  }
-
-  if (relationship === 'INSTALLED') {
-    return (
-      <Chip tone="brand">{parentName ? `Instalado en ${parentName}` : 'Instalado'}</Chip>
-    );
-  }
-
-  return <Chip tone="neutral">Independiente</Chip>;
+  return <ContextText>{physicalRelationLabel(relationship, parentName)}</ContextText>;
 }
 
 export function PhysicalWorkChip({
@@ -52,54 +68,179 @@ export function PhysicalWorkChip({
 }
 
 export function AssemblyKindChip({ isAssembly }: { isAssembly?: boolean }) {
-  if (!isAssembly) {
-    return <Chip tone="neutral">Pieza</Chip>;
-  }
-
-  return <Chip tone="brand">Ensamblaje</Chip>;
-}
-
-export function CompleteChip({ complete }: { complete?: boolean }) {
-  if (complete == null) {
+  const label = assemblyKindLabel(isAssembly);
+  if (!label) {
     return null;
   }
 
-  return complete ? (
-    <Chip tone="success">Completo</Chip>
-  ) : (
-    <Chip tone="amber">Incompleto</Chip>
-  );
+  return <ContextText>{label}</ContextText>;
+}
+
+export function CompleteChip({ complete }: { complete?: boolean }) {
+  if (!isIncompleteException(complete)) {
+    return null;
+  }
+
+  return <Chip tone="amber">Incompleto</Chip>;
 }
 
 export function ReservationChip({
   reserved,
   draftId,
+  compact = false,
 }: {
   reserved: boolean;
   draftId?: string;
+  compact?: boolean;
 }) {
   if (!reserved) {
     return null;
   }
 
-  return <Chip tone="amber">{draftId ? `Reservado (${draftId})` : 'Reservado'}</Chip>;
+  const label = !compact && draftId ? `Reservado (${draftId})` : 'Reservado';
+  return <Chip tone="amber">{label}</Chip>;
 }
 
 export function NoDesarmarChip({
   active,
   rootId,
+  compact = false,
 }: {
   active: boolean;
   rootId?: string;
+  compact?: boolean;
 }) {
   if (!active) {
     return null;
   }
 
+  const showRoot = !compact && rootId && rootId.length > 0;
+  return <Chip tone="danger">{showRoot ? `No desarmar · ${rootId}` : 'No desarmar'}</Chip>;
+}
+
+function StatusFact({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
   return (
-    <Chip tone="danger">
-      {rootId && rootId.length > 0 ? `No desarmar · ${rootId}` : 'No desarmar'}
-    </Chip>
+    <>
+      <dt className="text-[11px] font-medium leading-5 text-navy-400">{label}</dt>
+      <dd className="min-w-0 leading-5 text-navy">{children}</dd>
+    </>
+  );
+}
+
+export function InventoryStatusCluster({
+  commercialState,
+  physicalRelationship,
+  parentName,
+  isAssembly,
+  complete,
+  reserved,
+  reservedByDraftId,
+  noDesarmar,
+  protectedRootId,
+  compact = false,
+  includePhysicalContext = true,
+  layout,
+  stockLine,
+  extra,
+}: {
+  commercialState: CommercialDisplayState;
+  physicalRelationship?: PhysicalDisplayRelationship;
+  parentName?: string;
+  isAssembly?: boolean;
+  complete?: boolean;
+  reserved: boolean;
+  reservedByDraftId?: string;
+  noDesarmar: boolean;
+  protectedRootId?: string;
+  compact?: boolean;
+  includePhysicalContext?: boolean;
+  layout?: 'stack' | 'inline' | 'panel';
+  stockLine?: string;
+  extra?: ReactNode;
+}) {
+  const resolvedLayout = layout ?? (compact ? 'stack' : 'panel');
+  const physical = physicalRelationLabel(physicalRelationship, parentName);
+  const showAlerts =
+    (resolvedLayout !== 'panel' && isIncompleteException(complete)) || reserved || noDesarmar;
+  const alerts = (
+    <>
+      {resolvedLayout !== 'panel' ? <CompleteChip complete={complete} /> : null}
+      <ReservationChip reserved={reserved} draftId={reservedByDraftId} compact={compact || resolvedLayout !== 'panel'} />
+      <NoDesarmarChip
+        active={noDesarmar}
+        rootId={protectedRootId}
+        compact={compact || resolvedLayout !== 'panel'}
+      />
+      {extra}
+    </>
+  );
+
+  if (resolvedLayout === 'inline') {
+    return (
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <CommercialChip state={commercialState} />
+        {includePhysicalContext && (
+          <>
+            <span className="text-navy-200" aria-hidden>
+              ·
+            </span>
+            <span className="text-xs text-navy-500">{physical}</span>
+          </>
+        )}
+        {(showAlerts || extra) && <div className="flex flex-wrap gap-1">{alerts}</div>}
+      </div>
+    );
+  }
+
+  const completeness =
+    resolvedLayout === 'panel' && isAssembly ? completenessLabel(complete) : null;
+  const wide = resolvedLayout === 'panel';
+
+  return (
+    <dl
+      className={`grid min-w-[12.5rem] items-baseline gap-x-3 ${
+        wide
+          ? 'grid-cols-[6.5rem_minmax(0,1fr)] gap-y-3'
+          : 'grid-cols-[4.5rem_minmax(0,1fr)] gap-y-1.5'
+      }`}
+    >
+      {wide && (
+        <StatusFact label="Tipo">
+          <span className="text-sm text-navy">{isAssembly ? 'Ensamblaje' : 'Pieza'}</span>
+        </StatusFact>
+      )}
+      <StatusFact label="Comercial">
+        <CommercialChip state={commercialState} size={wide ? 'md' : 'sm'} />
+      </StatusFact>
+      {includePhysicalContext && (
+        <StatusFact label="Físico">
+          <span className={wide ? 'text-sm text-navy' : 'text-xs text-navy-600'}>{physical}</span>
+        </StatusFact>
+      )}
+      {completeness && (
+        <StatusFact label="Completitud">
+          <span className={complete === false ? 'text-sm font-medium text-amber-900' : 'text-sm text-navy'}>
+            {completeness}
+          </span>
+        </StatusFact>
+      )}
+      {stockLine && (
+        <StatusFact label="Stock">
+          <span className="text-xs text-navy-600">{stockLine}</span>
+        </StatusFact>
+      )}
+      {(showAlerts || extra) && (
+        <StatusFact label="Atención">
+          <div className="flex flex-wrap gap-1.5">{alerts}</div>
+        </StatusFact>
+      )}
+    </dl>
   );
 }
 
@@ -136,10 +277,11 @@ export function WOTypeChip({
 }: {
   type: 'DISMANTLING' | 'INSTALLATION';
 }) {
-  if (type === 'INSTALLATION') {
-    return <Chip tone="brand">Instalación</Chip>;
-  }
-  return <Chip tone="amber">Desarme</Chip>;
+  return (
+    <span className="text-sm text-navy-500">
+      {type === 'INSTALLATION' ? 'Instalación' : 'Desarme'}
+    </span>
+  );
 }
 
 export function WOStatusChip({
@@ -157,4 +299,12 @@ export function WOStatusChip({
     return <Chip tone="danger">Cancelada</Chip>;
   }
   return <Chip tone="neutral">Pendiente</Chip>;
+}
+
+export function AccountStateChip({ active }: { active: boolean }) {
+  if (active) {
+    return <span className="text-sm text-navy">Activo</span>;
+  }
+
+  return <Chip tone="amber">Inactivo</Chip>;
 }

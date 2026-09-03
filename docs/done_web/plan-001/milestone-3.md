@@ -1,11 +1,11 @@
-# Milestone 3 — WM3: Dashboard operativo
+﻿# Milestone 3 — WM3: Dashboard operativo
 
 | Campo | Valor |
 |---|---|
 | **ID plan** | WM3 |
 | **Estado** | Completado |
 | **Fecha** | 2026-08-28 |
-| **Referencia** | [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM3 |
+| **Referencia** | [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM3 |
 | **Alcance** | Panel resumen por rol: KPIs, facturas recientes, timeline de actividad |
 | **Siguiente** | WM4 — Clientes |
 
@@ -95,7 +95,7 @@ apps/web/
 | 4.ª tarjeta fila 1 | Utilidad DOP RD$8,900.00 | Borradores: 1 |
 | Desarmes pendientes | 1 | 1 |
 | OT en proceso | 1 | 1 |
-| Ensamblajes incompletos | 2 (TRK-001, ENG-002) | 2 |
+| Ensamblajes incompletos | 2 (CAM-001, MOT-002) | 2 |
 | FX pendiente | 1 | no se envía ni se pinta |
 
 Clic en una factura reciente → `/sales/:id` (detalle aún placeholder WM7).
@@ -150,7 +150,7 @@ Listo para implementar `features/customers/` sobre `MockCustomerRepository`. El 
 
 ## 10. Referencias
 
-- [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM3
-- [`docs/done_web/milestone-2.md`](./milestone-2.md)
-- [`docs/FEATURES/11_COST_AND_PROFITABILITY.md`](../FEATURES/11_COST_AND_PROFITABILITY.md) COST-003
-- [`docs/PROTOTYPE_PLAN.md`](../PROTOTYPE_PLAN.md) § 5 Dashboard
+- [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM3
+- [`docs/done_web/plan-001/milestone-2.md`](./milestone-2.md)
+- [`docs/FEATURES/11_COST_AND_PROFITABILITY.md`](../../FEATURES/11_COST_AND_PROFITABILITY.md) COST-003
+- [`docs/PROTOTYPE_PLAN.md`](../../PROTOTYPE_PLAN.md) § 5 Dashboard

@@ -25,7 +25,7 @@ services:
     container_name: truck_parts_api
     restart: unless-stopped
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${NODE_ENV}
       PORT: 3000
       DATABASE_URL: ${DATABASE_URL_DOCKER}
     depends_on:
@@ -48,6 +48,9 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        VITE_ENABLE_DEMO_CONTROLS: ${VITE_ENABLE_DEMO_CONTROLS}
+        VITE_CAPABILITIES_PRESET: ${VITE_CAPABILITIES_PRESET}
     container_name: truck_parts_web
     restart: unless-stopped
     ports:

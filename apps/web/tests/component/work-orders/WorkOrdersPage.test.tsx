@@ -47,6 +47,9 @@ describe('WorkOrdersPage', () => {
     expect(screen.getAllByText('En proceso').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Pendiente').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Completada').length).toBeGreaterThan(0);
+    const orderLink = screen.getByRole('link', { name: 'OD-DEMO-060' });
+    expect(orderLink).toHaveAttribute('href', '/work-orders/OD-DEMO-060');
+    expect(orderLink.closest('tr')).toHaveClass('cursor-pointer');
   });
 
   it('filters the in-progress tab to the assigned seed order', async () => {
@@ -58,7 +61,7 @@ describe('WorkOrdersPage', () => {
     });
 
     expect(await screen.findByText('OD-DEMO-060')).toBeVisible();
-    await user.click(screen.getByRole('tab', { name: 'En proceso' }));
+    await user.click(screen.getByRole('button', { name: 'En proceso' }));
 
     expect(await screen.findByText('OD-DEMO-060')).toBeVisible();
     expect(screen.queryByText('OD-DEMO-061')).not.toBeInTheDocument();
@@ -77,7 +80,7 @@ describe('WorkOrdersPage', () => {
     await user.click(screen.getByRole('button', { name: 'Nueva orden de trabajo' }));
 
     const dialog = await screen.findByRole('dialog');
-    await user.selectOptions(within(dialog).getByLabelText('Pieza'), 'ENG-001');
+    await user.selectOptions(within(dialog).getByLabelText('Pieza'), 'MOT-001');
     await user.click(within(dialog).getByRole('button', { name: 'Crear orden de trabajo' }));
 
     expect(await screen.findByRole('heading', { name: 'OD-DEMO-064' })).toBeVisible();
@@ -112,6 +115,7 @@ describe('WorkOrderDetailPage', () => {
     expect(await screen.findByText('Cancelada')).toBeVisible();
     expect(screen.getByText('Cambio de plan')).toBeVisible();
     expect(screen.getByText(/Orden de trabajo OD-DEMO-062 cancelada/)).toBeVisible();
+    expect(screen.getByText(/por Administrador Demo/)).toBeVisible();
   });
 
   it('hides admin actions on a completed order', async () => {
@@ -126,5 +130,6 @@ describe('WorkOrderDetailPage', () => {
     expect(screen.queryByRole('button', { name: 'Cancelar orden' })).not.toBeInTheDocument();
     expect(screen.getByText('before-alt.jpg')).toBeVisible();
     expect(screen.getByText('after-alt.jpg')).toBeVisible();
+    expect(screen.getByText(/por Carlos Méndez/)).toBeVisible();
   });
 });

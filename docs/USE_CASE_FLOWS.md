@@ -83,7 +83,7 @@ For quantity stock, `availableToReserve = physical/on-hand quantity - currently 
 **Main Flow:**
 
 1. The actor selects a maintained category and enters available shared data: name, brand, model, part or serial number when known, condition, acquisition cost when known or estimated, free-text location, notes, photos, and applicable category-specific values.
-2. The system assigns or validates an unused internal ID.
+2. The system assigns the next unused public internal code for the selected category. The operator does not type that code.
 3. The system creates a standalone item as `Available` and `Independent`. A present child registered within the received-assembly flow instead receives its initial observed parent relationship through that controlled baseline.
 4. The system records actor, time, and initial values.
 
@@ -92,7 +92,7 @@ For quantity stock, `availableToReserve = physical/on-hand quantity - currently 
 - Commercial State, Physical Relationship, completeness, condition, location, and cost remain separate.
 - Seller and Administrator may view acquisition cost; Seller cannot edit protected cost. Unknown cost remains unknown and is never silently treated as zero.
 
-**Conflicts:** Reject reused IDs, invalid category data, unauthorized protected-cost edits, or a partial creation. Unknown real-world identifiers do not block registration when the approved practical minimum is present.
+**Conflicts:** Reject a missing category prefix/sequence, invalid category data, unauthorized protected-cost edits, or a partial creation. Unknown real-world identifiers do not block registration when the approved practical minimum is present.
 
 ## Register quantity stock
 
@@ -141,8 +141,8 @@ For quantity stock, `availableToReserve = physical/on-hand quantity - currently 
 
 **State Result Examples:**
 
-- `ENG-001` is `Complete` with `ALT-004`, `TUR-009`, and `STA-002` installed when all applicable expected components are present.
-- `ENG-002` is `Incomplete` with its real present children installed and `Turbo` recorded as a `MISSING_AT_RECEIPT` Known Missing Component when no physical turbo arrived.
+- `MOT-001` is `Complete` with `ALT-004`, `TUR-009`, and `ARR-002` installed when all applicable expected components are present.
+- `MOT-002` is `Incomplete` with its real present children installed and `Turbo` recorded as a `MISSING_AT_RECEIPT` Known Missing Component when no physical turbo arrived.
 - A general `Turbo` definition marked `NOT_APPLICABLE` for a concrete engine creates no inventory item, no Known Missing Component, and no completeness effect.
 
 **Important Rules:**

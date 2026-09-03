@@ -44,7 +44,7 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
     suggestedUsername: 'admin',
     suggestedPassword: 'demo1234',
     nextPath: '/work-orders/OD-DEMO-062',
-    nextSteps: 'Inicie sesión como admin. Revise OD-DEMO-062 (instalación de FLT-001 en ENG-002).',
+    nextSteps: 'Inicie sesión como admin. Revise OD-DEMO-062 (instalación de FIL-001 en MOT-002).',
   },
   {
     id: 4,
@@ -66,13 +66,13 @@ export const DEMO_SCENARIOS: readonly DemoScenario[] = [
     suggestedPassword: 'demo1234',
     nextPath: '/sales/draft/INV-DRAFT-01',
     nextSteps:
-      'Inicie sesión como laura. Abra el borrador limpio, asigne precio a ENG-003 y confirme la venta.',
+      'Inicie sesión como laura. Abra el borrador limpio, asigne precio a MOT-003 y confirme la venta.',
   },
   {
     id: 6,
     slug: 'no-desarmar-blocked',
     title: 'Venta bloqueada por No desarmar',
-    description: 'Intento de línea suelta bajo ENG-003.',
+    description: 'Intento de línea suelta bajo MOT-003.',
     suggestedUsername: 'laura',
     suggestedPassword: 'demo1234',
     nextPath: '/inventory/ALT-011',
@@ -166,7 +166,7 @@ function prepareFullAssemblySale(state: AppState): Result<void> {
     }
   }
 
-  const assembly = requireItem(state, 'ENG-003');
+  const assembly = requireItem(state, 'MOT-003');
   if (!assembly.ok) {
     return assembly;
   }
@@ -179,7 +179,7 @@ function prepareFullAssemblySale(state: AppState): Result<void> {
   const added = addDraftLine(state, seller, {
     draftId: created.value.draftId,
     type: 'ITEM',
-    itemId: 'ENG-003',
+    itemId: 'MOT-003',
   });
   if (!added.ok) {
     return added;
@@ -200,7 +200,7 @@ export function applyDemoScenario(state: AppState, scenarioId: number): Result<v
       return ok(undefined);
     case 2:
     case 4:
-      return requireItem(state, 'ENG-001');
+      return requireItem(state, 'MOT-001');
     case 3:
       if (!state.workOrders.some((order) => order.id === 'OD-DEMO-062')) {
         return err({ code: 'CONFLICT', message: 'Falta OD-DEMO-062' });
@@ -209,9 +209,9 @@ export function applyDemoScenario(state: AppState, scenarioId: number): Result<v
     case 5:
       return prepareFullAssemblySale(state);
     case 6: {
-      const engine = state.items.find((item) => item.id === 'ENG-003');
+      const engine = state.items.find((item) => item.id === 'MOT-003');
       if (!engine?.noDesarmar) {
-        return err({ code: 'CONFLICT', message: 'ENG-003 debe tener No desarmar' });
+        return err({ code: 'CONFLICT', message: 'MOT-003 debe tener No desarmar' });
       }
       return ok(undefined);
     }

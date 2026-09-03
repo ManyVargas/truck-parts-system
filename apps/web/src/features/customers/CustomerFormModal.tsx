@@ -148,6 +148,11 @@ export function CustomerFormModal({
   return (
     <Modal open={open} title={isEdit ? 'Editar cliente' : 'Nuevo cliente'} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <Info tone="error" title="No se pudo guardar">
+            {error}
+          </Info>
+        )}
         <Field label="Nombre" htmlFor="customer-name">
           <Input
             id="customer-name"
@@ -255,12 +260,6 @@ export function CustomerFormModal({
             </div>
           ))}
         </div>
-
-        {error && (
-          <Info tone="error" title="No se pudo guardar">
-            {error}
-          </Info>
-        )}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>

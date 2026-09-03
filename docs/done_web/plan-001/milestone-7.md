@@ -1,11 +1,11 @@
-# Milestone 7 — WM7: Ventas, detalle, pagos y cancelación
+﻿# Milestone 7 — WM7: Ventas, detalle, pagos y cancelación
 
 | Campo          | Valor                                                                          |
 | -------------- | ------------------------------------------------------------------------------ |
 | **ID plan**    | WM7                                                                            |
 | **Estado**     | Completado                                                                     |
 | **Fecha**      | 2026-08-31                                                                     |
-| **Referencia** | [`docs/plans_web/plan-001.md`](../plans_web/plan-001.md) § WM7                 |
+| **Referencia** | [`docs/plans_web/plan-001.md`](../../plans_web/plan-001.md) § WM7                 |
 | **Alcance**    | Listado, detalle, pagos, cancelación, corrección de moneda, PDF interno, ITBIS |
 | **Siguiente**  | WM8 — Punto de venta y borradores (POS)                                        |
 

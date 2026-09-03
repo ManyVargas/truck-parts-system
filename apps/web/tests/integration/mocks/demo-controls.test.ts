@@ -60,7 +60,7 @@ describe('demo controls', () => {
     const state = getMockState();
     const draft = state.invoices.find((invoice) => invoice.status === 'DRAFT')!;
     expect(draft.lines).toHaveLength(1);
-    expect(draft.lines[0]?.itemId).toBe('ENG-003');
+    expect(draft.lines[0]?.itemId).toBe('MOT-003');
 
     const seller = state.users.find((user) => user.id === 'U-LAURA')!;
     const priced = setDraftLinePrice(state, seller, {
@@ -72,7 +72,7 @@ describe('demo controls', () => {
 
     const confirmed = confirmInvoice(state, seller, draft.id);
     expect(confirmed.ok).toBe(true);
-    expect(state.items.find((item) => item.id === 'ENG-003')?.commercialState).toBe('SOLD');
+    expect(state.items.find((item) => item.id === 'MOT-003')?.commercialState).toBe('SOLD');
     expect(state.items.find((item) => item.id === 'ALT-011')?.commercialState).toBe('SOLD');
   });
 });

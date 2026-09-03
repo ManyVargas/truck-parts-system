@@ -35,6 +35,7 @@ export function PaymentHistory({ payments, currency }: PaymentHistoryProps) {
                 </div>
                 <p className="mt-0.5 text-xs text-navy-400">
                   {DATE_FORMATTER.format(new Date(payment.createdAt))}
+                  {payment.actorName ? ` · por ${payment.actorName}` : ''}
                   {payment.reference ? ` · ${payment.reference}` : ''}
                 </p>
               </div>
