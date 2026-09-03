@@ -68,6 +68,21 @@ describe('WorkOrdersPage', () => {
     expect(screen.queryByText('OD-DEMO-062')).not.toBeInTheDocument();
   });
 
+  it('shows pending dismantling orders from type and status query params', async () => {
+    signInAs('ADMINISTRATOR');
+    renderWithProviders(workOrderRoutes(), {
+      route: '/work-orders?type=DISMANTLING&status=PENDING',
+      auth: createAuthValue('ADMINISTRATOR'),
+    });
+
+    expect(await screen.findByText('OD-DEMO-061')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Pendiente' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText(/Tipo: Desmonte/)).toBeVisible();
+    expect(screen.queryByText('OD-DEMO-060')).not.toBeInTheDocument();
+    expect(screen.queryByText('OD-DEMO-062')).not.toBeInTheDocument();
+    expect(screen.queryByText('OD-DEMO-063')).not.toBeInTheDocument();
+  });
+
   it('creates a manual dismantling from the list and opens the detail', async () => {
     signInAs('ADMINISTRATOR');
     const user = userEvent.setup();

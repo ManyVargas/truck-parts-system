@@ -1,10 +1,14 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
+import type { WorkOrderType } from '../../api/contracts/entities';
 import type { CreateManualWorkOrderInput, WorkOrderListTab } from '../../api/contracts/work-orders';
-import { Button, Info } from '../../shared/ui';
+import { can } from '../../shared/auth/policies';
+import { UX_TERMS } from '../../shared/copy/glossary';
+import { Button, Chip, Info, Skeleton, toPageLoadMessage } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
 import { TabBar } from '../../shared/layout/TabBar';
+import { useAuth } from '../auth/useAuth';
 import { CreateWorkOrderModal } from './CreateWorkOrderModal';
 import { WorkOrderTable } from './WorkOrderTable';
 import { useWorkOrders } from './useWorkOrders';
@@ -17,12 +21,77 @@ const TABS: { id: WorkOrderListTab; label: string }[] = [
   { id: 'CANCELLED', label: 'Cancelada' },
 ];
 
+const WORK_ORDER_TABS: WorkOrderListTab[] = [
+  'ALL',
+  'PENDING',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'CANCELLED',
+];
+
+function parseWorkOrderTab(value: string | null): WorkOrderListTab | null {
+  if (value && WORK_ORDER_TABS.includes(value as WorkOrderListTab)) {
+    return value as WorkOrderListTab;
+  }
+  return null;
+}
+
+function parseWorkOrderType(value: string | null): WorkOrderType | null {
+  if (value === 'DISMANTLING' || value === 'INSTALLATION') {
+    return value;
+  }
+  return null;
+}
+
+function workOrderTypeLabel(type: WorkOrderType): string {
+  return type === 'DISMANTLING' ? UX_TERMS.dismantling : 'Instalación';
+}
+
 export function WorkOrdersPage() {
-  const [tab, setTab] = useState<WorkOrderListTab>('ALL');
+  const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = parseWorkOrderTab(searchParams.get('status')) ?? 'ALL';
+  const typeFilter = parseWorkOrderType(searchParams.get('type'));
   const { result, createOptions, isMutating, createManual } = useWorkOrders(tab);
   const navigate = useNavigate();
   const [modalOpen, setModalOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const canManageWorkOrders = can(user, 'workOrders.manage');
+  const visibleRows = useMemo(() => {
+    if (result.status !== 'ready') {
+      return [];
+    }
+    if (!typeFilter) {
+      return result.rows;
+    }
+    return result.rows.filter((row) => row.type === typeFilter);
+  }, [result, typeFilter]);
+
+  function handleTabChange(next: WorkOrderListTab) {
+    setSearchParams(
+      (prev) => {
+        const nextParams = new URLSearchParams(prev);
+        if (next === 'ALL') {
+          nextParams.delete('status');
+        } else {
+          nextParams.set('status', next);
+        }
+        return nextParams;
+      },
+      { replace: true },
+    );
+  }
+
+  function clearTypeFilter() {
+    setSearchParams(
+      (prev) => {
+        const nextParams = new URLSearchParams(prev);
+        nextParams.delete('type');
+        return nextParams;
+      },
+      { replace: true },
+    );
+  }
 
   function closeModal() {
     if (isMutating) {
@@ -46,7 +115,7 @@ export function WorkOrdersPage() {
   if (result.status === 'error') {
     return (
       <Info tone="error" title="No se pudo cargar las órdenes de trabajo">
-        {result.error.message}
+        {toPageLoadMessage(result.error.message, 'No pudimos cargar las órdenes de trabajo.')}
       </Info>
     );
   }
@@ -57,38 +126,49 @@ export function WorkOrdersPage() {
         title="Órdenes de Trabajo"
         description="Gestión administrativa de desarmes e instalaciones. Completar el trabajo físico corresponde al mecánico."
         actions={
-          <Button
-            onClick={() => {
-              setFormError(null);
-              setModalOpen(true);
-            }}
-            disabled={result.status === 'loading'}
-          >
-            Nueva orden de trabajo
-          </Button>
+          canManageWorkOrders ? (
+            <Button
+              onClick={() => {
+                setFormError(null);
+                setModalOpen(true);
+              }}
+              disabled={result.status === 'loading'}
+            >
+              Nueva orden de trabajo
+            </Button>
+          ) : undefined
         }
       />
 
-      <TabBar tabs={TABS} value={tab} onChange={setTab} aria-label="Estado de la orden" />
-
-      {result.status === 'loading' ? (
-        <p className="text-sm text-navy-400" aria-live="polite">
-          Cargando órdenes…
-        </p>
-      ) : (
-        <WorkOrderTable rows={result.rows} />
+      {typeFilter && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <Chip tone="brand">Tipo: {workOrderTypeLabel(typeFilter)}</Chip>
+          <Button variant="ghost" size="sm" onClick={clearTypeFilter}>
+            Quitar filtro
+          </Button>
+        </div>
       )}
 
-      <CreateWorkOrderModal
-        open={modalOpen}
-        options={createOptions}
-        isSaving={isMutating}
-        error={formError}
-        onClose={closeModal}
-        onSubmit={(input) => {
-          void handleSubmit(input);
-        }}
-      />
+      <TabBar tabs={TABS} value={tab} onChange={handleTabChange} aria-label="Estado de la orden" />
+
+      {result.status === 'loading' ? (
+        <Skeleton label="Cargando órdenes" />
+      ) : (
+        <WorkOrderTable rows={visibleRows} />
+      )}
+
+      {canManageWorkOrders && (
+        <CreateWorkOrderModal
+          open={modalOpen}
+          options={createOptions}
+          isSaving={isMutating}
+          error={formError}
+          onClose={closeModal}
+          onSubmit={(input) => {
+            void handleSubmit(input);
+          }}
+        />
+      )}
     </>
   );
 }

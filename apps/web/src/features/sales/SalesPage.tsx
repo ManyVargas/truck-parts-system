@@ -1,12 +1,18 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import type { SalesListRow, SalesListTab } from '../../api/contracts/sales';
-import { Button, Info, SearchInput } from '../../shared/ui';
+import { Button, Chip, Info, SearchInput, Skeleton, toPageLoadMessage } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
 import { TabBar } from '../../shared/layout/TabBar';
 import { SalesTable } from './SalesTable';
-import { useSalesList } from './useSalesList';
+import {
+  applySalesUrlFilters,
+  parseSalesListTab,
+  parseSalesUrlFilters,
+  salesUrlFiltersActive,
+  useSalesList,
+} from './useSalesList';
 
 const TABS: { id: SalesListTab; label: string }[] = [
   { id: 'ALL', label: 'Todas' },
@@ -28,25 +34,74 @@ function matchesSalesQuery(row: SalesListRow, query: string): boolean {
   );
 }
 
+function kpiFilterLabels(filters: ReturnType<typeof parseSalesUrlFilters>): string[] {
+  const labels: string[] = [];
+  if (filters.today) {
+    labels.push('Facturas de hoy');
+  }
+  if (filters.outstanding) {
+    labels.push('Saldo pendiente');
+  }
+  if (filters.payments) {
+    labels.push('Historial de cobros');
+  }
+  return labels;
+}
+
 export function SalesPage() {
-  const [tab, setTab] = useState<SalesListTab>('ALL');
+  const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState('');
+  const tab = parseSalesListTab(searchParams.get('tab')) ?? 'ALL';
+  const kpiFilters = parseSalesUrlFilters(searchParams);
   const { result } = useSalesList(tab);
   const navigate = useNavigate();
   const visibleRows = useMemo(() => {
     if (result.status !== 'ready') {
       return [];
     }
-    return result.rows.filter((row) => matchesSalesQuery(row, query));
-  }, [query, result]);
+    return applySalesUrlFilters(result.rows, kpiFilters).filter((row) =>
+      matchesSalesQuery(row, query),
+    );
+  }, [kpiFilters, query, result]);
+
+  function handleTabChange(next: SalesListTab) {
+    setSearchParams(
+      (prev) => {
+        const nextParams = new URLSearchParams(prev);
+        if (next === 'ALL') {
+          nextParams.delete('tab');
+        } else {
+          nextParams.set('tab', next);
+        }
+        return nextParams;
+      },
+      { replace: true },
+    );
+  }
+
+  function clearKpiFilters() {
+    setSearchParams(
+      (prev) => {
+        const nextParams = new URLSearchParams(prev);
+        nextParams.delete('today');
+        nextParams.delete('outstanding');
+        nextParams.delete('payments');
+        return nextParams;
+      },
+      { replace: true },
+    );
+  }
 
   if (result.status === 'error') {
     return (
       <Info tone="error" title="No se pudo cargar las ventas">
-        {result.error.message}
+        {toPageLoadMessage(result.error.message, 'No pudimos cargar las ventas.')}
       </Info>
     );
   }
+
+  const activeKpiLabels = kpiFilterLabels(kpiFilters);
+  const hasKpiFilter = salesUrlFiltersActive(kpiFilters);
 
   return (
     <>
@@ -68,14 +123,28 @@ export function SalesPage() {
         />
       </div>
 
-      <TabBar tabs={TABS} value={tab} onChange={setTab} aria-label="Estado de factura" />
+      {hasKpiFilter && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {activeKpiLabels.map((label) => (
+            <Chip key={label} tone="brand">
+              {label}
+            </Chip>
+          ))}
+          <Button variant="ghost" size="sm" onClick={clearKpiFilters}>
+            Quitar filtro
+          </Button>
+        </div>
+      )}
+
+      <TabBar tabs={TABS} value={tab} onChange={handleTabChange} aria-label="Estado de factura" />
 
       {result.status === 'loading' ? (
-        <p className="text-sm text-navy-400" aria-live="polite">
-          Cargando facturas…
-        </p>
+        <Skeleton label="Cargando facturas" />
       ) : (
-        <SalesTable rows={visibleRows} hasQuery={query.trim().length > 0} />
+        <SalesTable
+          rows={visibleRows}
+          hasQuery={query.trim().length > 0 || hasKpiFilter}
+        />
       )}
     </>
   );

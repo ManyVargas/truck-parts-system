@@ -64,4 +64,54 @@ describe('SalesPage', () => {
     expect(screen.getByText('FAC-000099')).toBeVisible();
     expect(screen.queryByText('FAC-000098')).not.toBeInTheDocument();
   });
+
+  it('opens the draft tab from the tab query param', async () => {
+    renderWithProviders(<SalesPage />, {
+      route: '/sales?tab=DRAFT',
+      auth: createAuthValue('SELLER'),
+    });
+
+    expect(await screen.findByText(/Borrador INV-DRAFT-01/)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Borrador' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByText('FAC-000098')).not.toBeInTheDocument();
+  });
+
+  it('hides zero-balance invoices when outstanding=1', async () => {
+    renderWithProviders(<SalesPage />, {
+      route: '/sales?outstanding=1',
+      auth: createAuthValue('SELLER'),
+    });
+
+    expect(await screen.findByText('FAC-000098')).toBeVisible();
+    expect(screen.getByText('FAC-000099')).toBeVisible();
+    expect(screen.getByText('Saldo pendiente')).toBeVisible();
+    expect(screen.queryByText('FAC-000097')).not.toBeInTheDocument();
+    expect(screen.queryByText('FAC-000096')).not.toBeInTheDocument();
+  });
+
+  it('keeps only invoices confirmed on the demo day when today=1', async () => {
+    renderWithProviders(<SalesPage />, {
+      route: '/sales?today=1',
+      auth: createAuthValue('SELLER'),
+    });
+
+    expect(await screen.findByText('FAC-000098')).toBeVisible();
+    expect(screen.getByText('FAC-000099')).toBeVisible();
+    expect(screen.getByText('Facturas de hoy')).toBeVisible();
+    expect(screen.queryByText('FAC-000096')).not.toBeInTheDocument();
+    expect(screen.queryByText('FAC-000097')).not.toBeInTheDocument();
+  });
+
+  it('shows the payment history when payments=1', async () => {
+    renderWithProviders(<SalesPage />, {
+      route: '/sales?payments=1',
+      auth: createAuthValue('SELLER'),
+    });
+
+    expect(await screen.findByText('FAC-000099')).toBeVisible();
+    expect(screen.getByText('FAC-000097')).toBeVisible();
+    expect(screen.getByText('FAC-000096')).toBeVisible();
+    expect(screen.getByText('Historial de cobros')).toBeVisible();
+    expect(screen.queryByText('FAC-000098')).not.toBeInTheDocument();
+  });
 });
