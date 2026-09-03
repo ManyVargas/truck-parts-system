@@ -30,7 +30,11 @@ import {
   protectedAncestor,
 } from './inventory-helpers';
 import { derivePaymentState, invoiceTotal, roundMoney } from './invoice-money';
-import { activeWorkAffectingAssembly, CASH_CUSTOMER_ID, customerQualifiesForFiscal } from './sales-helpers';
+import {
+  activeWorkAffectingAssembly,
+  CASH_CUSTOMER_ID,
+  customerQualifiesForFiscal,
+} from './sales-helpers';
 import { applyUsdProfitability } from './usd-profitability';
 
 function nextNumericId(ids: string[], prefix: string, pad: number): string {
@@ -151,7 +155,12 @@ function releaseLineReservation(state: AppState, line: InvoiceLine): void {
   }
 }
 
-function reserveItemOnDraft(state: AppState, actor: User, draft: Invoice, item: Item): Result<void> {
+function reserveItemOnDraft(
+  state: AppState,
+  actor: User,
+  draft: Invoice,
+  item: Item,
+): Result<void> {
   if (item.commercialState === 'SOLD') {
     return err({ code: 'VALIDATION', message: 'Este ítem ya está vendido' });
   }
@@ -214,7 +223,11 @@ export function createDraft(state: AppState, actor: User): Result<CreateDraftRes
   return ok({ draftId: draft.id });
 }
 
-export function addDraftLine(state: AppState, actor: User, input: AddDraftLineInput): Result<Invoice> {
+export function addDraftLine(
+  state: AppState,
+  actor: User,
+  input: AddDraftLineInput,
+): Result<Invoice> {
   const found = findInvoice(state, input.draftId);
   if (!found.ok) {
     return found;
@@ -231,7 +244,7 @@ export function addDraftLine(state: AppState, actor: User, input: AddDraftLineIn
     }
     const item = itemById(state.items, input.itemId);
     if (!item) {
-      return err({ code: 'NOT_FOUND', message: 'Ítem no encontrado' });
+      return err({ code: 'NOT_FOUND', message: 'Pieza no encontrada' });
     }
     if (draft.lines.some((line) => line.itemId === item.id)) {
       return ok(draft);
@@ -339,8 +352,7 @@ export function addDraftLine(state: AppState, actor: User, input: AddDraftLineIn
     return ok(draft);
   }
 
-  const description =
-    input.description?.trim() || (input.type === 'DELIVERY' ? 'Entrega' : '');
+  const description = input.description?.trim() || (input.type === 'DELIVERY' ? 'Entrega' : '');
   if (!description) {
     return err({ code: 'VALIDATION', message: 'La descripción es obligatoria' });
   }
@@ -356,7 +368,10 @@ export function addDraftLine(state: AppState, actor: User, input: AddDraftLineIn
     input.acquisitionCostDop != null &&
     (!Number.isFinite(input.acquisitionCostDop) || input.acquisitionCostDop < 0)
   ) {
-    return err({ code: 'VALIDATION', message: 'El costo de adquisición debe ser un número válido' });
+    return err({
+      code: 'VALIDATION',
+      message: 'El costo de adquisición debe ser un número válido',
+    });
   }
 
   draft.lines.push({
@@ -424,7 +439,11 @@ export function setDraftLinePrice(
   return ok(draftResult.value);
 }
 
-export function setDraftMeta(state: AppState, _actor: User, input: SetDraftMetaInput): Result<Invoice> {
+export function setDraftMeta(
+  state: AppState,
+  _actor: User,
+  input: SetDraftMetaInput,
+): Result<Invoice> {
   const found = findInvoice(state, input.draftId);
   if (!found.ok) {
     return found;
@@ -531,7 +550,10 @@ function snapshotDeliveredAssembly(items: Item[], root: Item): DeliveredAssembly
   };
 }
 
-function uniqueAppendInvoiceIds(existing: string[] | undefined, ...invoiceIds: Array<string | undefined>): string[] {
+function uniqueAppendInvoiceIds(
+  existing: string[] | undefined,
+  ...invoiceIds: Array<string | undefined>
+): string[] {
   const result = existing ? [...existing] : [];
   for (const invoiceId of invoiceIds) {
     if (invoiceId && !result.includes(invoiceId)) {
@@ -639,7 +661,7 @@ export function confirmInvoice(
     if (line.itemId) {
       const item = itemById(state.items, line.itemId);
       if (!item) {
-        return err({ code: 'NOT_FOUND', message: `Ítem ${line.itemId} no encontrado` });
+        return err({ code: 'NOT_FOUND', message: `Pieza ${line.itemId} no encontrada` });
       }
       if (item.commercialState === 'SOLD') {
         return err({ code: 'CONFLICT', message: `${item.id} ya está vendido` });
@@ -776,7 +798,9 @@ export function confirmInvoice(
 
   if (payment && initialPaymentAmount != null) {
     if (payment.idempotencyKey) {
-      const existing = invoice.payments.find((entry) => entry.idempotencyKey === payment.idempotencyKey);
+      const existing = invoice.payments.find(
+        (entry) => entry.idempotencyKey === payment.idempotencyKey,
+      );
       if (existing) {
         return ok(invoice);
       }

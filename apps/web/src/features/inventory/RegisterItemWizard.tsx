@@ -59,6 +59,7 @@ export function RegisterItemWizard({
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
   const [registered, setRegistered] = useState<RegisteredSummary>();
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
 
   const visibleCategories = hierarchy
     ? categories
@@ -71,6 +72,15 @@ export function RegisterItemWizard({
     Boolean(hierarchy) && mode === 'INDIVIDUAL' && Boolean(selectedCategory?.isAssembly);
   const categoryAttributes = selectedCategory?.attributes ?? [];
   const showCharacteristics = mode === 'INDIVIDUAL' && categoryAttributes.length > 0;
+  const hasUnsavedChanges =
+    !registered &&
+    (mode !== 'INDIVIDUAL' ||
+      step !== 1 ||
+      JSON.stringify(item) !== JSON.stringify(EMPTY_ITEM) ||
+      qtySku !== '' ||
+      initialQuantity !== '0' ||
+      unitCostDop !== '' ||
+      baseline.length > 0);
 
   const patchItem = (patch: Partial<RegisterItemInput>) =>
     setItem((current) => ({ ...current, ...patch }));
@@ -85,10 +95,25 @@ export function RegisterItemWizard({
     setError(undefined);
     setSaving(false);
     setRegistered(undefined);
+    setConfirmingDiscard(false);
   };
   const close = () => {
     reset();
     onClose();
+  };
+  const requestClose = () => {
+    if (saving) {
+      return;
+    }
+    if (confirmingDiscard) {
+      setConfirmingDiscard(false);
+      return;
+    }
+    if (hasUnsavedChanges) {
+      setConfirmingDiscard(true);
+      return;
+    }
+    close();
   };
 
   const save = async () => {
@@ -127,22 +152,31 @@ export function RegisterItemWizard({
     event.preventDefault();
     setError(undefined);
     if (isAssemblyFlow) {
-      setBaseline(
-        mergeBaselineEntries(selectedCategory?.expectedComponents ?? [], baseline),
-      );
+      setBaseline(mergeBaselineEntries(selectedCategory?.expectedComponents ?? [], baseline));
       setStep(2);
       return;
     }
     void save();
   };
 
-  const modalTitle = registered
-    ? 'Inventario registrado'
-    : isAssemblyFlow && step === 2
-      ? 'Registrar ensamblaje'
-      : 'Registrar inventario';
+  const modalTitle = confirmingDiscard
+    ? '¿Descartar el registro?'
+    : registered
+      ? 'Inventario registrado'
+      : isAssemblyFlow && step === 2
+        ? 'Registrar ensamblaje'
+        : 'Registrar inventario';
 
-  const footer = registered ? (
+  const footer = confirmingDiscard ? (
+    <>
+      <Button variant="secondary" onClick={() => setConfirmingDiscard(false)} autoFocus>
+        Seguir registrando
+      </Button>
+      <Button variant="danger" onClick={close}>
+        Descartar registro
+      </Button>
+    </>
+  ) : registered ? (
     <>
       <Button variant="secondary" onClick={close}>
         Volver al listado
@@ -159,7 +193,7 @@ export function RegisterItemWizard({
     </>
   ) : step === 2 ? (
     <>
-      <Button variant="secondary" onClick={close} disabled={saving}>
+      <Button variant="secondary" onClick={requestClose} disabled={saving}>
         Cancelar
       </Button>
       <div className="flex gap-2">
@@ -173,7 +207,7 @@ export function RegisterItemWizard({
     </>
   ) : (
     <>
-      <Button variant="secondary" onClick={close} disabled={saving}>
+      <Button variant="secondary" onClick={requestClose} disabled={saving}>
         Cancelar
       </Button>
       <Button type="submit" form={REGISTER_STEP1_FORM_ID} disabled={saving} busy={saving}>
@@ -183,8 +217,19 @@ export function RegisterItemWizard({
   );
 
   return (
-    <Modal open={open} title={modalTitle} onClose={close} size="lg" footer={footer}>
-      {registered ? (
+    <Modal
+      open={open}
+      title={modalTitle}
+      onClose={requestClose}
+      dismissible={!saving}
+      size="lg"
+      footer={footer}
+    >
+      {confirmingDiscard ? (
+        <Info tone="warning" title="La información todavía no se ha guardado">
+          Si descarta el registro, perderá los datos y componentes que haya completado.
+        </Info>
+      ) : registered ? (
         <Info tone="success" title={`${registered.id} quedó registrado`}>
           <p>Ya está en inventario y puede buscarse en el listado.</p>
           {registered.pending.length > 0 ? (

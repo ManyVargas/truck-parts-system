@@ -3,8 +3,9 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { inventoryRepository } from '../../../src/api/repositories';
 import { InventoryPage } from '../../../src/features/inventory/InventoryPage';
 import { getMockState, resetMockState } from '../../../src/mocks/state';
 import { renderWithProviders } from '../../support/render';
@@ -18,6 +19,7 @@ describe('InventoryPage', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     resetMockState();
   });
 
@@ -164,11 +166,57 @@ describe('InventoryPage', () => {
     expect(within(dialog).getByRole('group', { name: 'Evidencia' })).toBeVisible();
     expect(within(dialog).getByLabelText('Condición')).toBeVisible();
     expect(within(dialog).getByLabelText('Costo en pesos (opcional)')).toBeVisible();
-    expect(within(dialog).queryByText('Paso 1 de 2 — Información del ensamblaje')).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByText('Paso 1 de 2 — Información del ensamblaje'),
+    ).not.toBeInTheDocument();
     expect(within(dialog).getByLabelText('Serial (opcional)')).not.toBeVisible();
 
     await user.click(within(dialog).getByText('Información adicional (opcional)'));
     expect(within(dialog).getByLabelText('Serial (opcional)')).toBeVisible();
+  });
+
+  it('asks before discarding an inventory registration with unsaved data', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<InventoryPage />, { route: '/inventory' });
+    await screen.findByText('Filtro de aceite HD');
+
+    await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Nombre'), 'Registro que debe conservarse');
+    await user.keyboard('{Escape}');
+
+    expect(within(dialog).getByRole('heading', { name: '¿Descartar el registro?' })).toBeVisible();
+    await user.click(within(dialog).getByRole('button', { name: 'Seguir registrando' }));
+    expect(within(dialog).getByLabelText('Nombre')).toHaveValue('Registro que debe conservarse');
+
+    await user.click(dialog.parentElement!);
+    expect(within(dialog).getByRole('heading', { name: '¿Descartar el registro?' })).toBeVisible();
+    await user.click(within(dialog).getByRole('button', { name: 'Seguir registrando' }));
+
+    await user.click(within(dialog).getByRole('button', { name: 'Cerrar' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Descartar registro' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('cannot close the inventory registration while it is saving', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(inventoryRepository, 'registerItem').mockImplementationOnce(
+      () => new Promise<never>(() => undefined),
+    );
+    renderWithProviders(<InventoryPage />, { route: '/inventory' });
+    await screen.findByText('Filtro de aceite HD');
+
+    await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Nombre'), 'Registro en curso');
+    await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-ALT');
+    await user.click(within(dialog).getByRole('button', { name: 'Registrar' }));
+
+    expect(within(dialog).getByRole('button', { name: 'Cerrar' })).toBeDisabled();
+    await user.keyboard('{Escape}');
+    await user.click(dialog.parentElement!);
+    expect(dialog).toBeVisible();
+    expect(within(dialog).queryByText('¿Descartar el registro?')).not.toBeInTheDocument();
   });
 
   it('announces both assembly steps and keeps checklist data after going back', async () => {
@@ -222,7 +270,9 @@ describe('InventoryPage', () => {
     expect(reservedRow).not.toBeNull();
     expect(within(reservedRow!).getByText('Reservado')).toBeVisible();
 
-    const incompleteRow = screen.getByRole('link', { name: /Cummins ISX Incompleto/ }).closest('tr');
+    const incompleteRow = screen
+      .getByRole('link', { name: /Cummins ISX Incompleto/ })
+      .closest('tr');
     expect(incompleteRow).not.toBeNull();
     expect(within(incompleteRow!).getByText('Independiente')).toBeVisible();
     expect(within(incompleteRow!).getByText('Incompleto')).toBeVisible();

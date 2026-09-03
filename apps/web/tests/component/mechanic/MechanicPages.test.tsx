@@ -57,7 +57,9 @@ describe('MechanicPendingPage', () => {
 
     await user.click(screen.getAllByRole('button', { name: 'Tomar orden' })[1]!);
 
-    expect(await screen.findByText('Otro mecánico ya tomó esta orden. La cola se actualizó.')).toBeVisible();
+    expect(
+      await screen.findByText('Otro mecánico ya tomó esta orden. La cola se actualizó.'),
+    ).toBeVisible();
     await waitFor(() => expect(screen.queryByText('OD-DEMO-062')).not.toBeInTheDocument());
 
     await user.click(screen.getAllByRole('button', { name: 'Tomar orden' })[0]!);
@@ -126,7 +128,9 @@ describe('MechanicMinePage and MechanicOrderView', () => {
     await user.click(screen.getByRole('link', { name: 'Ver historial' }));
 
     expect(
-      await screen.findByText('Esta orden fue cancelada. Ya no se puede completar ni agregar evidencia.'),
+      await screen.findByText(
+        'Esta orden fue cancelada. Ya no se puede completar ni agregar evidencia.',
+      ),
     ).toBeVisible();
     expect(screen.getByText('Orden cancelada')).toBeVisible();
     expect(screen.getByRole('link', { name: '← Mis órdenes' })).toBeVisible();
@@ -145,7 +149,9 @@ describe('MechanicMinePage and MechanicOrderView', () => {
       auth: createAuthValue('MECHANIC'),
     });
 
-    expect(await screen.findByText('Trabajo terminado. La evidencia queda en el historial.')).toBeVisible();
+    expect(
+      await screen.findByText('Trabajo terminado. La evidencia queda en el historial.'),
+    ).toBeVisible();
     expect(screen.getByRole('link', { name: 'Ir a pendientes' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Completar desmonte' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Después')).not.toBeInTheDocument();
@@ -192,7 +198,7 @@ describe('MechanicMinePage and MechanicOrderView', () => {
     });
 
     expect(await screen.findByText('Turbo Garrett')).toBeVisible();
-    await user.type(screen.getByLabelText('Ubicación después del desarme'), 'Patio norte');
+    await user.type(screen.getByLabelText('Ubicación después del desmonte'), 'Patio norte');
     await user.upload(screen.getByLabelText('Después'), file);
 
     expect(
@@ -202,7 +208,7 @@ describe('MechanicMinePage and MechanicOrderView', () => {
     ).toBeVisible();
     expect(screen.getByText('after-turbo.jpg')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Reintentar subida' })).toBeVisible();
-    expect(screen.getByLabelText('Ubicación después del desarme')).toHaveValue('Patio norte');
+    expect(screen.getByLabelText('Ubicación después del desmonte')).toHaveValue('Patio norte');
 
     addPhoto.mockRestore();
     await user.click(screen.getByRole('button', { name: 'Reintentar subida' }));
@@ -215,7 +221,7 @@ describe('MechanicMinePage and MechanicOrderView', () => {
 
     await user.click(screen.getByRole('button', { name: 'Completar desmonte' }));
     expect(await screen.findAllByText(/conexión estable/)).not.toHaveLength(0);
-    expect(screen.getByLabelText('Ubicación después del desarme')).toHaveValue('Patio norte');
+    expect(screen.getByLabelText('Ubicación después del desmonte')).toHaveValue('Patio norte');
     expect(screen.getByText('after-turbo.jpg')).toBeVisible();
   });
 });

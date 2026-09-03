@@ -79,7 +79,8 @@ function loadActiveOrder(state: AppState, workOrderId: string): Result<WorkOrder
   if (order.status === 'COMPLETED') {
     return err({
       code: 'CONFLICT',
-      message: 'Una orden de trabajo completada no se modifica; el reverso requiere una orden opuesta',
+      message:
+        'Una orden de trabajo completada no se modifica; el reverso requiere una orden opuesta',
     });
   }
 
@@ -186,7 +187,8 @@ export function cancelOrder(
   if (order.status === 'IN_PROGRESS' && !input.physicalVerified) {
     return err({
       code: 'VALIDATION',
-      message: 'Confirme que verificó el estado físico antes de cancelar una orden de trabajo en proceso',
+      message:
+        'Confirme que verificó el estado físico antes de cancelar una orden de trabajo en proceso',
     });
   }
 
@@ -196,19 +198,13 @@ export function cancelOrder(
   order.cancelReason = reason.value;
   order.cancelledAt = DEMO_NOW_ISO;
 
-  appendEvent(
-    state,
-    'WORK_ORDER_CANCELLED',
-    `Orden de trabajo ${order.id} cancelada`,
-    actor,
-    {
-      workOrderId: order.id,
-      previousStatus,
-      previousAssigneeId,
-      reason: reason.value,
-      physicalVerified: Boolean(input.physicalVerified),
-    },
-  );
+  appendEvent(state, 'WORK_ORDER_CANCELLED', `Orden de trabajo ${order.id} cancelada`, actor, {
+    workOrderId: order.id,
+    previousStatus,
+    previousAssigneeId,
+    reason: reason.value,
+    physicalVerified: Boolean(input.physicalVerified),
+  });
 
   return ok(order);
 }
@@ -274,10 +270,16 @@ export function takeOrder(state: AppState, actor: User, workOrderId: string): Re
   order.assignedMechanicId = actor.id;
   order.status = 'IN_PROGRESS';
 
-  appendEvent(state, 'WORK_ORDER_CLAIMED', `Orden de trabajo ${order.id} tomada por ${actor.name}`, actor, {
-    workOrderId: order.id,
-    assignedMechanicId: actor.id,
-  });
+  appendEvent(
+    state,
+    'WORK_ORDER_CLAIMED',
+    `Orden de trabajo ${order.id} tomada por ${actor.name}`,
+    actor,
+    {
+      workOrderId: order.id,
+      assignedMechanicId: actor.id,
+    },
+  );
 
   return ok(order);
 }
@@ -345,7 +347,7 @@ export function completeDesarme(
 
   const piece = itemById(state.items, order.pieceId);
   if (!piece) {
-    return err({ code: 'NOT_FOUND', message: 'Ítem no encontrado' });
+    return err({ code: 'NOT_FOUND', message: 'Pieza no encontrada' });
   }
 
   const restriction = protectedAncestor(state.items, piece);
@@ -364,7 +366,8 @@ export function completeDesarme(
   ) {
     return err({
       code: 'CONFLICT',
-      message: 'La relación física ya no coincide con esta orden de trabajo; no se aplica el desarme',
+      message:
+        'La relación física ya no coincide con esta orden de trabajo; no se aplica el desarme',
     });
   }
 
@@ -436,7 +439,7 @@ export function completeInstalacion(
 
   const piece = itemById(state.items, order.pieceId);
   if (!piece) {
-    return err({ code: 'NOT_FOUND', message: 'Ítem no encontrado' });
+    return err({ code: 'NOT_FOUND', message: 'Pieza no encontrada' });
   }
 
   if (piece.physicalRelationship !== 'INDEPENDENT' || piece.parentId) {

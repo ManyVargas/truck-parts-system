@@ -9,11 +9,7 @@ import { Button, Input, Modal } from '../../../src/shared/ui';
 import { renderWithProviders } from '../../support/render';
 import '../../support/dom';
 
-function ModalHarness({
-  onClose = vi.fn(),
-}: {
-  onClose?: () => void;
-}) {
+function ModalHarness({ onClose = vi.fn() }: { onClose?: () => void }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -77,5 +73,24 @@ describe('Modal', () => {
     expect(screen.getByRole('button', { name: 'Eliminar definitivamente' })).not.toHaveFocus();
     await user.keyboard('{Enter}');
     expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it('blocks every implicit close path when dismissal is disabled', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderWithProviders(
+      <Modal open title="Guardando" onClose={onClose} dismissible={false}>
+        <p>Operación en curso</p>
+      </Modal>,
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Guardando' });
+    const closeButton = screen.getByRole('button', { name: 'Cerrar' });
+    expect(closeButton).toBeDisabled();
+
+    await user.keyboard('{Escape}');
+    await user.click(dialog.parentElement!);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(dialog).toBeVisible();
   });
 });

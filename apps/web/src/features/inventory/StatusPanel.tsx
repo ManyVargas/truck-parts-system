@@ -1,7 +1,7 @@
 import type { ItemDetailView } from '../../api/contracts/inventory';
 import { useAuth } from '../auth/useAuth';
 import { can } from '../../shared/auth/policies';
-import { locationDisplay } from '../../shared/copy/glossary';
+import { locationDisplay, UX_TERMS } from '../../shared/copy/glossary';
 import { InventoryStatusCluster, PhysicalWorkChip } from '../../shared/domain';
 import { Card, Info } from '../../shared/ui';
 
@@ -33,7 +33,9 @@ export function StatusPanel({ detail }: { detail: ItemDetailView }) {
         protectedRootId={detail.protectedRootId}
         layout="panel"
         extra={
-          activeWork ? <PhysicalWorkChip type={activeWork.type} status={activeWork.status} /> : undefined
+          activeWork ? (
+            <PhysicalWorkChip type={activeWork.type} status={activeWork.status} />
+          ) : undefined
         }
       />
       <dl className="mt-5 grid gap-3 border-t border-navy-100 pt-4 text-sm sm:grid-cols-2">
@@ -56,7 +58,8 @@ export function StatusPanel({ detail }: { detail: ItemDetailView }) {
         <div className="mt-4">
           <Info tone="info" title="Historial físico">
             Estuvo instalado en {detail.formerInstallation.parentName} (
-            {detail.formerInstallation.parentId}). El desarme no borra esa actividad
+            {detail.formerInstallation.parentId}). El {UX_TERMS.dismantling.toLowerCase()} no borra
+            esa actividad
             {detail.formerInstallation.workOrderId
               ? ` · ${detail.formerInstallation.workOrderId}`
               : ''}
@@ -68,8 +71,9 @@ export function StatusPanel({ detail }: { detail: ItemDetailView }) {
         <div className="mt-4 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm text-navy">
           <p className="font-medium">Piezas vendidas aún instaladas</p>
           <p className="mt-1 text-navy-400">
-            El ensamblaje sigue completo hasta que el mecánico termine el desarme. Si se cancela la
-            factura antes, la pieza puede volver a disponible sin haber salido del padre.
+            El ensamblaje sigue completo hasta que el mecánico termine el{' '}
+            {UX_TERMS.dismantling.toLowerCase()}. Si se cancela la factura antes, la pieza puede
+            volver a disponible sin haber salido del padre.
           </p>
           <ul className="mt-2 list-disc pl-4">
             {detail.soldInstalledChildren.map((child) => (
@@ -110,7 +114,11 @@ export function StatusPanel({ detail }: { detail: ItemDetailView }) {
           <ul className="mt-1 list-disc pl-4">
             {detail.missingComponents.map((entry) => (
               <li key={entry.id}>
-                {entry.expectedComponentName} ({entry.origin === 'MISSING_AT_RECEIPT' ? 'en recepción' : 'tras desarme'})
+                {entry.expectedComponentName} (
+                {entry.origin === 'MISSING_AT_RECEIPT'
+                  ? 'en recepción'
+                  : `tras ${UX_TERMS.dismantling.toLowerCase()}`}
+                )
               </li>
             ))}
           </ul>

@@ -105,14 +105,14 @@ describe('PosPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
     const type = screen.getByLabelText('Tipo de línea');
-    expect(type).not.toHaveTextContent('Artículo de inventario');
+    expect(type).not.toHaveTextContent('Pieza');
     expect(type).not.toHaveTextContent('Producto por cantidad');
     expect(type).toHaveTextContent('Mercancía genérica');
 
     await user.click(screen.getByRole('button', { name: 'Cancelar' }));
     await user.click(screen.getByRole('button', { name: 'Confirmar venta' }));
     expect(screen.queryByLabelText('Pago inicial')).not.toBeInTheDocument();
-    expect(screen.queryByText(/orden de desarme pendiente/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/orden de desmonte pendiente/i)).not.toBeInTheDocument();
   });
 
   it('recalculates included ITBIS when fiscal mode is enabled', async () => {
@@ -135,7 +135,7 @@ describe('PosPage', () => {
     await user.click(confirmButtons[confirmButtons.length - 1]);
 
     expect(await screen.findByText('Venta confirmada')).toBeVisible();
-    expect(screen.getByText(/Orden de desarme: OD-DEMO-064/)).toBeVisible();
+    expect(screen.getByText(/Orden de desmonte: OD-DEMO-064/)).toBeVisible();
   });
 
   it('lists a newly created customer in the selector', async () => {
@@ -156,7 +156,9 @@ describe('PosPage', () => {
 
     expect(screen.getByRole('option', { name: 'Instalación mecánica' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Desarme especializado' })).toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'Diagnóstico electrónico' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('option', { name: 'Diagnóstico electrónico' }),
+    ).not.toBeInTheDocument();
   });
 
   it('keeps an open draft after a simulated page reload', async () => {
@@ -185,7 +187,9 @@ describe('PosPage', () => {
     renderPos(created.value.draftId);
 
     expect(await screen.findByRole('button', { name: 'Confirmar venta' })).toBeDisabled();
-    expect(screen.getByText('Agregue al menos una línea', { selector: '#pos-confirm-block-reason' })).toBeVisible();
+    expect(
+      screen.getByText('Agregue al menos una línea', { selector: '#pos-confirm-block-reason' }),
+    ).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Ver requisitos' }));
     expect(document.getElementById('pos-lines')).toHaveFocus();
@@ -207,9 +211,14 @@ describe('PosPage', () => {
     const user = userEvent.setup();
     renderPos(created.value.draftId);
 
-    expect(await screen.findByText('Hay precios pendientes', { selector: '#pos-confirm-block-reason' })).toBeVisible();
+    expect(
+      await screen.findByText('Hay precios pendientes', { selector: '#pos-confirm-block-reason' }),
+    ).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Ver requisitos' }));
-    expect(document.activeElement).toHaveAttribute('aria-label', expect.stringMatching(/^Precio de /));
+    expect(document.activeElement).toHaveAttribute(
+      'aria-label',
+      expect.stringMatching(/^Precio de /),
+    );
   });
 
   it('removes a line immediately and restores it from the undo toast', async () => {
@@ -235,7 +244,7 @@ describe('PosPage', () => {
 
     expect(await screen.findByText('Alternador 24V')).toBeVisible();
     expect(screen.queryByRole('columnheader', { name: 'Descripción' })).not.toBeInTheDocument();
-    expect(screen.getByText('Artículo · ALT-004')).toBeVisible();
+    expect(screen.getByText('Pieza · ALT-004')).toBeVisible();
     expect(screen.getAllByText('Cantidad')).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: 'Quitar' })).toHaveLength(2);
   });

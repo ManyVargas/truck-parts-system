@@ -4,6 +4,7 @@ import type { LineType } from '../../api/contracts/entities';
 import type { PosDraftView } from '../../api/contracts/sales';
 import { enabledPosLineTypes } from '../../shared/config/capabilities';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
+import { UX_TERMS } from '../../shared/copy/glossary';
 import { Button, Field, Info, Input, Modal, Select } from '../../shared/ui';
 import { posAddLineReservationHint } from './pos-copy';
 
@@ -67,8 +68,10 @@ export function AddLineModal({
       itemId: type === 'ITEM' ? itemId : undefined,
       qtyProductId: type === 'QTY' ? qtyProductId : undefined,
       serviceId: type === 'SERVICE' ? serviceId : undefined,
-      description: type === 'GENERIC' || type === 'EXTERNAL' || type === 'DELIVERY' ? description : undefined,
-      quantity: type === 'QTY' || type === 'GENERIC' || type === 'EXTERNAL' ? Number(quantity) : undefined,
+      description:
+        type === 'GENERIC' || type === 'EXTERNAL' || type === 'DELIVERY' ? description : undefined,
+      quantity:
+        type === 'QTY' || type === 'GENERIC' || type === 'EXTERNAL' ? Number(quantity) : undefined,
       unitPrice: type === 'ITEM' ? undefined : Number(unitPrice),
       acquisitionCostDop: type === 'EXTERNAL' && cost !== '' ? Number(cost) : undefined,
     });
@@ -99,9 +102,13 @@ export function AddLineModal({
         {reservationHint && <p className="text-xs text-navy-400">{reservationHint}</p>}
 
         {type === 'ITEM' && (
-          <Field htmlFor="line-item" label="Ítem">
-            <Select id="line-item" value={itemId} onChange={(event) => setItemId(event.target.value)}>
-              {draft.items.length === 0 && <option value="">No hay ítems elegibles</option>}
+          <Field htmlFor="line-item" label={UX_TERMS.piece}>
+            <Select
+              id="line-item"
+              value={itemId}
+              onChange={(event) => setItemId(event.target.value)}
+            >
+              {draft.items.length === 0 && <option value="">No hay piezas elegibles</option>}
               {draft.items.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.id} · {item.name}
@@ -193,7 +200,10 @@ export function AddLineModal({
         )}
 
         {type !== 'ITEM' && (
-          <Field htmlFor="line-price" label={type === 'DELIVERY' ? 'Importe (0 = cortesía)' : 'Precio'}>
+          <Field
+            htmlFor="line-price"
+            label={type === 'DELIVERY' ? 'Importe (0 = cortesía)' : 'Precio'}
+          >
             <Input
               id="line-price"
               type="number"

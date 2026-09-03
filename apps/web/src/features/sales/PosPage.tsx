@@ -7,7 +7,7 @@ import { PageHeader } from '../../shared/layout/PageHeader';
 import { useMediaQuery } from '../../shared/layout/useMediaQuery';
 import { AssemblyKindChip, RelationChip } from '../../shared/domain';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
-import { UNDO_TOAST_DURATION_MS } from '../../shared/copy/glossary';
+import { UNDO_TOAST_DURATION_MS, UX_TERMS } from '../../shared/copy/glossary';
 import { Button, Card, Chip, Info, money, useToast } from '../../shared/ui';
 import { AddLineModal } from './AddLineModal';
 import { AssemblyTree } from './AssemblyTree';
@@ -227,7 +227,7 @@ export function PosPage() {
           <Info tone="success" title={`Factura ${draft.number} confirmada`}>
             Cliente {draft.customerName}. Total {money(draft.totals.gross, draft.currency)}.
             {draft.createdWorkOrderIds.length > 0 && capabilities.workOrders
-              ? ` Orden de desarme: ${draft.createdWorkOrderIds.join(', ')}.`
+              ? ` Orden de ${UX_TERMS.dismantling.toLowerCase()}: ${draft.createdWorkOrderIds.join(', ')}.`
               : ''}{' '}
             <Link to={`/sales/${draft.id}`} className="font-medium text-brand hover:underline">
               Ver detalle
@@ -242,7 +242,11 @@ export function PosPage() {
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <h2 className="text-lg font-semibold text-navy">Líneas</h2>
               <Chip>{draft.id}</Chip>
-              {draft.fiscal ? <Chip tone="brand">Fiscal</Chip> : <Chip>Sin comprobante fiscal</Chip>}
+              {draft.fiscal ? (
+                <Chip tone="brand">Fiscal</Chip>
+              ) : (
+                <Chip>Sin comprobante fiscal</Chip>
+              )}
             </div>
             {draft.lines.length === 0 ? (
               <p className="text-sm text-navy-400">{posEmptyLinesMessage(capabilities)}</p>
@@ -413,7 +417,9 @@ function DraftLinesTable({ draft, readOnly, isMutating, onSetPrice, onRemove }: 
               <td className="py-3 pr-3 text-navy">
                 {line.taxable && draft.fiscal ? money(line.itbis, draft.currency) : '—'}
               </td>
-              <td className="py-3 pr-3 font-medium text-navy">{money(line.gross, draft.currency)}</td>
+              <td className="py-3 pr-3 font-medium text-navy">
+                {money(line.gross, draft.currency)}
+              </td>
               {!readOnly && (
                 <td className="py-3">
                   <RemoveLineButton disabled={isMutating} onClick={() => onRemove(line)} />

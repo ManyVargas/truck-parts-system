@@ -60,6 +60,7 @@ Completeness is derived from unresolved Known Missing Components for the direct 
 ## Implementation checklist
 
 ### Domain / persistence
+
 - [ ] Define current relationship and closed relationship-history representation.
 - [ ] Enforce at most one current parent.
 - [ ] Implement cycle detection and ancestor checks.
@@ -71,13 +72,15 @@ Completeness is derived from unresolved Known Missing Components for the direct 
 - [ ] Add hierarchy version/concurrency protection for later sale/Work-Order coordination.
 
 ### Frontend
-- [ ] Assembly baseline registration/checklist.
+
+- [x] Prototype assembly baseline registration/checklist; production API integration remains part of Release 6.
 - [x] Hierarchy/tree detail.
 - [x] Missing-component and completeness display.
 - [x] Administrator `No desarmar` controls.
 - [x] Protected baseline-correction UI with reason and preview.
 
 ### Tests
+
 - [ ] Second-parent/self/cycle rejection.
 - [ ] PRESENT/MISSING/NOT_APPLICABLE baseline scenarios.
 - [x] Direct-parent-only completeness.

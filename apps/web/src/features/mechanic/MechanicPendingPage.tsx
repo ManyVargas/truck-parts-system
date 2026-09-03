@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 
+import { UX_TERMS } from '../../shared/copy/glossary';
 import { Empty, Skeleton, useToast } from '../../shared/ui';
 import { MechanicOrderCard } from './MechanicOrderCard';
 import { MechanicQueryError } from './MechanicQueryError';
@@ -16,11 +17,7 @@ export function MechanicPendingPage() {
 
   if (result.status === 'error') {
     return (
-      <MechanicQueryError
-        title="No se pudo cargar la cola"
-        error={result.error}
-        onRetry={reload}
-      />
+      <MechanicQueryError title="No se pudo cargar la cola" error={result.error} onRetry={reload} />
     );
   }
 
@@ -52,7 +49,7 @@ export function MechanicPendingPage() {
       {pending.length === 0 ? (
         <Empty
           title="No hay órdenes pendientes"
-          description="Las nuevas órdenes de desarme o instalación aparecerán aquí."
+          description={`Las nuevas órdenes de ${UX_TERMS.dismantling.toLowerCase()} o instalación aparecerán aquí.`}
           action={
             <Link to="/mechanic/mine" className={emptyLinkClass}>
               Ver mis órdenes

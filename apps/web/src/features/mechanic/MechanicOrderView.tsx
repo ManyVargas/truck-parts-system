@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
+import { UX_TERMS } from '../../shared/copy/glossary';
 import { WOStatusChip, WOTypeChip } from '../../shared/domain';
 import { Button, Card, Field, Info, Input, Mono, Skeleton, useToast } from '../../shared/ui';
 import { EvidencePanel } from './EvidencePanel';
-import {
-  completeActionLabel,
-  mechanicNextAction,
-  toMechanicUserMessage,
-} from './mechanic-copy';
+import { completeActionLabel, mechanicNextAction, toMechanicUserMessage } from './mechanic-copy';
 import { useMechanicOrder } from './useMechanicOrders';
 
 function contextLine(type: 'DISMANTLING' | 'INSTALLATION', source?: string, destination?: string) {
@@ -151,7 +148,7 @@ export function MechanicOrderView() {
 
       {order.type === 'DISMANTLING' && order.actions.canAddEvidence && (
         <Field
-          label="Ubicación después del desarme"
+          label={`Ubicación después del ${UX_TERMS.dismantling.toLowerCase()}`}
           htmlFor="post-dismantling-location"
           hint="Opcional. Si la deja vacía, la ubicación queda pendiente."
         >

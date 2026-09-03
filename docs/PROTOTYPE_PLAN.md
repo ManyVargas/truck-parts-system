@@ -508,6 +508,9 @@ When implementing UI:
 
 Before treating the prototype as approved, confirm with the owner that:
 
+> This is a stakeholder-validation checklist, not an implementation checklist. Passing automated
+> tests or completing an internal UX walkthrough does not mark these items as approved.
+
 - [ ] Billing workflow is understandable and matches daily operation.
 - [ ] Customer selection and `Cliente Contado` behavior are acceptable.
 - [ ] Invoice line types and negotiated-price interaction are understandable.

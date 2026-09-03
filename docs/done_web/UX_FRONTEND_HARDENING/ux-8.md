@@ -1,13 +1,13 @@
 # Milestone UX-8 — Validación final de usabilidad y consistencia
 
-| Campo | Valor |
-|---|---|
-| **ID plan** | UX-8 |
-| **Estado** | Completado |
-| **Fecha** | 2026-09-02 |
+| Campo          | Valor                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------ |
+| **ID plan**    | UX-8                                                                                                   |
+| **Estado**     | Walkthrough interno completado; validación con usuarios pendiente                                      |
+| **Fecha**      | 2026-09-02                                                                                             |
 | **Referencia** | [`docs/plans_web/UX_FRONTEND_HARDENING_PLAN.md`](../../plans_web/UX_FRONTEND_HARDENING_PLAN.md) § UX-8 |
-| **Alcance** | Solo frontend (`apps/web`). No cambia reglas de negocio ni el backend. |
-| **Siguiente** | Cierre del plan UX Hardening |
+| **Alcance**    | Solo frontend (`apps/web`). No cambia reglas de negocio ni el backend.                                 |
+| **Siguiente**  | Validación del prototipo con usuarios y propietario                                                    |
 
 ---
 
@@ -23,32 +23,32 @@ Esta pasada fue un walkthrough estructurado (tareas + heurísticas), no una sesi
 
 ### Administrador
 
-| Tarea | Resultado | Fricción encontrada |
-|---|---|---|
-| Crear un usuario | Completada | — |
-| Cambiar estado | Completada | **Desactivar** se veía igual que **Editar** (ambos secondary). |
-| Registrar una pieza | Completada | El éxito decía «artículo» y el resto del dominio dice «pieza». Error de registro sin título `Info`. |
-| Registrar un ensamblaje | Completada | Cancelar/Atrás seguían activos mientras guardaba. |
-| Buscar inventario | Completada | Columna «Ítem» (jerga) vs «Nombre» en otras tablas. |
-| Revisar rentabilidad | Completada (capability on) | Tabla fuera de `TableShell` / `HoverRow` / `Empty`. |
+| Tarea                   | Resultado                  | Fricción encontrada                                                                                 |
+| ----------------------- | -------------------------- | --------------------------------------------------------------------------------------------------- |
+| Crear un usuario        | Completada                 | —                                                                                                   |
+| Cambiar estado          | Completada                 | **Desactivar** se veía igual que **Editar** (ambos secondary).                                      |
+| Registrar una pieza     | Completada                 | El éxito decía «artículo» y el resto del dominio dice «pieza». Error de registro sin título `Info`. |
+| Registrar un ensamblaje | Completada                 | Cancelar/Atrás seguían activos mientras guardaba.                                                   |
+| Buscar inventario       | Completada                 | Columna «Ítem» (jerga) vs «Nombre» en otras tablas.                                                 |
+| Revisar rentabilidad    | Completada (capability on) | Tabla fuera de `TableShell` / `HoverRow` / `Empty`.                                                 |
 
 ### Vendedor
 
-| Tarea | Resultado | Fricción encontrada |
-|---|---|---|
-| Buscar cliente | Completada | — |
-| Crear borrador | Completada | — |
-| Añadir / corregir línea | Completada | Error del modal como `<p>` rojo, no `Info`. |
-| Confirmar venta | Completada | Igual: error fuera del patrón `Info`. |
+| Tarea                   | Resultado                       | Fricción encontrada                                                     |
+| ----------------------- | ------------------------------- | ----------------------------------------------------------------------- |
+| Buscar cliente          | Completada                      | —                                                                       |
+| Crear borrador          | Completada                      | —                                                                       |
+| Añadir / corregir línea | Completada                      | Error del modal como `<p>` rojo, no `Info`.                             |
+| Confirmar venta         | Completada                      | Igual: error fuera del patrón `Info`.                                   |
 | Buscar factura anterior | **Bloqueada antes del arreglo** | No había búsqueda; el vacío pedía crear el borrador «desde inventario». |
 
 ### Mecánico
 
-| Tarea | Resultado | Fricción encontrada |
-|---|---|---|
-| Abrir pendientes / una orden | Completada | Tras abrir un pendiente, el único volver iba a **Mis órdenes**. |
-| Identificar pieza / ubicación | Completada | «Ubicación efectiva» vs «Ubicación» en la tarjeta. |
-| Adjuntar evidencia / completar | Completada | — |
+| Tarea                          | Resultado  | Fricción encontrada                                             |
+| ------------------------------ | ---------- | --------------------------------------------------------------- |
+| Abrir pendientes / una orden   | Completada | Tras abrir un pendiente, el único volver iba a **Mis órdenes**. |
+| Identificar pieza / ubicación  | Completada | «Ubicación efectiva» vs «Ubicación» en la tarjeta.              |
+| Adjuntar evidencia / completar | Completada | —                                                               |
 
 ## 3. Qué se entregó
 

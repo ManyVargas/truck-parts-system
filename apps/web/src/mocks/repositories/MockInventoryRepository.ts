@@ -32,7 +32,7 @@ export class MockInventoryRepository implements InventoryRepository {
   async getItem(id: string) {
     const item = getMockState().items.find((entry) => entry.id === id);
     if (!item) {
-      return err({ code: 'NOT_FOUND', message: 'Ítem no encontrado' });
+      return err({ code: 'NOT_FOUND', message: 'Pieza no encontrada' });
     }
     return ok(cloneForRead(item));
   }

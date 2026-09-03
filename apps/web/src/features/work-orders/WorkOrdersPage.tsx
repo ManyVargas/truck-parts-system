@@ -124,7 +124,7 @@ export function WorkOrdersPage() {
     <>
       <PageHeader
         title="Órdenes de Trabajo"
-        description="Gestión administrativa de desarmes e instalaciones. Completar el trabajo físico corresponde al mecánico."
+        description={`Gestión administrativa de ${UX_TERMS.dismantling.toLowerCase()}s e instalaciones. Completar el trabajo físico corresponde al mecánico.`}
         actions={
           canManageWorkOrders ? (
             <Button

@@ -6,6 +6,7 @@ export const UX_TERMS = {
   availability: 'Disponibilidad',
   relation: 'Relación',
   assembly: 'Ensamblaje',
+  piece: 'Pieza',
   quantityItem: 'Producto por cantidad',
   workOrder: 'Orden de trabajo',
   dismantling: 'Desmonte',
