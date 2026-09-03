@@ -53,4 +53,15 @@ describe('SalesPage', () => {
     await screen.findByText('FAC-000098');
     expect(screen.getByRole('button', { name: 'Nuevo borrador' })).toBeVisible();
   });
+
+  it('filters the list by invoice number so a previous sale can be found', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<SalesPage />, { route: '/sales', auth: createAuthValue('SELLER') });
+    await screen.findByText('FAC-000098');
+
+    await user.type(screen.getByLabelText('Buscar por número o cliente'), 'FAC-000099');
+
+    expect(screen.getByText('FAC-000099')).toBeVisible();
+    expect(screen.queryByText('FAC-000098')).not.toBeInTheDocument();
+  });
 });

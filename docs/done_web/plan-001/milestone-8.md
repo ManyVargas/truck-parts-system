@@ -81,7 +81,7 @@ apps/web/src/
 | --- | --- |
 | Borrador → confirmar → `FAC-` | ✅ `FAC-000100` tras el seed; el detalle WM7 puede cobrar |
 | Pieza instalada → OT Desarme Pendiente | ✅ ALT-004 + `OD-DEMO-064` |
-| Ensamblaje bloqueado si OT activa | ✅ ENG-001 / ENG-002 |
+| Ensamblaje bloqueado si OT activa | ✅ MOT-001 / MOT-002 |
 | `No desarmar` impide línea suelta | ✅ ALT-011 |
 | Precio pendiente bloquea confirmación | ✅ |
 | Fiscal + Cliente Contado bloqueado | ✅ |

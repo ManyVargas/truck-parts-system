@@ -422,7 +422,7 @@ Register and find real stock accurately before linking it to invoice reservation
 ## Scope
 
 ### Individually tracked items
-- immutable internal ID;
+- immutable internal identity (UUID + assigned public `internalCode`);
 - practical minimum registration;
 - enrichment later;
 - separate inventory concepts;

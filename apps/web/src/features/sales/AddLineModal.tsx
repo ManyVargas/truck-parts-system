@@ -4,7 +4,7 @@ import type { LineType } from '../../api/contracts/entities';
 import type { PosDraftView } from '../../api/contracts/sales';
 import { enabledPosLineTypes } from '../../shared/config/capabilities';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
-import { Button, Field, Input, Modal, Select } from '../../shared/ui';
+import { Button, Field, Info, Input, Modal, Select } from '../../shared/ui';
 import { posAddLineReservationHint } from './pos-copy';
 
 type AddLineModalProps = {
@@ -78,9 +78,9 @@ export function AddLineModal({
     <Modal open={open} title="Agregar línea" onClose={onClose} size="lg">
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
         {error && (
-          <p className="text-sm text-red-600" role="alert">
+          <Info tone="error" title="No se pudo agregar la línea">
             {error}
-          </p>
+          </Info>
         )}
         <Field htmlFor="line-type" label="Tipo de línea">
           <Select

@@ -28,7 +28,7 @@ export function InventoryDetailPage() {
 
   if (query.result.status === 'error') {
     return (
-      <Info tone="error" title="No se pudo cargar el detalle">
+      <Info tone="error" title="No se pudo cargar el detalle del inventario">
         {query.result.error.message}
       </Info>
     );

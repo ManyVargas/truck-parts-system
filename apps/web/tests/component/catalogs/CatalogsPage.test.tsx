@@ -28,6 +28,7 @@ describe('CatalogsPage', () => {
     expect(await screen.findByText('Motor')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Nueva categoría' }));
     await user.type(screen.getByLabelText('Nombre'), 'Rin');
+    await user.type(screen.getByLabelText('Prefijo de código'), 'RIN');
     await user.click(screen.getByLabelText(/Es ensamblaje/));
     await user.type(screen.getByLabelText('Componentes esperados'), 'Disco\nTuerca');
     await user.click(screen.getByRole('button', { name: 'Guardar' }));
@@ -48,7 +49,7 @@ describe('CatalogsPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<CatalogsPage />, { route: '/catalogs' });
 
-    const motorRow = (await screen.findByText('CAT-ENG')).closest('tr');
+    const motorRow = (await screen.findByText('MOT')).closest('tr');
     expect(motorRow).not.toBeNull();
     await user.click(within(motorRow!).getByRole('button', { name: 'Editar' }));
 

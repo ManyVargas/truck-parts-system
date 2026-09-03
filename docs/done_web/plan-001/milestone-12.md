@@ -41,7 +41,7 @@ WM11 dejó catálogos y usuarios sobre el mismo `AppState`. `FAC-000096` ya esta
 
 ### 3.4 Escenarios reinician, no autentican
 
-**Decisión:** Cada escenario hace reset + preparación/verificación del seed y deja un hint de credenciales en `sessionStorage`. El usuario escribe el login. El escenario 5 descarta el borrador seed y prepara un borrador limpio con `ENG-003`, sin órdenes activas que bloqueen la venta completa.
+**Decisión:** Cada escenario hace reset + preparación/verificación del seed y deja un hint de credenciales en `sessionStorage`. El usuario escribe el login. El escenario 5 descarta el borrador seed y prepara un borrador limpio con `MOT-003`, sin órdenes activas que bloqueen la venta completa.
 
 **Por qué:** Misma regla WM2: demo-controls nunca hacen `loginAs`.
 
@@ -71,7 +71,7 @@ apps/web/src/
 | FAC-000096 pendiente FX hasta toggle + reintentar | ✅ 42000/61.50 → utilidad USD |
 | Liberar reserva descarta borrador y libera pieza | ✅ `INV-DRAFT-01` / `ALT-004`, solo desde 6 horas |
 | Corrección de moneda invalida ganancia manual obsoleta | ✅ conserva el valor anterior en el evento correctivo |
-| Escenario 5 permite confirmar ensamblaje completo | ✅ borrador limpio con `ENG-003` y su subárbol |
+| Escenario 5 permite confirmar ensamblaje completo | ✅ borrador limpio con `MOT-003` y su subárbol |
 | `VITE_USE_MOCK_API=false` arranca sin importar mocks en features | ✅ composition root + test de imports |
 | Walkthrough Part A/B/C reproducible | ✅ seed + escenarios 1, 7, 11–12 y flujos WM8–WM11 |
 | Checklist endurecimiento completado | ✅ policies en servicio, proyecciones por rol, demo sin bypass |

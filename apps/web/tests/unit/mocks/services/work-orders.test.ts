@@ -38,7 +38,7 @@ describe('work order catalog and commands', () => {
       type: 'DISMANTLING',
       status: 'IN_PROGRESS',
       pieceId: 'TUR-009',
-      sourceParentId: 'ENG-001',
+      sourceParentId: 'MOT-001',
       assignedMechanicName: 'Pedro Santana',
       invoiceNumber: 'FAC-000096',
     });
@@ -50,7 +50,7 @@ describe('work order catalog and commands', () => {
     expect(byId['OD-DEMO-062']).toMatchObject({
       type: 'INSTALLATION',
       status: 'PENDING',
-      destinationParentId: 'ENG-002',
+      destinationParentId: 'MOT-002',
     });
     expect(byId['OD-DEMO-063']).toMatchObject({
       status: 'COMPLETED',
@@ -60,18 +60,18 @@ describe('work order catalog and commands', () => {
 
   it('creates a pending dismantling without changing hierarchy', () => {
     const state = createInitialState();
-    const piece = state.items.find((item) => item.id === 'ENG-001')!;
+    const piece = state.items.find((item) => item.id === 'MOT-001')!;
     const parentId = piece.parentId;
     const relationship = piece.physicalRelationship;
 
-    const result = createManualDesarme(state, ADMIN, { pieceId: 'ENG-001' });
+    const result = createManualDesarme(state, ADMIN, { pieceId: 'MOT-001' });
 
     expect(result.ok).toBe(true);
     if (!result.ok) {
       return;
     }
     expect(result.value.status).toBe('PENDING');
-    expect(result.value.sourceParentId).toBe('TRK-001');
+    expect(result.value.sourceParentId).toBe('CAM-001');
     expect(piece.parentId).toBe(parentId);
     expect(piece.physicalRelationship).toBe(relationship);
     expect(
@@ -87,7 +87,7 @@ describe('work order catalog and commands', () => {
 
     const result = createInstalacion(state, ADMIN, {
       pieceId: 'ALT-010',
-      destinationParentId: 'ENG-002',
+      destinationParentId: 'MOT-002',
     });
 
     expect(result.ok).toBe(true);
@@ -137,7 +137,7 @@ describe('work order catalog and commands', () => {
 
   it('cancels a pending order with reason and leaves inventory untouched', () => {
     const state = createInitialState();
-    const piece = state.items.find((item) => item.id === 'FLT-001')!;
+    const piece = state.items.find((item) => item.id === 'FIL-001')!;
     const relationship = piece.physicalRelationship;
 
     const result = cancelOrder(state, ADMIN, {
@@ -189,15 +189,15 @@ describe('work order catalog and commands', () => {
     const installationIds = options.installationPieces.map((piece) => piece.id);
 
     expect(dismantlingIds).not.toContain('TUR-009');
-    expect(dismantlingIds).not.toContain('STA-002');
-    expect(installationIds).not.toContain('FLT-001');
+    expect(dismantlingIds).not.toContain('ARR-002');
+    expect(installationIds).not.toContain('FIL-001');
     expect(options.mechanics.map((mechanic) => mechanic.id)).toEqual(['U-PEDRO']);
   });
 
   it('still uses the shared createManualWorkOrder path for inventory actions', () => {
     const state = createInitialState();
     const result = createManualWorkOrder(state, ADMIN, {
-      pieceId: 'ENG-001',
+      pieceId: 'MOT-001',
       type: 'DISMANTLING',
     });
     expect(result.ok).toBe(true);
@@ -271,8 +271,8 @@ describe('mechanic take, evidence and completion', () => {
 
   it('completes dismantling with an explicit or pending post-removal location', () => {
     const state = createInitialState();
-    const truckComplete = state.items.find((item) => item.id === 'TRK-001')?.complete;
-    const missingOnTruck = state.knownMissing.filter((entry) => entry.parentId === 'TRK-001').length;
+    const truckComplete = state.items.find((item) => item.id === 'CAM-001')?.complete;
+    const missingOnTruck = state.knownMissing.filter((entry) => entry.parentId === 'CAM-001').length;
 
     expect(
       addPhoto(state, PEDRO, {
@@ -289,7 +289,7 @@ describe('mechanic take, evidence and completion', () => {
 
     expect(result.ok).toBe(true);
     const turbo = state.items.find((item) => item.id === 'TUR-009')!;
-    const engine = state.items.find((item) => item.id === 'ENG-001')!;
+    const engine = state.items.find((item) => item.id === 'MOT-001')!;
     expect(turbo.commercialState).toBe('SOLD');
     expect(turbo.physicalRelationship).toBe('INDEPENDENT');
     expect(turbo.parentId).toBeUndefined();
@@ -298,13 +298,13 @@ describe('mechanic take, evidence and completion', () => {
     expect(
       state.knownMissing.some(
         (entry) =>
-          entry.parentId === 'ENG-001' &&
+          entry.parentId === 'MOT-001' &&
           entry.formerItemId === 'TUR-009' &&
           entry.origin === 'REMOVED_AFTER_BASELINE',
       ),
     ).toBe(true);
-    expect(state.items.find((item) => item.id === 'TRK-001')?.complete).toBe(truckComplete);
-    expect(state.knownMissing.filter((entry) => entry.parentId === 'TRK-001')).toHaveLength(
+    expect(state.items.find((item) => item.id === 'CAM-001')?.complete).toBe(truckComplete);
+    expect(state.knownMissing.filter((entry) => entry.parentId === 'CAM-001')).toHaveLength(
       missingOnTruck,
     );
 
@@ -333,7 +333,7 @@ describe('mechanic take, evidence and completion', () => {
       type: 'DISMANTLING',
       status: 'IN_PROGRESS',
       pieceId: 'ALT-011',
-      sourceParentId: 'ENG-003',
+      sourceParentId: 'MOT-003',
       assignedMechanicId: 'U-PEDRO',
       beforePhotos: ['before.jpg'],
       afterPhotos: ['after.jpg'],
@@ -342,7 +342,7 @@ describe('mechanic take, evidence and completion', () => {
 
     const result = completeDesarme(state, PEDRO, { workOrderId: 'OD-DEMO-070' });
     expect(result.ok).toBe(false);
-    expect(state.items.find((item) => item.id === 'ALT-011')?.parentId).toBe('ENG-003');
+    expect(state.items.find((item) => item.id === 'ALT-011')?.parentId).toBe('MOT-003');
   });
 
   it('installs without resolving an unrelated missing component', () => {
@@ -366,10 +366,10 @@ describe('mechanic take, evidence and completion', () => {
     const result = completeInstalacion(state, PEDRO, { workOrderId: 'OD-DEMO-062' });
     expect(result.ok).toBe(true);
 
-    const filter = state.items.find((item) => item.id === 'FLT-001')!;
+    const filter = state.items.find((item) => item.id === 'FIL-001')!;
     expect(filter.physicalRelationship).toBe('INSTALLED');
-    expect(filter.parentId).toBe('ENG-002');
-    expect(state.items.find((item) => item.id === 'ENG-002')?.complete).toBe(false);
+    expect(filter.parentId).toBe('MOT-002');
+    expect(state.items.find((item) => item.id === 'MOT-002')?.complete).toBe(false);
     expect(state.knownMissing.some((entry) => entry.id === 'KM-001')).toBe(true);
     expect(state.knownMissing.some((entry) => entry.id === 'KM-003')).toBe(true);
   });
@@ -378,7 +378,7 @@ describe('mechanic take, evidence and completion', () => {
     const state = createInitialState();
     const created = createInstalacion(state, ADMIN, {
       pieceId: 'ALT-010',
-      destinationParentId: 'ENG-002',
+      destinationParentId: 'MOT-002',
     });
     expect(created.ok).toBe(true);
     if (!created.ok) {
@@ -405,8 +405,8 @@ describe('mechanic take, evidence and completion', () => {
     expect(result.ok).toBe(true);
     expect(state.knownMissing.some((entry) => entry.id === 'KM-003')).toBe(false);
     expect(state.knownMissing.some((entry) => entry.id === 'KM-001')).toBe(true);
-    expect(state.items.find((item) => item.id === 'ENG-002')?.complete).toBe(false);
-    expect(state.items.find((item) => item.id === 'ALT-010')?.parentId).toBe('ENG-002');
+    expect(state.items.find((item) => item.id === 'MOT-002')?.complete).toBe(false);
+    expect(state.items.find((item) => item.id === 'ALT-010')?.parentId).toBe('MOT-002');
   });
 
   it('projects mechanic views without commercial fields', () => {

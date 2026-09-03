@@ -195,7 +195,6 @@ export type ManualWorkOrderInput = {
 };
 
 export type RegisterItemInput = {
-  id: string;
   name: string;
   categoryId: string;
   brand?: string;

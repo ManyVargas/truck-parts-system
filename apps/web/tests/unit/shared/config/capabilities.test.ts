@@ -59,7 +59,7 @@ describe('capability presets follow the Development Plan', () => {
   it('Release 4 adds independent inventory and catalogs without selling stock', () => {
     const capabilities = CAPABILITY_PRESETS['release-4'];
 
-    expect(isRouteAllowedForRole('/inventory/ENG-001', 'SELLER', capabilities)).toBe(true);
+    expect(isRouteAllowedForRole('/inventory/MOT-001', 'SELLER', capabilities)).toBe(true);
     expect(isRouteAllowedForRole('/catalogs', 'ADMINISTRATOR', capabilities)).toBe(true);
     expect(capabilities.hierarchy).toBe(false);
     expect(capabilities.inventorySales).toBe(false);

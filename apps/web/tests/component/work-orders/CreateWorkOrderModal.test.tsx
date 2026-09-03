@@ -9,9 +9,9 @@ import { renderWithProviders } from '../../support/render';
 import '../../support/dom';
 
 const OPTIONS = {
-  dismantlingPieces: [{ id: 'ENG-001', name: 'Detroit DD15 Completo', parentId: 'TRK-001' }],
+  dismantlingPieces: [{ id: 'MOT-001', name: 'Detroit DD15 Completo', parentId: 'CAM-001' }],
   installationPieces: [{ id: 'ALT-010', name: 'Alternador independiente' }],
-  destinations: [{ id: 'ENG-002', name: 'Motor incompleto' }],
+  destinations: [{ id: 'MOT-002', name: 'Motor incompleto' }],
   mechanics: [{ id: 'U-PEDRO', name: 'Pedro Santana' }],
 };
 
@@ -30,12 +30,12 @@ describe('CreateWorkOrderModal', () => {
       />,
     );
 
-    await user.selectOptions(screen.getByLabelText('Pieza'), 'ENG-001');
+    await user.selectOptions(screen.getByLabelText('Pieza'), 'MOT-001');
     await user.type(screen.getByLabelText('Notas'), 'Desarme de patio');
     await user.click(screen.getByRole('button', { name: 'Crear orden de trabajo' }));
 
     expect(onSubmit).toHaveBeenCalledWith({
-      pieceId: 'ENG-001',
+      pieceId: 'MOT-001',
       type: 'DISMANTLING',
       destinationParentId: undefined,
       notes: 'Desarme de patio',
@@ -58,13 +58,13 @@ describe('CreateWorkOrderModal', () => {
 
     await user.selectOptions(screen.getByLabelText('Tipo'), 'INSTALLATION');
     await user.selectOptions(screen.getByLabelText('Pieza'), 'ALT-010');
-    await user.selectOptions(screen.getByLabelText('Padre destino'), 'ENG-002');
+    await user.selectOptions(screen.getByLabelText('Padre destino'), 'MOT-002');
     await user.click(screen.getByRole('button', { name: 'Crear orden de trabajo' }));
 
     expect(onSubmit).toHaveBeenCalledWith({
       pieceId: 'ALT-010',
       type: 'INSTALLATION',
-      destinationParentId: 'ENG-002',
+      destinationParentId: 'MOT-002',
       notes: undefined,
     });
   });

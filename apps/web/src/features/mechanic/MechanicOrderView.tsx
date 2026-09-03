@@ -82,8 +82,11 @@ export function MechanicOrderView() {
 
   return (
     <div className={showComplete ? 'space-y-4 pb-28' : 'space-y-4'}>
-      <Link to="/mechanic/mine" className="inline-flex min-h-11 items-center text-base font-medium text-brand">
-        ← Mis órdenes
+      <Link
+        to={order.status === 'PENDING' ? '/mechanic/pending' : '/mechanic/mine'}
+        className="inline-flex min-h-11 items-center text-base font-medium text-brand"
+      >
+        {order.status === 'PENDING' ? '← Pendientes' : '← Mis órdenes'}
       </Link>
 
       <div className="flex items-start justify-between gap-2">
@@ -106,7 +109,7 @@ export function MechanicOrderView() {
 
       <Card className="space-y-2 text-base">
         <p>{contextLine(order.type, sourceLabel, destinationLabel)}</p>
-        {order.effectiveLocation && <p>Ubicación efectiva: {order.effectiveLocation}</p>}
+        {order.effectiveLocation && <p>Ubicación: {order.effectiveLocation}</p>}
         {order.assignedMechanicName && <p>Asignado: {order.assignedMechanicName}</p>}
         {order.notes && <p>Notas: {order.notes}</p>}
       </Card>

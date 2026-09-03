@@ -17,7 +17,7 @@ export function RouteAccessGuard() {
   if (isLoading) {
     return (
       <p className="text-sm text-navy-400" aria-live="polite">
-        Cargando…
+        Cargando sesión…
       </p>
     );
   }

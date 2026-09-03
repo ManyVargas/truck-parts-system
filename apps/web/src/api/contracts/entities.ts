@@ -17,6 +17,11 @@ export type PhysicalRelationship = 'INDEPENDENT' | 'INSTALLED';
 export type ItemCondition = 'NEW' | 'USED' | 'REMANUFACTURED';
 
 export type Item = {
+  /**
+   * Public inventory code (MOT-001). The mock uses this as the row key and
+   * route param. Production stores a UUID primary key and this value as
+   * `internalCode` — see FEATURES/02_INVENTORY.md.
+   */
   id: string;
   name: string;
   categoryId: string;
@@ -95,6 +100,8 @@ export type Customer = {
 export type Category = {
   id: string;
   name: string;
+  /** Short code used to mint item identities (`MOT` → `MOT-004`). Immutable after create. */
+  codePrefix: string;
   isAssembly: boolean;
   expectedComponents?: string[];
 };
@@ -248,6 +255,8 @@ export type AppState = {
   fxAvailable: boolean;
   fxRateDopPerUsd: number;
   facSeq: number;
+  /** Next unused number per category id for individually tracked item codes. */
+  itemCodeSeq: Record<string, number>;
 };
 
 export type Session = {

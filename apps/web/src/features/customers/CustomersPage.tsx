@@ -51,7 +51,7 @@ export function CustomersPage() {
 
   if (result.status === 'error') {
     return (
-      <Info tone="error" title="No se pudo cargar clientes">
+      <Info tone="error" title="No se pudo cargar los clientes">
         {result.error.message}
       </Info>
     );

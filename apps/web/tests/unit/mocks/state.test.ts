@@ -18,7 +18,7 @@ describe('mock state', () => {
   });
 
   it('deep-clones repository read values', () => {
-    const source = getMockState().items.find((item) => item.id === 'ENG-001')!;
+    const source = getMockState().items.find((item) => item.id === 'MOT-001')!;
     const clone = cloneForRead(source);
 
     clone.attributes!.displacement = 'mutado';

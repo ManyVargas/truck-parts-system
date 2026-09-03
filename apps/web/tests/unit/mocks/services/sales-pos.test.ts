@@ -33,7 +33,7 @@ describe('POS draft commands', () => {
     const alternator = state.items.find((item) => item.id === 'ALT-004')!;
     expect(alternator.commercialState).toBe('SOLD');
     expect(alternator.physicalRelationship).toBe('INSTALLED');
-    expect(alternator.parentId).toBe('ENG-001');
+    expect(alternator.parentId).toBe('MOT-001');
     expect(alternator.reservedByDraftId).toBeUndefined();
 
     const oil = state.qtyProducts.find((product) => product.id === 'QTY-OIL-15W40')!;
@@ -96,7 +96,7 @@ describe('POS draft commands', () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.message).toContain('ENG-003');
+      expect(result.error.message).toContain('MOT-003');
     }
   });
 
@@ -112,14 +112,14 @@ describe('POS draft commands', () => {
       addDraftLine(state, seller, {
         draftId: created.value.draftId,
         type: 'ITEM',
-        itemId: 'FLT-001',
+        itemId: 'FIL-001',
       }).ok,
     ).toBe(true);
 
     const conflict = addDraftLine(state, seller, {
       draftId: 'INV-DRAFT-01',
       type: 'ITEM',
-      itemId: 'FLT-001',
+      itemId: 'FIL-001',
     });
     expect(conflict.ok).toBe(false);
     if (!conflict.ok) {
@@ -133,7 +133,7 @@ describe('POS draft commands', () => {
       addDraftLine(state, seller, {
         draftId: 'INV-DRAFT-01',
         type: 'ITEM',
-        itemId: 'FLT-001',
+        itemId: 'FIL-001',
       }).ok,
     ).toBe(true);
 
@@ -151,7 +151,7 @@ describe('POS draft commands', () => {
     }
     const draftId = created.value.draftId;
 
-    const added = addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'ENG-002' });
+    const added = addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'MOT-002' });
     expect(added.ok).toBe(true);
     expect(setDraftLinePrice(state, seller, { draftId, lineId: 'L-D1', unitPrice: 50_000 }).ok).toBe(
       true,
@@ -162,10 +162,10 @@ describe('POS draft commands', () => {
     if (!result.ok) {
       expect(result.error.message).toContain('OD-DEMO-062');
     }
-    expect(state.items.find((item) => item.id === 'ENG-002')?.commercialState).toBe('AVAILABLE');
+    expect(state.items.find((item) => item.id === 'MOT-002')?.commercialState).toBe('AVAILABLE');
   });
 
-  it('creates a dismantling WO when confirming installed assembly ENG-001', () => {
+  it('creates a dismantling WO when confirming installed assembly MOT-001', () => {
     const state = createInitialState();
     const created = createDraft(state, seller);
     expect(created.ok).toBe(true);
@@ -175,37 +175,37 @@ describe('POS draft commands', () => {
 
     delete state.items.find((item) => item.id === 'ALT-004')!.reservedByDraftId;
     for (const order of state.workOrders) {
-      if (order.pieceId === 'TUR-009' || order.pieceId === 'STA-002') {
+      if (order.pieceId === 'TUR-009' || order.pieceId === 'ARR-002') {
         order.status = 'COMPLETED';
       }
     }
     // SALE-008: included descendants must not already be Sold at confirmation.
-    for (const descendantId of ['TUR-009', 'STA-002'] as const) {
+    for (const descendantId of ['TUR-009', 'ARR-002'] as const) {
       state.items.find((item) => item.id === descendantId)!.commercialState = 'AVAILABLE';
     }
 
     const draftId = created.value.draftId;
-    expect(addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'ENG-001' }).ok).toBe(true);
+    expect(addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'MOT-001' }).ok).toBe(true);
     const lineId = state.invoices.find((entry) => entry.id === draftId)!.lines[0]!.id;
     expect(setDraftLinePrice(state, seller, { draftId, lineId, unitPrice: 200_000 }).ok).toBe(true);
 
-    const truckCompleteBefore = state.items.find((item) => item.id === 'TRK-001')!.complete;
+    const truckCompleteBefore = state.items.find((item) => item.id === 'CAM-001')!.complete;
     const result = confirmInvoice(state, seller, draftId);
 
     expect(result.ok).toBe(true);
-    const engine = state.items.find((item) => item.id === 'ENG-001')!;
+    const engine = state.items.find((item) => item.id === 'MOT-001')!;
     expect(engine.commercialState).toBe('SOLD');
     expect(engine.physicalRelationship).toBe('INSTALLED');
-    expect(engine.parentId).toBe('TRK-001');
+    expect(engine.parentId).toBe('CAM-001');
 
     const dismantling = state.workOrders.find(
       (order) =>
-        order.pieceId === 'ENG-001' &&
+        order.pieceId === 'MOT-001' &&
         order.type === 'DISMANTLING' &&
         (order.status === 'PENDING' || order.status === 'IN_PROGRESS'),
     );
     expect(dismantling).toMatchObject({ invoiceId: draftId });
-    expect(state.items.find((item) => item.id === 'TRK-001')!.complete).toBe(truckCompleteBefore);
+    expect(state.items.find((item) => item.id === 'CAM-001')!.complete).toBe(truckCompleteBefore);
   });
 
   it('does not create a dismantling WO when confirming an independent assembly', () => {
@@ -217,20 +217,20 @@ describe('POS draft commands', () => {
     }
 
     const draftId = created.value.draftId;
-    expect(addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'ENG-003' }).ok).toBe(true);
+    expect(addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'MOT-003' }).ok).toBe(true);
     const lineId = state.invoices.find((entry) => entry.id === draftId)!.lines[0]!.id;
     expect(setDraftLinePrice(state, seller, { draftId, lineId, unitPrice: 150_000 }).ok).toBe(true);
 
     const woCountBefore = state.workOrders.filter(
-      (order) => order.type === 'DISMANTLING' && order.pieceId === 'ENG-003',
+      (order) => order.type === 'DISMANTLING' && order.pieceId === 'MOT-003',
     ).length;
     const result = confirmInvoice(state, seller, draftId);
 
     expect(result.ok).toBe(true);
-    expect(state.items.find((item) => item.id === 'ENG-003')?.commercialState).toBe('SOLD');
-    expect(state.items.find((item) => item.id === 'ENG-003')?.physicalRelationship).toBe('INDEPENDENT');
+    expect(state.items.find((item) => item.id === 'MOT-003')?.commercialState).toBe('SOLD');
+    expect(state.items.find((item) => item.id === 'MOT-003')?.physicalRelationship).toBe('INDEPENDENT');
     expect(
-      state.workOrders.filter((order) => order.type === 'DISMANTLING' && order.pieceId === 'ENG-003'),
+      state.workOrders.filter((order) => order.type === 'DISMANTLING' && order.pieceId === 'MOT-003'),
     ).toHaveLength(woCountBefore);
   });
 
@@ -243,7 +243,7 @@ describe('POS draft commands', () => {
     }
 
     const draftId = created.value.draftId;
-    expect(addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'ENG-003' }).ok).toBe(true);
+    expect(addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'MOT-003' }).ok).toBe(true);
     const lineId = state.invoices.find((entry) => entry.id === draftId)!.lines[0]!.id;
     expect(setDraftLinePrice(state, seller, { draftId, lineId, unitPrice: 150_000 }).ok).toBe(true);
 
@@ -251,23 +251,23 @@ describe('POS draft commands', () => {
     expect(result.ok).toBe(true);
 
     const invoice = state.invoices.find((entry) => entry.id === draftId)!;
-    const delivered = invoice.deliveredAssemblies?.find((entry) => entry.rootItemId === 'ENG-003');
+    const delivered = invoice.deliveredAssemblies?.find((entry) => entry.rootItemId === 'MOT-003');
     expect(delivered).toBeDefined();
     expect(delivered!.nodes.map((node) => node.itemId)).toEqual(
-      expect.arrayContaining(['ENG-003', 'ALT-011']),
+      expect.arrayContaining(['MOT-003', 'ALT-011']),
     );
-    expect(delivered!.nodes.find((node) => node.itemId === 'ALT-011')?.parentId).toBe('ENG-003');
+    expect(delivered!.nodes.find((node) => node.itemId === 'ALT-011')?.parentId).toBe('MOT-003');
 
-    state.items.find((item) => item.id === 'ALT-011')!.parentId = 'ENG-002';
+    state.items.find((item) => item.id === 'ALT-011')!.parentId = 'MOT-002';
 
-    expect(invoice.deliveredAssemblies!.find((entry) => entry.rootItemId === 'ENG-003')!.nodes.find(
+    expect(invoice.deliveredAssemblies!.find((entry) => entry.rootItemId === 'MOT-003')!.nodes.find(
       (node) => node.itemId === 'ALT-011',
-    )?.parentId).toBe('ENG-003');
+    )?.parentId).toBe('MOT-003');
 
     const detail = buildInvoiceDetail(state, invoice, admin);
-    expect(detail.deliveredAssemblies?.find((entry) => entry.rootItemId === 'ENG-003')?.nodes.find(
+    expect(detail.deliveredAssemblies?.find((entry) => entry.rootItemId === 'MOT-003')?.nodes.find(
       (node) => node.itemId === 'ALT-011',
-    )?.parentId).toBe('ENG-003');
+    )?.parentId).toBe('MOT-003');
   });
 
   it('rejects confirming an assembly whose descendant is already Sold', () => {
@@ -282,7 +282,7 @@ describe('POS draft commands', () => {
     }
 
     const draftId = created.value.draftId;
-    expect(addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'ENG-003' }).ok).toBe(true);
+    expect(addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'MOT-003' }).ok).toBe(true);
     const lineId = state.invoices.find((entry) => entry.id === draftId)!.lines[0]!.id;
     expect(setDraftLinePrice(state, seller, { draftId, lineId, unitPrice: 150_000 }).ok).toBe(true);
 
@@ -294,18 +294,18 @@ describe('POS draft commands', () => {
       expect(result.error.code).toBe('CONFLICT');
       expect(result.error.message).toContain('ALT-011');
     }
-    expect(state.items.find((item) => item.id === 'ENG-003')?.commercialState).toBe('AVAILABLE');
+    expect(state.items.find((item) => item.id === 'MOT-003')?.commercialState).toBe('AVAILABLE');
     expect(state.facSeq).toBe(facSeqBefore);
     expect(state.invoices.find((entry) => entry.id === draftId)?.status).toBe('DRAFT');
   });
 
-  it('blocks confirming ENG-001 while descendant dismantling is active', () => {
+  it('blocks confirming MOT-001 while descendant dismantling is active', () => {
     const state = createInitialState();
     expect(
       addDraftLine(state, seller, {
         draftId: 'INV-DRAFT-01',
         type: 'ITEM',
-        itemId: 'ENG-001',
+        itemId: 'MOT-001',
       }).ok,
     ).toBe(false);
 
@@ -317,7 +317,7 @@ describe('POS draft commands', () => {
 
     delete state.items.find((item) => item.id === 'ALT-004')!.reservedByDraftId;
     const draftId = created.value.draftId;
-    expect(addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'ENG-001' }).ok).toBe(true);
+    expect(addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'MOT-001' }).ok).toBe(true);
     const lineId = state.invoices.find((entry) => entry.id === draftId)!.lines[0]!.id;
     expect(setDraftLinePrice(state, seller, { draftId, lineId, unitPrice: 200_000 }).ok).toBe(true);
 

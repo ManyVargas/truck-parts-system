@@ -66,7 +66,7 @@ export function UsersPage() {
 
   if (result.status === 'error') {
     return (
-      <Info tone="error" title="No se pudo cargar usuarios">
+      <Info tone="error" title="No se pudo cargar los usuarios">
         {result.error.message}
       </Info>
     );
@@ -88,7 +88,7 @@ export function UsersPage() {
         <SearchInput
           id="user-search"
           label="Buscar por nombre o usuario"
-          placeholder="Nombre o username"
+          placeholder="Nombre o usuario"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />

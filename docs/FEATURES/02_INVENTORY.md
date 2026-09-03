@@ -38,6 +38,16 @@ Controllers translate HTTP only. Business rules belong in services. Prisma/datab
 
 Inventory owns physical-item identity and ordinary descriptive/operational fields. Use an immutable internal identifier distinct from serial/OEM/part number. Keep commercial availability, condition, physical relationship, completeness, reservation, invoice/payment state, and Work-Order state in their owning modules rather than collapsing them into one status field.
 
+**Production identity (Release 4 persistence):**
+
+- Technical primary key: UUID. All foreign keys (parent, invoice line, reservation, Work Order, history) use this key.
+- Public code (`internalCode`): `{category.codePrefix}-{nnnnnn}` with six zero-padded digits, e.g. `MOT-000042`. Unique, immutable, never reused. This is what operators search, print, and see in URLs.
+- `Category.codePrefix` is required, unique, 2–8 characters (`A–Z` then `A–Z`/`0–9`), and immutable after create. Existing items keep their codes if a later operational rename of the category name occurs.
+- Allocate the next number from a per-category counter (same idea as `facSeq` / `FAC-000001`), inside the same transaction as the insert, with a row lock. Do not compute `MAX(internalCode)+1` from item rows: that races and can reuse a retired number.
+- The HTTP create command does not accept a client-supplied item code. Nested present children in an assembly baseline are assigned in the same transaction; a rejected tree consumes no numbers.
+- Quantity products are a different inventory mode: they keep a catalog SKU, not a per-unit sequence.
+- The frontend mock simulates this by writing the public code into `Item.id` and keeping seed values such as `MOT-001` so demo routes stay stable. Pad width in the mock is 3 to match those dummy codes; production must use 6.
+
 Use explicit commands for normal edits versus protected corrections. Normal Seller/Administrator edits may change approved descriptive/category/photo/free-location information. Protected identity/state/audit corrections are Administrator-only, require a reason, and append before/after history.
 
 Do not model missing expected components as fake inventory rows. A missing component is owned by Hierarchy as a Known Missing Component. Do not use one huge table of hundreds of nullable category fields; shared base fields plus controlled category-specific attributes are preferred.
@@ -67,12 +77,13 @@ Acquisition cost is entered in DOP when known or estimated; unknown is a real st
 
 ### Frontend
 - [ ] Registration form driven by category minimums.
+- [x] Prototype mock assigns the public item code at save from the category prefix; the operator does not type it (wizard, assembly checklist, catalog-present child). Quantity SKU remains operator-entered.
 - [ ] Detail/edit screen for ordinary fields.
 - [x] Clear visual separation of availability, condition, relationship, completeness, and reservation.
 - [x] Administrator-only protected correction flow.
 
 ### Tests
-- [ ] Duplicate/reused ID rejection.
+- [ ] Duplicate/reused public-code rejection and failed create consuming no sequence number.
 - [ ] Partial registration and later enrichment.
 - [ ] Missing serial/part number allowed when category minimums pass.
 - [ ] Unknown cost remains unknown.
@@ -91,8 +102,8 @@ The blocks below are the final reconciled requirements retained from the previou
 **Requirement:** Every individually tracked physical unit must have an immutable unique internal ID separate from serial, OEM, or part numbers.  
 **Business Reason:** Used parts need identity even when markings are missing, duplicated, or changed.  
 **Preconditions:** The physical unit exists and applicable category minimums are satisfied.  
-**Main Flow:** User registers a unit; the system assigns or validates its unused internal ID. During initial assembly baseline registration, every expected component marked present is registered as its own real unit before being linked to the received parent.  
-**Business Rules:** An installed item keeps its identity; IDs cannot be reused; a catalog or Expected Component Definition is not physical inventory; a component marked `MISSING` or `NOT_APPLICABLE` is not a physical unit and receives no inventory ID.  
+**Main Flow:** User selects a category and enters known facts; the system assigns the next unused public internal code for that category. The operator does not type or override the code in the MVP. During initial assembly baseline registration, every expected component marked present is registered as its own real unit (with its own assigned code) before being linked to the received parent.  
+**Business Rules:** An installed item keeps its identity; public codes cannot be reused; a failed registration consumes no code; a catalog or Expected Component Definition is not physical inventory; a component marked `MISSING` or `NOT_APPLICABLE` is not a physical unit and receives no inventory identity.  
 **Important Exceptions/Edge Cases:** Missing serial or part number does not prevent registration when category minimums are met; absence must not be represented by a placeholder item.  
 **Dependencies:** CAT-001.  
 **Acceptance Notes:** Duplicate internal IDs fail; two real units may share descriptive product data; a baseline with two present and one missing expected component creates two child identities and no identity for the absence.

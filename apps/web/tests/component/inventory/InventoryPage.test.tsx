@@ -61,13 +61,13 @@ describe('InventoryPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
     const dialog = screen.getByRole('dialog');
-    await user.type(within(dialog).getByLabelText('ID interno'), 'ALT-020');
     await user.type(within(dialog).getByLabelText('Nombre'), 'Alternador de mostrador');
     await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-ALT');
+    expect(within(dialog).getByLabelText('Código interno')).toHaveValue('ALT');
     await user.click(within(dialog).getByRole('button', { name: 'Registrar' }));
 
     expect(await screen.findByText('Alternador de mostrador')).toBeVisible();
-    expect(await screen.findByText('ALT-020 quedó registrado')).toBeVisible();
+    expect(await screen.findByText('ALT-012 quedó registrado')).toBeVisible();
     expect(within(dialog).getByText(/Aún puede completar:/)).toBeVisible();
     await user.click(within(dialog).getByRole('button', { name: 'Volver al listado' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -81,7 +81,7 @@ describe('InventoryPage', () => {
     await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
     const dialog = screen.getByRole('dialog');
     await user.click(within(dialog).getByLabelText('Producto por cantidad'));
-    await user.type(within(dialog).getByLabelText('ID interno'), 'QTY-FIL-NEW');
+    await user.type(within(dialog).getByLabelText('Código de producto'), 'QTY-FIL-NEW');
     await user.type(within(dialog).getByLabelText('Nombre'), 'Filtro por caja');
     await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-FIL');
     await user.clear(within(dialog).getByLabelText('Existencia inicial'));
@@ -100,20 +100,17 @@ describe('InventoryPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
     const dialog = screen.getByRole('dialog');
-    await user.type(within(dialog).getByLabelText('ID interno'), 'TRK-020');
     await user.type(within(dialog).getByLabelText('Nombre'), 'Camión con motor recibido');
     await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-TRK');
     await user.click(within(dialog).getByRole('button', { name: 'Continuar' }));
 
     const motorGroup = within(dialog).getByRole('group', { name: 'Motor' });
     await user.click(within(motorGroup).getByLabelText('Presente'));
-    await user.type(within(motorGroup).getByLabelText('ID del componente'), 'ENG-020');
     await user.clear(within(motorGroup).getByLabelText('Nombre'));
     await user.type(within(motorGroup).getByLabelText('Nombre'), 'Motor dentro del camión');
 
     const alternatorGroup = within(motorGroup).getByRole('group', { name: 'Alternador' });
     await user.click(within(alternatorGroup).getByLabelText('Presente'));
-    await user.type(within(alternatorGroup).getByLabelText('ID del componente'), 'ALT-020');
     const starterGroup = within(motorGroup).getByRole('group', { name: 'Motor de arranque' });
     await user.click(within(starterGroup).getByLabelText('No aplica'));
     const transmissionGroup = within(dialog).getByRole('group', { name: 'Transmisión' });
@@ -121,15 +118,15 @@ describe('InventoryPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Registrar ensamblaje' }));
 
     expect(await screen.findByText('Camión con motor recibido')).toBeVisible();
-    expect(getMockState().items.find((item) => item.id === 'ENG-020')).toMatchObject({
-      parentId: 'TRK-020',
+    expect(getMockState().items.find((item) => item.id === 'MOT-004')).toMatchObject({
+      parentId: 'CAM-002',
       complete: false,
     });
-    expect(getMockState().items.find((item) => item.id === 'ALT-020')?.parentId).toBe('ENG-020');
+    expect(getMockState().items.find((item) => item.id === 'ALT-012')?.parentId).toBe('MOT-004');
     expect(getMockState().knownMissing).toContainEqual(
-      expect.objectContaining({ parentId: 'ENG-020', expectedComponentName: 'Turbo' }),
+      expect.objectContaining({ parentId: 'MOT-004', expectedComponentName: 'Turbo' }),
     );
-    expect(await screen.findByText('TRK-020 quedó registrado')).toBeVisible();
+    expect(await screen.findByText('CAM-002 quedó registrado')).toBeVisible();
   });
 
   it('keeps enrichment fields collapsed until the operator opens them', async () => {
@@ -140,7 +137,7 @@ describe('InventoryPage', () => {
     await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
     const dialog = screen.getByRole('dialog');
 
-    expect(within(dialog).getByLabelText('ID interno')).toBeVisible();
+    expect(within(dialog).getByLabelText('Código interno')).toBeVisible();
     expect(within(dialog).getByLabelText('Condición')).toBeVisible();
     expect(within(dialog).getByLabelText('Costo en pesos (opcional)')).toBeVisible();
     expect(within(dialog).queryByText('Paso 1 de 2 — Información del ensamblaje')).not.toBeInTheDocument();
@@ -157,7 +154,6 @@ describe('InventoryPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Registrar inventario' }));
     const dialog = screen.getByRole('dialog');
-    await user.type(within(dialog).getByLabelText('ID interno'), 'TRK-021');
     await user.type(within(dialog).getByLabelText('Nombre'), 'Camión para volver atrás');
     await user.selectOptions(within(dialog).getByLabelText('Categoría'), 'CAT-TRK');
     expect(within(dialog).getByText('Paso 1 de 2 — Información del ensamblaje')).toBeVisible();
@@ -166,13 +162,15 @@ describe('InventoryPage', () => {
     expect(within(dialog).getByText('Paso 2 de 2 — Componentes iniciales')).toBeVisible();
     const motorGroup = within(dialog).getByRole('group', { name: 'Motor' });
     await user.click(within(motorGroup).getByLabelText('Presente'));
-    await user.type(within(motorGroup).getByLabelText('ID del componente'), 'ENG-021');
     await user.click(within(dialog).getByRole('button', { name: 'Atrás' }));
-    expect(within(dialog).getByLabelText('ID interno')).toHaveValue('TRK-021');
+    expect(within(dialog).getByLabelText('Nombre')).toHaveValue('Camión para volver atrás');
+    expect(within(dialog).getByLabelText('Código interno')).toHaveValue('CAM');
     await user.click(within(dialog).getByRole('button', { name: 'Continuar' }));
-    expect(
-      within(within(dialog).getByRole('group', { name: 'Motor' })).getByLabelText('ID del componente'),
-    ).toHaveValue('ENG-021');
+    const motorPresent = within(within(dialog).getByRole('group', { name: 'Motor' })).getAllByRole(
+      'radio',
+      { name: 'Presente' },
+    )[0];
+    expect(motorPresent).toBeChecked();
   });
 
   it('ranks inventory states and opens detail from the row or the named link', async () => {
@@ -188,7 +186,7 @@ describe('InventoryPage', () => {
     const engineRow = engineName.closest('tr');
     expect(engineRow).not.toBeNull();
     expect(engineRow).toHaveClass('cursor-pointer');
-    expect(engineName).toHaveAttribute('href', '/inventory/ENG-001');
+    expect(engineName).toHaveAttribute('href', '/inventory/MOT-001');
     expect(within(engineRow!).getByText('Comercial')).toBeVisible();
     expect(within(engineRow!).getByText('Físico')).toBeVisible();
     expect(within(engineRow!).getByText('Instalado en Freightliner Cascadia 2018')).toBeVisible();

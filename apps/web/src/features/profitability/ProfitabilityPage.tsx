@@ -1,11 +1,20 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 
 import type { ProfitabilityInvoiceRow } from '../../api/contracts/profitability';
 import { FxStatusChip } from '../../shared/domain';
 import { KpiCard } from '../../shared/layout/KpiCard';
 import { PageHeader } from '../../shared/layout/PageHeader';
-import { Button, Info, money, currencyLabel, useToast } from '../../shared/ui';
+import {
+  Button,
+  Empty,
+  EntityLink,
+  HoverRow,
+  Info,
+  money,
+  currencyLabel,
+  TableShell,
+  useToast,
+} from '../../shared/ui';
 import { RecordGrossProfitModal } from './RecordGrossProfitModal';
 import { useProfitability } from './useProfitability';
 
@@ -25,7 +34,7 @@ export function ProfitabilityPage() {
 
   if (query.status === 'error') {
     return (
-      <Info tone="error" title="No se pudo cargar rentabilidad">
+      <Info tone="error" title="No se pudo cargar la rentabilidad">
         {query.error.message}
       </Info>
     );
@@ -109,25 +118,30 @@ export function ProfitabilityPage() {
           />
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-navy-100 bg-white">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-navy-100 bg-navy-50 text-xs uppercase tracking-wide text-navy-400">
+        {snapshot.invoices.length === 0 ? (
+          <Empty
+            title="No hay facturas con rentabilidad"
+            description="Las facturas completadas aparecerán aquí cuando exista ganancia calculada o pendiente."
+          />
+        ) : (
+          <TableShell>
+            <thead className="border-b border-navy-100 bg-navy-50 text-navy-400">
               <tr>
                 <th className="px-4 py-3 font-medium">Factura</th>
                 <th className="px-4 py-3 font-medium">Cliente</th>
                 <th className="px-4 py-3 font-medium">Moneda</th>
                 <th className="px-4 py-3 font-medium">Total</th>
                 <th className="px-4 py-3 font-medium">Ganancia bruta</th>
-                <th className="px-4 py-3 font-medium">Acción</th>
+                <th className="px-4 py-3 font-medium">
+                  <span className="sr-only">Acciones</span>
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-navy-100">
               {snapshot.invoices.map((row) => (
-                <tr key={row.id} className="border-b border-navy-50 last:border-0">
+                <HoverRow key={row.id} to={row.href}>
                   <td className="px-4 py-3 font-medium text-navy">
-                    <Link className="underline" to={row.href}>
-                      {row.number}
-                    </Link>
+                    <EntityLink to={row.href}>{row.number}</EntityLink>
                   </td>
                   <td className="px-4 py-3 text-navy-700">{row.customerName}</td>
                   <td className="px-4 py-3">{currencyLabel(row.currency)}</td>
@@ -172,11 +186,11 @@ export function ProfitabilityPage() {
                       <span className="text-navy-400">—</span>
                     )}
                   </td>
-                </tr>
+                </HoverRow>
               ))}
             </tbody>
-          </table>
-        </div>
+          </TableShell>
+        )}
       </div>
 
       <RecordGrossProfitModal

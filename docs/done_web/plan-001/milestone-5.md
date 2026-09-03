@@ -33,7 +33,7 @@ WM4 dejó inventario como `PlaceholderPage`. El handoff pedía `features/invento
 
 ### 3.2 `No desarmar` se hereda y se valida al reservar
 
-**Decisión:** El chip y el bloqueo usan el ancestro protegido. Agregar a borrador un descendiente de ENG-003 falla en `addInventoryToDraft` aunque la UI oculte el botón. Vender ENG-003 como unidad sí está permitido (HIER-008).
+**Decisión:** El chip y el bloqueo usan el ancestro protegido. Agregar a borrador un descendiente de MOT-003 falla en `addInventoryToDraft` aunque la UI oculte el botón. Vender MOT-003 como unidad sí está permitido (HIER-008).
 
 **Por qué:** Endurecimiento vs Make: ocultar el botón no basta.
 
@@ -96,10 +96,10 @@ apps/web/
 | Caso                           | Resultado                                                   |
 | ------------------------------ | ----------------------------------------------------------- |
 | Listado sin “Mostrar vendidos” | TUR-009 oculto                                              |
-| TRK-001                        | Un motor (ENG-001); Transmisión faltante; Incompleto        |
-| ENG-002 / ENG-003              | Independientes en Patio B / Patio C                         |
-| ENG-002                        | Incompleto + faltante Turbo                                 |
-| ENG-003                        | Chip No desarmar; ALT-011 instalado y bloqueado al reservar |
+| CAM-001                        | Un motor (MOT-001); Transmisión faltante; Incompleto        |
+| MOT-002 / MOT-003              | Independientes en Patio B / Patio C                         |
+| MOT-002                        | Incompleto + faltante Turbo                                 |
+| MOT-003                        | Chip No desarmar; ALT-011 instalado y bloqueado al reservar |
 | QTY-OIL-15W40                  | 48 exist. − 2 res. = 46 disp.                               |
 | ALT-004                        | Reservado en INV-DRAFT-01; ubicación efectiva Patio A       |
 
@@ -109,9 +109,9 @@ apps/web/
 
 | Criterio                                 | Estado                                        |
 | ---------------------------------------- | --------------------------------------------- |
-| Jerarquía TRK-001 navegable              | ✅ árbol con links                            |
-| ENG-003: No desarmar en descendientes    | ✅ helper + rechazo en servicio               |
-| ENG-002: incompleto + faltante           | ✅                                            |
+| Jerarquía CAM-001 navegable              | ✅ árbol con links                            |
+| MOT-003: No desarmar en descendientes    | ✅ helper + rechazo en servicio               |
+| MOT-002: incompleto + faltante           | ✅                                            |
 | Cantidad: disponible = onHand − reserved | ✅                                            |
 | Agregar a borrador abre POS              | ✅ navega a `/sales/draft/:id` (UI POS = WM8) |
 | No desarmar rechazado en servicio        | ✅                                            |
@@ -143,9 +143,9 @@ npm run typecheck
 **Flujos manuales:**
 
 1. Login `admin` / `demo1234` → Inventario
-2. Abrir TRK-001 → navegar a ENG-001 (hijos instalados) y a ENG-003 (ALT-011 No desarmar)
+2. Abrir CAM-001 → navegar a MOT-001 (hijos instalados) y a MOT-003 (ALT-011 No desarmar)
 3. QTY-OIL-15W40 → 46 disponibles
-4. FLT-001 → Agregar a borrador → ruta `/sales/draft/INV-DRAFT-01` (placeholder WM8)
+4. FIL-001 → Agregar a borrador → ruta `/sales/draft/INV-DRAFT-01` (placeholder WM8)
 5. Login `laura` → detalle sin botones No desarmar / OT / costo / baseline
 6. Reiniciar datos demo → TUR-009 sigue fuera del listado normal
 

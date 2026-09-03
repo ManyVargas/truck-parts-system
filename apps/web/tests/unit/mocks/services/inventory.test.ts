@@ -55,7 +55,7 @@ describe('inventory helpers', () => {
   });
 
   it('uses the independent item location', () => {
-    const filter = state.items.find((item) => item.id === 'FLT-001');
+    const filter = state.items.find((item) => item.id === 'FIL-001');
     expect(effectiveLocation(state.items, filter!)).toBe('Estante 3');
   });
 
@@ -64,17 +64,17 @@ describe('inventory helpers', () => {
     expect(isComplete(alt!, state.knownMissing, state.categories)).toBeUndefined();
   });
 
-  it('keeps ENG-001 complete while sold turbos remain installed pending desarme', () => {
-    const engine = state.items.find((item) => item.id === 'ENG-001');
+  it('keeps MOT-001 complete while sold turbos remain installed pending desarme', () => {
+    const engine = state.items.find((item) => item.id === 'MOT-001');
     const turbo = state.items.find((item) => item.id === 'TUR-009');
     expect(turbo?.commercialState).toBe('SOLD');
     expect(turbo?.physicalRelationship).toBe('INSTALLED');
-    expect(turbo?.parentId).toBe('ENG-001');
+    expect(turbo?.parentId).toBe('MOT-001');
     expect(isComplete(engine!, state.knownMissing, state.categories)).toBe(true);
 
-    const detail = buildItemDetail(state, 'ENG-001');
+    const detail = buildItemDetail(state, 'MOT-001');
     expect(detail?.soldInstalledChildren.map((child) => child.id).sort()).toEqual([
-      'STA-002',
+      'ARR-002',
       'TUR-009',
     ]);
   });
@@ -85,34 +85,34 @@ describe('inventory helpers', () => {
     expect(alt?.parentId).toBeUndefined();
     const detail = buildItemDetail(state, 'ALT-010');
     expect(detail?.formerInstallation).toMatchObject({
-      parentId: 'ENG-002',
+      parentId: 'MOT-002',
       workOrderId: 'OD-DEMO-063',
     });
   });
 
-  it('marks ENG-002 incomplete because of the missing turbo', () => {
-    const engine = state.items.find((item) => item.id === 'ENG-002');
+  it('marks MOT-002 incomplete because of the missing turbo', () => {
+    const engine = state.items.find((item) => item.id === 'MOT-002');
     expect(isComplete(engine!, state.knownMissing, state.categories)).toBe(false);
-    expect(state.knownMissing.some((entry) => entry.parentId === 'ENG-002')).toBe(true);
+    expect(state.knownMissing.some((entry) => entry.parentId === 'MOT-002')).toBe(true);
   });
 
-  it('HIER-008: applies No desarmar to real descendants of ENG-003', () => {
-    const engine = state.items.find((item) => item.id === 'ENG-003')!;
+  it('HIER-008: applies No desarmar to real descendants of MOT-003', () => {
+    const engine = state.items.find((item) => item.id === 'MOT-003')!;
     const descendant = state.items.find((item) => item.id === 'ALT-011')!;
 
-    expect(protectedAncestor(state.items, descendant)?.id).toBe('ENG-003');
-    expect(protectedAncestor(state.items, engine)?.id).toBe('ENG-003');
+    expect(protectedAncestor(state.items, descendant)?.id).toBe('MOT-003');
+    expect(protectedAncestor(state.items, engine)?.id).toBe('MOT-003');
   });
 
   it('HIER-007: a missing engine component does not change truck completeness', () => {
-    const truck = state.items.find((item) => item.id === 'TRK-001')!;
-    const engine = state.items.find((item) => item.id === 'ENG-001')!;
+    const truck = state.items.find((item) => item.id === 'CAM-001')!;
+    const engine = state.items.find((item) => item.id === 'MOT-001')!;
     const truckBefore = isComplete(truck, state.knownMissing, state.categories);
     const patchedMissing = [
       ...state.knownMissing,
       {
         id: 'KM-TEST',
-        parentId: 'ENG-001',
+        parentId: 'MOT-001',
         expectedComponentName: 'Sensor',
         origin: 'MISSING_AT_RECEIPT' as const,
       },
@@ -141,16 +141,16 @@ describe('buildInventoryCatalog', () => {
 
   it('searches across id, name, serial and part number', () => {
     expect(buildInventoryCatalog(state, { query: 'DD15' }).map((row) => row.id)).toContain(
-      'ENG-001',
+      'MOT-001',
     );
     expect(buildInventoryCatalog(state, { query: 'LF9009' }).map((row) => row.id)).toEqual([
-      'FLT-001',
+      'FIL-001',
     ]);
     expect(buildInventoryCatalog(state, { query: '15W-40' }).map((row) => row.id)).toEqual([
       'QTY-OIL-15W40',
     ]);
     expect(buildInventoryCatalog(state, { query: '14.8L' }).map((row) => row.id)).toEqual([
-      'ENG-001',
+      'MOT-001',
     ]);
   });
 
@@ -169,54 +169,54 @@ describe('buildInventoryCatalog', () => {
 describe('detail projections', () => {
   const state = createInitialState();
 
-  it('exposes a physically valid TRK-001 tree with one engine and a missing transmission', () => {
-    const detail = buildItemDetail(state, 'TRK-001');
-    expect(detail?.tree.id).toBe('TRK-001');
+  it('exposes a physically valid CAM-001 tree with one engine and a missing transmission', () => {
+    const detail = buildItemDetail(state, 'CAM-001');
+    expect(detail?.tree.id).toBe('CAM-001');
     expect(detail?.complete).toBe(false);
-    expect(detail?.tree.children.map((child) => child.id)).toEqual(['ENG-001']);
+    expect(detail?.tree.children.map((child) => child.id)).toEqual(['MOT-001']);
     expect(detail?.tree.missingSlots.map((slot) => slot.name)).toEqual(['Transmisión']);
-    expect(detail?.tree.children.some((child) => child.id === 'ENG-002')).toBe(false);
-    expect(detail?.tree.children.some((child) => child.id === 'ENG-003')).toBe(false);
+    expect(detail?.tree.children.some((child) => child.id === 'MOT-002')).toBe(false);
+    expect(detail?.tree.children.some((child) => child.id === 'MOT-003')).toBe(false);
   });
 
-  it('keeps ENG-002 and ENG-003 as independent yard engines', () => {
-    const isx = state.items.find((item) => item.id === 'ENG-002');
-    const dd13 = state.items.find((item) => item.id === 'ENG-003');
+  it('keeps MOT-002 and MOT-003 as independent yard engines', () => {
+    const isx = state.items.find((item) => item.id === 'MOT-002');
+    const dd13 = state.items.find((item) => item.id === 'MOT-003');
     expect(isx?.physicalRelationship).toBe('INDEPENDENT');
     expect(isx?.parentId).toBeUndefined();
     expect(dd13?.physicalRelationship).toBe('INDEPENDENT');
     expect(dd13?.parentId).toBeUndefined();
-    expect(buildItemDetail(state, 'ENG-002')?.tree.id).toBe('ENG-002');
-    expect(buildItemDetail(state, 'ENG-003')?.tree.id).toBe('ENG-003');
-    expect(buildItemDetail(state, 'ENG-003')?.tree.children.map((child) => child.id)).toEqual([
+    expect(buildItemDetail(state, 'MOT-002')?.tree.id).toBe('MOT-002');
+    expect(buildItemDetail(state, 'MOT-003')?.tree.id).toBe('MOT-003');
+    expect(buildItemDetail(state, 'MOT-003')?.tree.children.map((child) => child.id)).toEqual([
       'ALT-011',
     ]);
   });
 
   it('shows an installed engine with its truck parent and only its own descendants', () => {
-    const detail = buildItemDetail(state, 'ENG-001');
-    expect(detail?.tree.id).toBe('TRK-001');
+    const detail = buildItemDetail(state, 'MOT-001');
+    expect(detail?.tree.id).toBe('CAM-001');
     expect(detail?.tree.missingSlots).toEqual([]);
-    expect(detail?.tree.children.map((child) => child.id)).toEqual(['ENG-001']);
+    expect(detail?.tree.children.map((child) => child.id)).toEqual(['MOT-001']);
     const engine = detail?.tree.children[0];
     expect(engine?.children.map((child) => child.id).sort()).toEqual([
       'ALT-004',
-      'STA-002',
+      'ARR-002',
       'TUR-009',
     ]);
   });
 
   it('shows an installed part with parent engine and no sibling parts', () => {
     const detail = buildItemDetail(state, 'ALT-004');
-    expect(detail?.tree.id).toBe('TRK-001');
+    expect(detail?.tree.id).toBe('CAM-001');
     const engine = detail?.tree.children[0];
-    expect(engine?.id).toBe('ENG-001');
+    expect(engine?.id).toBe('MOT-001');
     expect(engine?.children.map((child) => child.id)).toEqual(['ALT-004']);
-    expect(engine?.children.some((child) => child.id === 'STA-002')).toBe(false);
+    expect(engine?.children.some((child) => child.id === 'ARR-002')).toBe(false);
   });
 
-  it('shows ENG-002 missing turbo and incomplete', () => {
-    const detail = buildItemDetail(state, 'ENG-002');
+  it('shows MOT-002 missing turbo and incomplete', () => {
+    const detail = buildItemDetail(state, 'MOT-002');
     expect(detail?.complete).toBe(false);
     expect(detail?.missingComponents.map((entry) => entry.expectedComponentName)).toEqual([
       'Turbo',
@@ -227,18 +227,18 @@ describe('detail projections', () => {
   it('HIER-008: blocks separate sale of a No desarmar descendant', () => {
     const detail = buildItemDetail(state, 'ALT-011');
     expect(detail?.draftEligibility.allowed).toBe(false);
-    expect(detail?.protectedRootId).toBe('ENG-003');
+    expect(detail?.protectedRootId).toBe('MOT-003');
     expect(detail?.effectiveLocation).toBe('Patio C');
   });
 
   it('allows selling the protected root as a unit', () => {
-    const detail = buildItemDetail(state, 'ENG-003');
+    const detail = buildItemDetail(state, 'MOT-003');
     expect(detail?.draftEligibility.allowed).toBe(true);
     expect(detail?.noDesarmar).toBe(true);
   });
 
   it('RES-001: overlapping ancestor is not draft-eligible while a descendant is reserved', () => {
-    const detail = buildItemDetail(state, 'ENG-001');
+    const detail = buildItemDetail(state, 'MOT-001');
     expect(detail?.draftEligibility.allowed).toBe(false);
   });
 
@@ -254,7 +254,6 @@ describe('inventory commands', () => {
   it('registers an individual item while keeping unknown cost absent', () => {
     const state = createInitialState();
     const result = registerItem(state, SELLER, {
-      id: 'ALT-020',
       name: 'Alternador de prueba',
       categoryId: 'CAT-ALT',
       condition: 'USED',
@@ -263,18 +262,20 @@ describe('inventory commands', () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(state.items.find((item) => item.id === 'ALT-020')).toMatchObject({
+    expect(state.items.find((item) => item.id === 'ALT-012')).toMatchObject({
       commercialState: 'AVAILABLE',
       physicalRelationship: 'INDEPENDENT',
       attributes: { voltaje: '24V' },
     });
-    expect(state.items.find((item) => item.id === 'ALT-020')).not.toHaveProperty(
+    expect(state.items.find((item) => item.id === 'ALT-012')).not.toHaveProperty(
       'acquisitionCostDop',
     );
+    expect(state.itemCodeSeq['CAT-ALT']).toBe(13);
   });
 
   it('registers quantity inventory with initial stock and zero reservation', () => {
     const state = createInitialState();
+    const altSeq = state.itemCodeSeq['CAT-ALT'];
     const result = registerQtyProduct(state, SELLER, {
       id: 'QTY-FIL-NEW',
       name: 'Filtro nuevo por caja',
@@ -290,13 +291,13 @@ describe('inventory commands', () => {
       reserved: 0,
       unitCostDop: 450,
     });
+    expect(state.itemCodeSeq['CAT-ALT']).toBe(altSeq);
   });
 
   it('registers an assembly parent, present children and receipt missing slots atomically', () => {
     const state = createInitialState();
     const result = registerAssembly(state, SELLER, {
       parent: {
-        id: 'ENG-020',
         name: 'Motor recibido',
         categoryId: 'CAT-ENG',
         condition: 'USED',
@@ -307,7 +308,6 @@ describe('inventory commands', () => {
           expectedComponentName: 'Alternador',
           status: 'PRESENT',
           item: {
-            id: 'ALT-020',
             name: 'Alternador instalado',
             categoryId: 'CAT-ALT',
             condition: 'USED',
@@ -319,14 +319,14 @@ describe('inventory commands', () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(state.items.find((item) => item.id === 'ENG-020')?.complete).toBe(false);
-    expect(state.items.find((item) => item.id === 'ALT-020')).toMatchObject({
-      parentId: 'ENG-020',
+    expect(state.items.find((item) => item.id === 'MOT-004')?.complete).toBe(false);
+    expect(state.items.find((item) => item.id === 'ALT-012')).toMatchObject({
+      parentId: 'MOT-004',
       physicalRelationship: 'INSTALLED',
     });
     expect(state.knownMissing).toContainEqual(
       expect.objectContaining({
-        parentId: 'ENG-020',
+        parentId: 'MOT-004',
         expectedComponentName: 'Turbo',
         origin: 'MISSING_AT_RECEIPT',
       }),
@@ -334,7 +334,7 @@ describe('inventory commands', () => {
     expect(
       state.knownMissing.some(
         (entry) =>
-          entry.parentId === 'ENG-020' && entry.expectedComponentName === 'Motor de arranque',
+          entry.parentId === 'MOT-004' && entry.expectedComponentName === 'Motor de arranque',
       ),
     ).toBe(false);
   });
@@ -343,7 +343,6 @@ describe('inventory commands', () => {
     const state = createInitialState();
     const result = registerAssembly(state, SELLER, {
       parent: {
-        id: 'TRK-020',
         name: 'Camión recibido',
         categoryId: 'CAT-TRK',
         condition: 'USED',
@@ -354,7 +353,6 @@ describe('inventory commands', () => {
           expectedComponentName: 'Motor',
           status: 'PRESENT',
           item: {
-            id: 'ENG-020',
             name: 'Motor recibido dentro del camión',
             categoryId: 'CAT-ENG',
             condition: 'USED',
@@ -364,7 +362,6 @@ describe('inventory commands', () => {
               expectedComponentName: 'Alternador',
               status: 'PRESENT',
               item: {
-                id: 'ALT-020',
                 name: 'Alternador recibido dentro del motor',
                 categoryId: 'CAT-ALT',
                 condition: 'USED',
@@ -379,34 +376,34 @@ describe('inventory commands', () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(state.items.find((item) => item.id === 'TRK-020')?.complete).toBe(true);
-    expect(state.items.find((item) => item.id === 'ENG-020')).toMatchObject({
-      parentId: 'TRK-020',
+    expect(state.items.find((item) => item.id === 'CAM-002')?.complete).toBe(true);
+    expect(state.items.find((item) => item.id === 'MOT-004')).toMatchObject({
+      parentId: 'CAM-002',
       complete: false,
     });
-    expect(state.items.find((item) => item.id === 'ALT-020')).toMatchObject({
-      parentId: 'ENG-020',
+    expect(state.items.find((item) => item.id === 'ALT-012')).toMatchObject({
+      parentId: 'MOT-004',
       physicalRelationship: 'INSTALLED',
     });
     expect(state.knownMissing).toContainEqual(
       expect.objectContaining({
-        parentId: 'ENG-020',
+        parentId: 'MOT-004',
         expectedComponentName: 'Turbo',
         origin: 'MISSING_AT_RECEIPT',
       }),
     );
-    const detail = buildItemDetail(state, 'TRK-020');
-    expect(detail?.tree.children[0]?.children[0]?.id).toBe('ALT-020');
+    const detail = buildItemDetail(state, 'CAM-002');
+    expect(detail?.tree.children[0]?.children[0]?.id).toBe('ALT-012');
     expect(detail?.tree.children[0]?.missingSlots.map((slot) => slot.name)).toEqual(['Turbo']);
     expect(state.events.at(-1)?.metadata?.receiptTree).toMatchObject({
-      itemId: 'TRK-020',
+      itemId: 'CAM-002',
       complete: true,
       baseline: [
         {
           expectedComponentName: 'Motor',
           status: 'PRESENT',
           child: {
-            itemId: 'ENG-020',
+            itemId: 'MOT-004',
             complete: false,
             baseline: [
               { expectedComponentName: 'Alternador', status: 'PRESENT' },
@@ -420,14 +417,14 @@ describe('inventory commands', () => {
     });
   });
 
-  it('rejects a deep child ID matching its parent case-insensitively without partial writes', () => {
+  it('does not consume item codes when a nested baseline fails', () => {
     const state = createInitialState();
     const itemCount = state.items.length;
     const missingCount = state.knownMissing.length;
     const eventCount = state.events.length;
+    const seqBefore = { ...state.itemCodeSeq };
     const result = registerAssembly(state, SELLER, {
       parent: {
-        id: 'TRK-020',
         name: 'Camión recibido',
         categoryId: 'CAT-TRK',
         condition: 'USED',
@@ -437,7 +434,6 @@ describe('inventory commands', () => {
           expectedComponentName: 'Motor',
           status: 'PRESENT',
           item: {
-            id: 'ENG-020',
             name: 'Motor recibido',
             categoryId: 'CAT-ENG',
             condition: 'USED',
@@ -446,12 +442,6 @@ describe('inventory commands', () => {
             {
               expectedComponentName: 'Alternador',
               status: 'PRESENT',
-              item: {
-                id: 'trk-020',
-                name: 'ID repetido',
-                categoryId: 'CAT-ALT',
-                condition: 'USED',
-              },
             },
             { expectedComponentName: 'Turbo', status: 'MISSING' },
             { expectedComponentName: 'Motor de arranque', status: 'NOT_APPLICABLE' },
@@ -465,14 +455,14 @@ describe('inventory commands', () => {
     expect(state.items).toHaveLength(itemCount);
     expect(state.knownMissing).toHaveLength(missingCount);
     expect(state.events).toHaveLength(eventCount);
+    expect(state.itemCodeSeq).toEqual(seqBefore);
   });
 
-  it('rejects a child ID matching quantity inventory case-insensitively without partial writes', () => {
+  it('rejects a child whose category does not match the expected slot without partial writes', () => {
     const state = createInitialState();
     const itemCount = state.items.length;
     const result = registerAssembly(state, SELLER, {
       parent: {
-        id: 'ENG-020',
         name: 'Motor recibido',
         categoryId: 'CAT-ENG',
         condition: 'USED',
@@ -482,9 +472,8 @@ describe('inventory commands', () => {
           expectedComponentName: 'Alternador',
           status: 'PRESENT',
           item: {
-            id: 'qty-oil-15w40',
-            name: 'Conflicto con cantidad',
-            categoryId: 'CAT-ALT',
+            name: 'Categoría incorrecta',
+            categoryId: 'CAT-FIL',
             condition: 'USED',
           },
         },
@@ -495,7 +484,7 @@ describe('inventory commands', () => {
 
     expect(result.ok).toBe(false);
     expect(state.items).toHaveLength(itemCount);
-    expect(state.items.some((item) => item.id === 'ENG-020')).toBe(false);
+    expect(state.items.some((item) => item.id === 'MOT-004')).toBe(false);
   });
 
   it('rejects quantity assemblies and missing or non-finite unit costs', () => {
@@ -531,19 +520,13 @@ describe('inventory commands', () => {
     ).toBe(false);
   });
 
-  it('rejects duplicate IDs and incomplete assembly checklists without partial writes', () => {
+  it('rejects incomplete assembly checklists without partial writes', () => {
     const state = createInitialState();
     const itemCount = state.items.length;
     const missingCount = state.knownMissing.length;
-    const duplicate = registerItem(state, SELLER, {
-      id: 'FLT-001',
-      name: 'Duplicado',
-      categoryId: 'CAT-FIL',
-      condition: 'USED',
-    });
+    const seqBefore = { ...state.itemCodeSeq };
     const incomplete = registerAssembly(state, SELLER, {
       parent: {
-        id: 'ENG-020',
         name: 'Motor incompleto',
         categoryId: 'CAT-ENG',
         condition: 'USED',
@@ -551,10 +534,10 @@ describe('inventory commands', () => {
       baseline: [{ expectedComponentName: 'Turbo', status: 'MISSING' }],
     });
 
-    expect(duplicate.ok).toBe(false);
     expect(incomplete.ok).toBe(false);
     expect(state.items).toHaveLength(itemCount);
     expect(state.knownMissing).toHaveLength(missingCount);
+    expect(state.itemCodeSeq).toEqual(seqBefore);
   });
 
   it('leaves state unchanged when a protected descendant is rejected without an open draft', () => {
@@ -593,34 +576,34 @@ describe('inventory commands', () => {
     const result = addInventoryToDraft(state, SELLER, { itemId: 'ALT-011' });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.message).toContain('ENG-003');
+      expect(result.error.message).toContain('MOT-003');
     }
   });
 
   it('RES-001: reserves without marking the item Sold', () => {
     const state = createInitialState();
-    const result = addInventoryToDraft(state, SELLER, { itemId: 'FLT-001' });
+    const result = addInventoryToDraft(state, SELLER, { itemId: 'FIL-001' });
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.draftId).toBe('INV-DRAFT-01');
       expect(result.value.alreadyInDraft).toBe(false);
     }
-    const filter = state.items.find((item) => item.id === 'FLT-001');
+    const filter = state.items.find((item) => item.id === 'FIL-001');
     expect(filter?.reservedByDraftId).toBe('INV-DRAFT-01');
     expect(filter?.commercialState).toBe('AVAILABLE');
   });
 
   it('LINE-001 / COST-003: copies known item acquisitionCostDop onto the new draft ITEM line', () => {
     const state = createInitialState();
-    const item = state.items.find((entry) => entry.id === 'FLT-001')!;
+    const item = state.items.find((entry) => entry.id === 'FIL-001')!;
     expect(item.acquisitionCostDop).toBe(850);
 
-    const result = addInventoryToDraft(state, SELLER, { itemId: 'FLT-001' });
+    const result = addInventoryToDraft(state, SELLER, { itemId: 'FIL-001' });
     expect(result.ok).toBe(true);
 
     const line = state.invoices
       .find((invoice) => invoice.status === 'DRAFT')
-      ?.lines.find((entry) => entry.itemId === 'FLT-001');
+      ?.lines.find((entry) => entry.itemId === 'FIL-001');
     expect(line).toMatchObject({
       type: 'ITEM',
       acquisitionCostDop: 850,
@@ -629,7 +612,7 @@ describe('inventory commands', () => {
 
   it('RES-001: rejects overlapping parent reservation while a descendant is held', () => {
     const state = createInitialState();
-    const result = addInventoryToDraft(state, SELLER, { itemId: 'ENG-001' });
+    const result = addInventoryToDraft(state, SELLER, { itemId: 'MOT-001' });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error.code).toBe('CONFLICT');
@@ -638,7 +621,7 @@ describe('inventory commands', () => {
 
   it('RES-001: rejects adding a unique item already reserved on another draft', () => {
     const state = createInitialState();
-    const filter = state.items.find((item) => item.id === 'FLT-001');
+    const filter = state.items.find((item) => item.id === 'FIL-001');
     expect(filter).toBeDefined();
     filter!.reservedByDraftId = 'INV-DRAFT-02';
     state.invoices.push({
@@ -653,7 +636,7 @@ describe('inventory commands', () => {
       createdAt: '2026-08-26T12:00:00.000Z',
     });
 
-    const result = addInventoryToDraft(state, SELLER, { itemId: 'FLT-001' });
+    const result = addInventoryToDraft(state, SELLER, { itemId: 'FIL-001' });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error.code).toBe('CONFLICT');
@@ -662,7 +645,7 @@ describe('inventory commands', () => {
     expect(
       state.invoices
         .find((invoice) => invoice.id === 'INV-DRAFT-01')
-        ?.lines.some((line) => line.itemId === 'FLT-001'),
+        ?.lines.some((line) => line.itemId === 'FIL-001'),
     ).toBe(false);
     expect(filter!.reservedByDraftId).toBe('INV-DRAFT-02');
   });
@@ -679,9 +662,9 @@ describe('inventory commands', () => {
   it('HIER-002: rejects installing a parent into its own descendant', () => {
     const state = createInitialState();
     const result = createManualWorkOrder(state, SELLER, {
-      pieceId: 'TRK-001',
+      pieceId: 'CAM-001',
       type: 'INSTALLATION',
-      destinationParentId: 'ENG-001',
+      destinationParentId: 'MOT-001',
     });
     expect(result.ok).toBe(false);
   });
@@ -691,7 +674,7 @@ describe('inventory commands', () => {
     const result = createManualWorkOrder(state, SELLER, {
       pieceId: 'ALT-010',
       type: 'INSTALLATION',
-      destinationParentId: 'FLT-001',
+      destinationParentId: 'FIL-001',
     });
     expect(result.ok).toBe(false);
   });
@@ -739,7 +722,7 @@ describe('inventory commands', () => {
 
   it('clears cost provenance explicitly and audits its before/after state', () => {
     const state = createInitialState();
-    const item = state.items.find((entry) => entry.id === 'FLT-001')!;
+    const item = state.items.find((entry) => entry.id === 'FIL-001')!;
     item.costProvenance = 'Factura de compra original';
     const beforeCost = item.acquisitionCostDop;
 
@@ -764,7 +747,7 @@ describe('inventory commands', () => {
 
   it('rejects non-finite cost corrections without changing the item', () => {
     const state = createInitialState();
-    const item = state.items.find((entry) => entry.id === 'FLT-001')!;
+    const item = state.items.find((entry) => entry.id === 'FIL-001')!;
     const beforeCost = item.acquisitionCostDop;
     const eventCount = state.events.length;
 
@@ -786,19 +769,19 @@ describe('inventory commands', () => {
     backfillPendingExpectedComponents(state, admin, engine, ['Bomba de aceite']);
 
     const result = resolveCatalogReview(state, admin, {
-      itemId: 'ENG-001',
+      itemId: 'MOT-001',
       expectedComponentName: 'Bomba de aceite',
       decision: 'NOT_APPLICABLE',
     });
 
     expect(result.ok).toBe(true);
-    expect(state.pendingCatalogReviews.some((entry) => entry.parentId === 'ENG-001')).toBe(false);
-    expect(isComplete(state.items.find((item) => item.id === 'ENG-001')!, state.knownMissing, state.categories)).toBe(
+    expect(state.pendingCatalogReviews.some((entry) => entry.parentId === 'MOT-001')).toBe(false);
+    expect(isComplete(state.items.find((item) => item.id === 'MOT-001')!, state.knownMissing, state.categories)).toBe(
       true,
     );
     expect(
       state.knownMissing.some(
-        (entry) => entry.parentId === 'ENG-001' && entry.expectedComponentName === 'Bomba de aceite',
+        (entry) => entry.parentId === 'MOT-001' && entry.expectedComponentName === 'Bomba de aceite',
       ),
     ).toBe(false);
   });
@@ -810,18 +793,18 @@ describe('inventory commands', () => {
     backfillPendingExpectedComponents(state, admin, engine, ['Bomba de aceite']);
 
     const result = resolveCatalogReview(state, admin, {
-      itemId: 'ENG-001',
+      itemId: 'MOT-001',
       expectedComponentName: 'Bomba de aceite',
       decision: 'MISSING',
     });
 
     expect(result.ok).toBe(true);
-    const item = state.items.find((entry) => entry.id === 'ENG-001')!;
+    const item = state.items.find((entry) => entry.id === 'MOT-001')!;
     expect(item.complete).toBe(false);
     expect(
       state.knownMissing.some(
         (entry) =>
-          entry.parentId === 'ENG-001' &&
+          entry.parentId === 'MOT-001' &&
           entry.expectedComponentName === 'Bomba de aceite' &&
           entry.origin === 'MISSING_AT_RECEIPT',
       ),
@@ -835,11 +818,10 @@ describe('inventory commands', () => {
     backfillPendingExpectedComponents(state, admin, engine, ['Filtros']);
 
     const result = resolveCatalogReview(state, admin, {
-      itemId: 'ENG-001',
+      itemId: 'MOT-001',
       expectedComponentName: 'Filtros',
       decision: 'PRESENT',
       item: {
-        id: 'FLT-ENG-001',
         name: 'Filtro del DD15',
         categoryId: 'CAT-FIL',
         condition: 'USED',
@@ -847,20 +829,20 @@ describe('inventory commands', () => {
     });
 
     expect(result.ok).toBe(true);
-    const child = state.items.find((entry) => entry.id === 'FLT-ENG-001');
+    const child = state.items.find((entry) => entry.id === 'FIL-002');
     expect(child).toMatchObject({
-      parentId: 'ENG-001',
+      parentId: 'MOT-001',
       physicalRelationship: 'INSTALLED',
       categoryId: 'CAT-FIL',
     });
-    const detail = buildItemDetail(state, 'ENG-001');
-    expect(detail?.tree.children.some((node) => node.id === 'ENG-001') || detail?.id).toBeTruthy();
+    const detail = buildItemDetail(state, 'MOT-001');
+    expect(detail?.tree.children.some((node) => node.id === 'MOT-001') || detail?.id).toBeTruthy();
     const engineNode =
-      detail?.tree.id === 'ENG-001'
+      detail?.tree.id === 'MOT-001'
         ? detail.tree
-        : detail?.tree.children.find((node) => node.id === 'ENG-001');
-    expect(engineNode?.children.some((node) => node.id === 'FLT-ENG-001')).toBe(true);
-    expect(state.items.find((entry) => entry.id === 'ENG-001')?.complete).toBe(true);
+        : detail?.tree.children.find((node) => node.id === 'MOT-001');
+    expect(engineNode?.children.some((node) => node.id === 'FIL-002')).toBe(true);
+    expect(state.items.find((entry) => entry.id === 'MOT-001')?.complete).toBe(true);
   });
 
   it('registers a present catalog slot that is itself an assembly with its nested baseline', () => {
@@ -870,17 +852,18 @@ describe('inventory commands', () => {
     state.categories.push({
       id: 'CAT-AUX-ENG',
       name: 'Motor auxiliar',
+      codePrefix: 'AUX',
       isAssembly: true,
       expectedComponents: ['Alternador'],
     });
+    state.itemCodeSeq['CAT-AUX-ENG'] = 1;
     backfillPendingExpectedComponents(state, admin, truckCategory, ['Motor auxiliar']);
 
     const result = resolveCatalogReview(state, admin, {
-      itemId: 'TRK-001',
+      itemId: 'CAM-001',
       expectedComponentName: 'Motor auxiliar',
       decision: 'PRESENT',
       item: {
-        id: 'ENG-AUX-001',
         name: 'Motor auxiliar recibido',
         categoryId: 'CAT-AUX-ENG',
         condition: 'USED',
@@ -889,14 +872,14 @@ describe('inventory commands', () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(state.items.find((entry) => entry.id === 'ENG-AUX-001')).toMatchObject({
-      parentId: 'TRK-001',
+    expect(state.items.find((entry) => entry.id === 'AUX-001')).toMatchObject({
+      parentId: 'CAM-001',
       physicalRelationship: 'INSTALLED',
       complete: false,
     });
     expect(state.knownMissing).toContainEqual(
       expect.objectContaining({
-        parentId: 'ENG-AUX-001',
+        parentId: 'AUX-001',
         expectedComponentName: 'Alternador',
         origin: 'MISSING_AT_RECEIPT',
       }),
@@ -904,7 +887,7 @@ describe('inventory commands', () => {
     expect(
       state.pendingCatalogReviews.some(
         (entry) =>
-          entry.parentId === 'TRK-001' && entry.expectedComponentName === 'Motor auxiliar',
+          entry.parentId === 'CAM-001' && entry.expectedComponentName === 'Motor auxiliar',
       ),
     ).toBe(false);
   });

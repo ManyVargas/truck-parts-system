@@ -45,7 +45,7 @@ export function UserTable({ rows, onEdit, onToggleActive, togglingId }: UserTabl
             <td className="px-4 py-3">
               <div className="flex justify-end gap-2">
                 <Button
-                  variant="secondary"
+                  variant={row.active ? 'danger' : 'secondary'}
                   size="sm"
                   disabled={togglingId === row.id}
                   onClick={() => onToggleActive(row)}

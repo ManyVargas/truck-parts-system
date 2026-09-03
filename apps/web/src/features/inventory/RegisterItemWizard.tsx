@@ -25,7 +25,6 @@ type RegisterItemWizardProps = {
 };
 
 const EMPTY_ITEM: RegisterItemInput = {
-  id: '',
   name: '',
   categoryId: '',
   condition: 'USED',
@@ -48,6 +47,7 @@ export function RegisterItemWizard({
   const [mode, setMode] = useState<RegistrationMode>('INDIVIDUAL');
   const [step, setStep] = useState<1 | 2>(1);
   const [item, setItem] = useState<RegisterItemInput>(EMPTY_ITEM);
+  const [qtySku, setQtySku] = useState('');
   const [attributesText, setAttributesText] = useState('');
   const [initialQuantity, setInitialQuantity] = useState('0');
   const [unitCostDop, setUnitCostDop] = useState('');
@@ -72,6 +72,7 @@ export function RegisterItemWizard({
     setMode('INDIVIDUAL');
     setStep(1);
     setItem(EMPTY_ITEM);
+    setQtySku('');
     setAttributesText('');
     setInitialQuantity('0');
     setUnitCostDop('');
@@ -93,7 +94,7 @@ export function RegisterItemWizard({
     const result =
       mode === 'QUANTITY'
         ? await inventoryRepository.registerQtyProduct({
-            id: item.id,
+            id: qtySku,
             name: item.name,
             categoryId: item.categoryId,
             brand: item.brand,
@@ -148,7 +149,7 @@ export function RegisterItemWizard({
                   <p className="mt-2">
                     Aún puede completar: {registered.pending.join(', ')}.
                   </p>
-                  <p className="mt-1">Esa información se añade después desde el detalle del artículo.</p>
+                  <p className="mt-1">Esa información se añade después desde el detalle de la pieza.</p>
                 </>
               ) : (
                 <p className="mt-2">No quedó información adicional pendiente.</p>
@@ -165,7 +166,7 @@ export function RegisterItemWizard({
                   navigate(`/inventory/${itemId}`);
                 }}
               >
-                Ver artículo
+                Ver pieza
               </Button>
             </div>
           </div>
@@ -201,21 +202,48 @@ export function RegisterItemWizard({
               </div>
             </fieldset>
 
-            {error && <Info tone="error">{error}</Info>}
+            {error && (
+              <Info tone="error" title="No se pudo registrar">
+                {error}
+              </Info>
+            )}
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                label="ID interno"
-                htmlFor="register-id"
-                hint="Identificador único, por ejemplo ALT-020."
-              >
-                <Input
-                  id="register-id"
-                  value={item.id}
-                  onChange={(event) => patchItem({ id: event.target.value })}
-                  required
-                />
-              </Field>
+              {mode === 'QUANTITY' ? (
+                <Field
+                  label="Código de producto"
+                  htmlFor="register-id"
+                  hint="SKU del producto intercambiable, no un código por unidad."
+                >
+                  <Input
+                    id="register-id"
+                    value={qtySku}
+                    onChange={(event) => setQtySku(event.target.value)}
+                    required
+                  />
+                </Field>
+              ) : (
+                <Field
+                  label="Código interno"
+                  htmlFor="register-code"
+                  hint={
+                    selectedCategory
+                      ? `Se asignará al guardar con prefijo ${selectedCategory.codePrefix}.`
+                      : 'Elige una categoría; el sistema asigna el código.'
+                  }
+                >
+                  <Input
+                    id="register-code"
+                    value={
+                      selectedCategory
+                        ? selectedCategory.codePrefix
+                        : 'Seleccione una categoría'
+                    }
+                    readOnly
+                    disabled
+                  />
+                </Field>
+              )}
               <Field label="Nombre" htmlFor="register-name">
                 <Input
                   id="register-name"
@@ -402,7 +430,7 @@ export function RegisterItemWizard({
             </OptionalDetails>
 
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={close}>
+              <Button variant="secondary" onClick={close} disabled={saving}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={saving}>
@@ -425,7 +453,11 @@ export function RegisterItemWizard({
             <p className="text-sm font-medium text-navy" aria-live="polite">
               Paso 2 de 2 — Componentes iniciales
             </p>
-            {error && <Info tone="error">{error}</Info>}
+            {error && (
+              <Info tone="error" title="No se pudo registrar">
+                {error}
+              </Info>
+            )}
             <BaselineChecklist
               expectedComponents={selectedCategory?.expectedComponents ?? []}
               categories={categories}
@@ -433,7 +465,7 @@ export function RegisterItemWizard({
               onChange={setBaseline}
             />
             <div className="flex justify-between gap-2">
-              <Button variant="secondary" onClick={() => setStep(1)}>
+              <Button variant="secondary" onClick={() => setStep(1)} disabled={saving}>
                 Atrás
               </Button>
               <Button type="submit" disabled={saving}>

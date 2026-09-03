@@ -59,7 +59,6 @@ describe('mergeBaselineEntries', () => {
         expectedComponentName: 'Motor',
         status: 'PRESENT',
         item: {
-          id: 'ENG-020',
           name: 'Motor',
           categoryId: 'CAT-ENG',
           condition: 'USED',
@@ -70,7 +69,7 @@ describe('mergeBaselineEntries', () => {
     expect(merged[0]).toMatchObject({
       expectedComponentName: 'Motor',
       status: 'PRESENT',
-      item: { id: 'ENG-020' },
+      item: { name: 'Motor', categoryId: 'CAT-ENG' },
     });
     expect(merged[1]).toEqual({
       expectedComponentName: 'Transmisión',

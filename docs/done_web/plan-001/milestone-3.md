@@ -95,7 +95,7 @@ apps/web/
 | 4.ª tarjeta fila 1 | Utilidad DOP RD$8,900.00 | Borradores: 1 |
 | Desarmes pendientes | 1 | 1 |
 | OT en proceso | 1 | 1 |
-| Ensamblajes incompletos | 2 (TRK-001, ENG-002) | 2 |
+| Ensamblajes incompletos | 2 (CAM-001, MOT-002) | 2 |
 | FX pendiente | 1 | no se envía ni se pinta |
 
 Clic en una factura reciente → `/sales/:id` (detalle aún placeholder WM7).

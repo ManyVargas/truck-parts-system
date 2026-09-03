@@ -64,7 +64,7 @@ describe('role navigation', () => {
   });
 
   it('recognizes registered route patterns and rejects typos', () => {
-    expect(isKnownDesktopRoute('/inventory/ENG-001')).toBe(true);
+    expect(isKnownDesktopRoute('/inventory/MOT-001')).toBe(true);
     expect(isKnownDesktopRoute('/sales/draft/INV-DRAFT-01')).toBe(true);
     expect(isKnownDesktopRoute('/work-orders/OD-DEMO-060')).toBe(true);
     expect(isKnownDesktopRoute('/profile')).toBe(true);
@@ -75,10 +75,10 @@ describe('role navigation', () => {
   });
 
   it('activates only the matching known navigation section', () => {
-    expect(isNavItemActive('/inventory/ENG-001', '/inventory')).toBe(true);
+    expect(isNavItemActive('/inventory/MOT-001', '/inventory')).toBe(true);
     expect(isNavItemActive('/sales/draft/INV-DRAFT-01', '/sales')).toBe(true);
     expect(isNavItemActive('/work-orders/OD-DEMO-060', '/work-orders')).toBe(true);
-    expect(isNavItemActive('/inventory/ENG-001', '/sales')).toBe(false);
+    expect(isNavItemActive('/inventory/MOT-001', '/sales')).toBe(false);
     expect(isNavItemActive('/inventory/nope/extra', '/inventory')).toBe(false);
   });
 

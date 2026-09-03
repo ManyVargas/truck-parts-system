@@ -30,7 +30,7 @@ describe('InventoryDetailPage', () => {
   it('shows hierarchy, missing components and administrator actions', async () => {
     signInAs('ADMINISTRATOR');
     renderWithProviders(detailRoute(), {
-      route: '/inventory/ENG-002',
+      route: '/inventory/MOT-002',
       auth: createAuthValue('ADMINISTRATOR'),
     });
 
@@ -46,7 +46,7 @@ describe('InventoryDetailPage', () => {
   it('hides administrator actions from sellers', async () => {
     signInAs('SELLER');
     renderWithProviders(detailRoute(), {
-      route: '/inventory/FLT-001',
+      route: '/inventory/FIL-001',
       auth: createAuthValue('SELLER'),
     });
 
@@ -76,7 +76,7 @@ describe('InventoryDetailPage', () => {
       auth: createAuthValue('SELLER'),
     });
 
-    expect(await screen.findByText('No se pudo cargar el detalle')).toBeVisible();
+    expect(await screen.findByText('No se pudo cargar el detalle del inventario')).toBeVisible();
     expect(screen.getByText('Inventario no encontrado')).toBeVisible();
   });
 });

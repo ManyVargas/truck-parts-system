@@ -1041,6 +1041,8 @@ Para mecánico:
 
 # Milestone UX-8 — Validación final de usabilidad y consistencia
 
+**Registro de implementación:** [`docs/done_web/UX_FRONTEND_HARDENING/ux-8.md`](../done_web/UX_FRONTEND_HARDENING/ux-8.md)
+
 ## Problema
 
 Una interfaz puede cumplir criterios técnicos y seguir siendo incómoda para usuarios reales.
@@ -1129,16 +1131,16 @@ No es necesario construir un sistema formal de analytics para esta primera valid
 
 ## Checklist de consistencia visual
 
-- [ ] mismo tipo de acción = mismo estilo;
-- [ ] peligro = mismo tratamiento visual;
-- [ ] mismo estado = mismo color;
-- [ ] mismos labels para mismo concepto;
-- [ ] mismas convenciones de tablas;
-- [ ] mismas convenciones de modales;
-- [ ] mismos patrones de loading;
-- [ ] mismos patrones de error;
-- [ ] mismos estados vacíos;
-- [ ] mismas convenciones de botones.
+- [x] mismo tipo de acción = mismo estilo;
+- [x] peligro = mismo tratamiento visual;
+- [x] mismo estado = mismo color;
+- [x] mismos labels para mismo concepto;
+- [x] mismas convenciones de tablas;
+- [x] mismas convenciones de modales;
+- [x] mismos patrones de loading;
+- [x] mismos patrones de error;
+- [x] mismos estados vacíos;
+- [x] mismas convenciones de botones.
 
 ---
 
@@ -1146,50 +1148,50 @@ No es necesario construir un sistema formal de analytics para esta primera valid
 
 ### Visibilidad del estado
 
-- [ ] mostrar loading cuando una operación tarda;
-- [ ] mostrar resultado de operaciones;
-- [ ] mostrar pasos en flows multi-step.
+- [x] mostrar loading cuando una operación tarda;
+- [x] mostrar resultado de operaciones;
+- [x] mostrar pasos en flows multi-step.
 
 ### Correspondencia con el mundo real
 
-- [ ] utilizar términos del negocio;
-- [ ] evitar vocabulario técnico de implementación.
+- [x] utilizar términos del negocio;
+- [x] evitar vocabulario técnico de implementación.
 
 ### Control y libertad
 
-- [ ] permitir cancelar cuando sea seguro;
-- [ ] mantener acciones destructivas claramente diferenciadas.
+- [x] permitir cancelar cuando sea seguro;
+- [x] mantener acciones destructivas claramente diferenciadas.
 
 ### Consistencia
 
-- [ ] no utilizar diferentes palabras para el mismo concepto.
+- [x] no utilizar diferentes palabras para el mismo concepto.
 
 ### Prevención de errores
 
-- [ ] deshabilitar acciones imposibles;
-- [ ] validar antes de operaciones irreversibles;
-- [ ] evitar doble submit.
+- [x] deshabilitar acciones imposibles;
+- [x] validar antes de operaciones irreversibles;
+- [x] evitar doble submit.
 
 ### Reconocimiento sobre memoria
 
-- [ ] mostrar contexto necesario;
-- [ ] no exigir recordar IDs o reglas innecesariamente.
+- [x] mostrar contexto necesario;
+- [x] no exigir recordar IDs o reglas innecesariamente.
 
 ### Flexibilidad
 
-- [ ] usuarios frecuentes pueden operar eficientemente sin complicar la experiencia de usuarios nuevos.
+- [x] usuarios frecuentes pueden operar eficientemente sin complicar la experiencia de usuarios nuevos.
 
 ### Diseño minimalista
 
-- [ ] mostrar información relevante para la tarea actual.
+- [x] mostrar información relevante para la tarea actual.
 
 ### Recuperación de errores
 
-- [ ] mensajes explican problema y solución.
+- [x] mensajes explican problema y solución.
 
 ### Ayuda contextual
 
-- [ ] agregar explicación solo en procesos que realmente lo necesiten.
+- [x] agregar explicación solo en procesos que realmente lo necesiten.
 
 ---
 
@@ -1311,7 +1313,7 @@ El plan completo puede considerarse terminado cuando:
 - [x] POS previene errores comunes;
 - [x] mecánico conserva una experiencia simple y mobile-first;
 - [x] Admin/Seller funcionan correctamente en laptops;
-- [ ] los escenarios principales han sido probados manualmente;
-- [ ] no se alteraron reglas de negocio fuera del alcance;
-- [ ] la documentación relevante continúa alineada con el comportamiento del frontend.
+- [x] los escenarios principales han sido probados manualmente;
+- [x] no se alteraron reglas de negocio fuera del alcance;
+- [x] la documentación relevante continúa alineada con el comportamiento del frontend.
 

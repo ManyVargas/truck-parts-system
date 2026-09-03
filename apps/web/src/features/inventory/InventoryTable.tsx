@@ -20,7 +20,7 @@ export function InventoryTable({ rows }: InventoryTableProps) {
     <TableShell>
       <thead className="border-b border-navy-100 bg-navy-50 text-navy-400">
         <tr>
-          <th className="px-4 py-3 font-medium">Ítem</th>
+          <th className="px-4 py-3 font-medium">Nombre</th>
           <th className="px-4 py-3 font-medium">Categoría</th>
           <th className="px-4 py-3 font-medium">Ubicación</th>
           <th className="px-4 py-3 font-medium">Estado</th>

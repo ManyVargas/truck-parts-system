@@ -108,7 +108,7 @@ export function CatalogsPage() {
 
   if (loadError) {
     return (
-      <Info tone="error" title="No se pudo cargar catálogos">
+      <Info tone="error" title="No se pudo cargar los catálogos">
         {loadError.message}
       </Info>
     );

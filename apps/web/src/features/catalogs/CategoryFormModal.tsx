@@ -16,12 +16,14 @@ export type CategoryFormModalProps = {
 
 type FormFields = {
   name: string;
+  codePrefix: string;
   isAssembly: boolean;
   expectedComponentsText: string;
 };
 
 const EMPTY_FIELDS: FormFields = {
   name: '',
+  codePrefix: '',
   isAssembly: false,
   expectedComponentsText: '',
 };
@@ -50,6 +52,7 @@ export function CategoryFormModal({
 
     setFields({
       name: category.name,
+      codePrefix: category.codePrefix,
       isAssembly: category.isAssembly,
       expectedComponentsText: (category.expectedComponents ?? []).join('\n'),
     });
@@ -60,6 +63,7 @@ export function CategoryFormModal({
     onSubmit({
       id: category?.id,
       name: fields.name,
+      codePrefix: fields.codePrefix,
       isAssembly: hierarchy ? fields.isAssembly : false,
       expectedComponents:
         hierarchy && fields.isAssembly
@@ -83,6 +87,26 @@ export function CategoryFormModal({
             onChange={(event) => setFields((current) => ({ ...current, name: event.target.value }))}
             required
             autoFocus
+          />
+        </Field>
+        <Field
+          label="Prefijo de código"
+          htmlFor="category-prefix"
+          hint={
+            isEdit
+              ? 'No se cambia: las piezas ya registradas conservan su código.'
+              : 'Ejemplo MOT. Las piezas nuevas se numeran MOT-001, MOT-002…'
+          }
+        >
+          <Input
+            id="category-prefix"
+            value={fields.codePrefix}
+            onChange={(event) =>
+              setFields((current) => ({ ...current, codePrefix: event.target.value.toUpperCase() }))
+            }
+            required={!isEdit}
+            disabled={isEdit}
+            maxLength={8}
           />
         </Field>
 

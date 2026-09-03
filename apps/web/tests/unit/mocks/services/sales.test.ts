@@ -76,7 +76,7 @@ describe('addPayment', () => {
     }
     expect(result.value.paymentState).toBe('PARTIALLY_PAID');
     expect(invoiceBalance(result.value)).toBe(14_500);
-    expect(state.items.find((item) => item.id === 'STA-002')?.commercialState).toBe('SOLD');
+    expect(state.items.find((item) => item.id === 'ARR-002')?.commercialState).toBe('SOLD');
   });
 
   it('rejects overpayment and non-positive amounts', () => {
@@ -118,10 +118,10 @@ describe('cancelInvoice', () => {
     expect(result.ok).toBe(true);
     expect(state.invoices.find((entry) => entry.id === 'INV-098')?.status).toBe('CANCELLED');
     expect(state.workOrders.find((order) => order.id === 'OD-DEMO-061')?.status).toBe('CANCELLED');
-    const piece = state.items.find((item) => item.id === 'STA-002')!;
+    const piece = state.items.find((item) => item.id === 'ARR-002')!;
     expect(piece.commercialState).toBe('AVAILABLE');
     expect(piece.physicalRelationship).toBe('INSTALLED');
-    expect(piece.parentId).toBe('ENG-001');
+    expect(piece.parentId).toBe('MOT-001');
   });
 
   it('requires an explicit in-progress decision and supports stop vs continue', () => {
@@ -194,17 +194,17 @@ describe('cancelInvoice', () => {
     }
     const draftId = created.value.draftId;
 
-    expect(addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'ENG-003' }).ok).toBe(true);
+    expect(addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'MOT-003' }).ok).toBe(true);
     const lineId = state.invoices.find((entry) => entry.id === draftId)!.lines[0]!.id;
     expect(setDraftLinePrice(state, seller, { draftId, lineId, unitPrice: 350_000 }).ok).toBe(true);
     expect(confirmInvoice(state, seller, draftId).ok).toBe(true);
 
-    const engineAfterSale = state.items.find((item) => item.id === 'ENG-003')!;
+    const engineAfterSale = state.items.find((item) => item.id === 'MOT-003')!;
     const alternatorAfterSale = state.items.find((item) => item.id === 'ALT-011')!;
     expect(engineAfterSale.commercialState).toBe('SOLD');
     expect(alternatorAfterSale.commercialState).toBe('SOLD');
     expect(alternatorAfterSale.physicalRelationship).toBe('INSTALLED');
-    expect(alternatorAfterSale.parentId).toBe('ENG-003');
+    expect(alternatorAfterSale.parentId).toBe('MOT-003');
 
     const cancelled = cancelInvoice(state, admin, {
       invoiceId: draftId,
@@ -212,12 +212,12 @@ describe('cancelInvoice', () => {
     });
     expect(cancelled.ok).toBe(true);
 
-    const engine = state.items.find((item) => item.id === 'ENG-003')!;
+    const engine = state.items.find((item) => item.id === 'MOT-003')!;
     const alternator = state.items.find((item) => item.id === 'ALT-011')!;
     expect(engine.commercialState).toBe('AVAILABLE');
     expect(alternator.commercialState).toBe('AVAILABLE');
     expect(alternator.physicalRelationship).toBe('INSTALLED');
-    expect(alternator.parentId).toBe('ENG-003');
+    expect(alternator.parentId).toBe('MOT-003');
   });
 
   it('CANCEL-002: rejects cancelling a paid or partial invoice without refundAmount', () => {
@@ -316,7 +316,7 @@ describe('cancelInvoice', () => {
     const result = cancelInvoice(state, admin, { invoiceId: 'INV-098', reason: 'Post desarme' });
     expect(result.ok).toBe(true);
 
-    const piece = state.items.find((item) => item.id === 'STA-002')!;
+    const piece = state.items.find((item) => item.id === 'ARR-002')!;
     expect(piece.commercialState).toBe('AVAILABLE');
     expect(piece.physicalRelationship).toBe('INDEPENDENT');
     expect(piece.parentId).toBeUndefined();

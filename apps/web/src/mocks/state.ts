@@ -1,8 +1,9 @@
 import type { AppState } from '../api/contracts/entities';
 import { createInitialState } from './data/seed';
+import { buildItemCodeSeq } from './services/item-code';
 import { clearSession } from './session';
 
-const APP_STATE_STORAGE_KEY = 'solocamiones.mock.app-state';
+const APP_STATE_STORAGE_KEY = 'solocamiones.mock.app-state.v2';
 
 let persistGeneration = 0;
 let currentState: AppState = readStoredState() ?? createInitialState();
@@ -29,6 +30,27 @@ function isAppState(value: unknown): value is AppState {
   );
 }
 
+function hydrateAppState(state: AppState): AppState {
+  const seedPrefixes = Object.fromEntries(
+    createInitialState().categories.map((category) => [category.id, category.codePrefix]),
+  );
+  const categories = state.categories.map((category) => ({
+    ...category,
+    codePrefix: category.codePrefix || seedPrefixes[category.id] || category.codePrefix,
+  }));
+  return {
+    ...state,
+    categories,
+    itemCodeSeq:
+      state.itemCodeSeq && Object.keys(state.itemCodeSeq).length > 0
+        ? state.itemCodeSeq
+        : buildItemCodeSeq(
+            categories.filter((category) => category.codePrefix),
+            state.items.map((item) => item.id),
+          ),
+  };
+}
+
 function readStoredState(): AppState | null {
   if (!canUseSessionStorage()) {
     return null;
@@ -41,7 +63,7 @@ function readStoredState(): AppState | null {
     }
 
     const parsed: unknown = JSON.parse(raw);
-    return isAppState(parsed) ? parsed : null;
+    return isAppState(parsed) ? hydrateAppState(parsed) : null;
   } catch {
     return null;
   }

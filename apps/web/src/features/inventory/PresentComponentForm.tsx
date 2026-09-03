@@ -28,7 +28,6 @@ export function PresentComponentForm({
   }
 
   const current: RegisterItemInput = value ?? {
-    id: '',
     name: expectedName,
     categoryId: category.id,
     condition: 'USED',
@@ -38,15 +37,11 @@ export function PresentComponentForm({
 
   return (
     <div className="space-y-3 rounded-lg border border-navy-100 bg-navy-50 p-3">
+      <p className="text-sm text-navy-400">
+        Código al guardar:{' '}
+        <span className="font-mono text-navy">{category.codePrefix}</span>
+      </p>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="ID del componente" htmlFor={`${prefix}-id`}>
-          <Input
-            id={`${prefix}-id`}
-            value={current.id}
-            onChange={(event) => patch({ id: event.target.value })}
-            placeholder="Ej. ALT-020"
-          />
-        </Field>
         <Field label="Nombre" htmlFor={`${prefix}-name`}>
           <Input
             id={`${prefix}-name`}

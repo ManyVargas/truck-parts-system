@@ -4,14 +4,19 @@ import { Empty, EntityLink, HoverRow, money, Mono, TableShell } from '../../shar
 
 export type SalesTableProps = {
   rows: SalesListRow[];
+  hasQuery?: boolean;
 };
 
-export function SalesTable({ rows }: SalesTableProps) {
+export function SalesTable({ rows, hasQuery = false }: SalesTableProps) {
   if (rows.length === 0) {
     return (
       <Empty
-        title="No hay facturas en esta vista"
-        description="Cambie de pestaña o cree un borrador desde inventario."
+        title={hasQuery ? 'Sin resultados' : 'No hay facturas en esta vista'}
+        description={
+          hasQuery
+            ? 'Pruebe otro número, cliente o cambie de pestaña.'
+            : 'Cambie de pestaña o cree un borrador con Nuevo borrador.'
+        }
       />
     );
   }

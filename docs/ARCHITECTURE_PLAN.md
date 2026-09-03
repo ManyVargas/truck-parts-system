@@ -178,7 +178,7 @@ Cross-module workflows should have one coordinating application service that use
 
 ### Recommendation: controlled JSONB for category-specific details
 
-Keep the practical shared base—immutable ID, name, category, brand, model, optional part/serial numbers, condition, acquisition cost when known or estimated, free-text location, notes, and photos—conceptually separate from small category details. A controlled JSONB document remains one possible implementation for varying details, with permitted keys, types, labels, and required status defined by category policy and validated by the application.
+Keep the practical shared base—UUID identity, public `internalCode`, name, category, brand, model, optional part/serial numbers, condition, acquisition cost when known or estimated, free-text location, notes, and photos—conceptually separate from small category details. A controlled JSONB document remains one possible implementation for varying details, with permitted keys, types, labels, and required status defined by category policy and validated by the application.
 
 **Problem solved:** assemblies may require a few specific facts, Tires need type, size, and diameter, and Rims need material/type and size. Requiring one wide record creates many irrelevant fields. Assembly expected-component lists are handled by the explicit model below rather than hidden inside category JSONB.
 
@@ -200,7 +200,15 @@ This is a strategy, not a final schema.
 
 The system needs two explicit inventory modes:
 
-1. **Individually tracked items:** used engines, alternators, assemblies, and other physical units that require a unique internal ID, condition, photos, provenance, and possible parent relationship.
+1. **Individually tracked items:** used engines, alternators, assemblies, and other physical units that require a unique internal identity, condition, photos, provenance, and possible parent relationship.
+
+**Item identity for production:**
+
+- Persist a UUID as the primary key and a separate unique `internalCode` (`{prefix}-{six digits}`) as the public, never-reused warehouse code.
+- Store `codePrefix` on the category. Generate `internalCode` in the inventory service inside the create transaction by locking a per-category sequence row (same pattern as invoice `FAC-` / `facSeq`). Prisma `@default` cannot encode a per-category prefix.
+- Do not accept the public code from the client on create. Do not derive the next number with `MAX(internalCode)`.
+- The in-memory frontend mock keeps the public code in `Item.id` (seed examples: `MOT-001`) so existing demo URLs work. Backend work must not copy that shortcut into PostgreSQL.
+
 2. **Quantity stock:** interchangeable products where the business tracks a shared description and on-hand count, such as ten equivalent units.
 
 The mode must be explicit at creation and determine allowed operations. Individually tracked items are sold once and can participate in hierarchy. Quantity stock is sold by quantity and decremented atomically; individual units do not receive fabricated IDs or relationship history.
@@ -364,7 +372,8 @@ Invoice confirmation commits the valid commercial sale and immutable invoice fac
 
 Concurrency must be designed around expected conflicts, not treated as a rare error:
 
-- Use database constraints for unique internal IDs and other invariant uniqueness.
+- Use database constraints for unique public item codes (`internalCode`) and UUID primary keys, plus other invariant uniqueness.
+- Lock the per-category item-code sequence in the same transaction as item insert, matching invoice `FAC-` allocation.
 - Use row locks, conditional updates, or optimistic version checks when confirming sales, changing relationships, reserving stock, and decrementing quantities.
 - Revalidate all relevant facts at confirmation even when the UI showed them moments earlier.
 - Make confirmation and refund commands idempotent so a browser retry cannot duplicate them.

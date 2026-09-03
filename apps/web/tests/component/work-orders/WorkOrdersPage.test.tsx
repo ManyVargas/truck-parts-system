@@ -80,7 +80,7 @@ describe('WorkOrdersPage', () => {
     await user.click(screen.getByRole('button', { name: 'Nueva orden de trabajo' }));
 
     const dialog = await screen.findByRole('dialog');
-    await user.selectOptions(within(dialog).getByLabelText('Pieza'), 'ENG-001');
+    await user.selectOptions(within(dialog).getByLabelText('Pieza'), 'MOT-001');
     await user.click(within(dialog).getByRole('button', { name: 'Crear orden de trabajo' }));
 
     expect(await screen.findByRole('heading', { name: 'OD-DEMO-064' })).toBeVisible();

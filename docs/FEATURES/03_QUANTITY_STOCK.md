@@ -38,6 +38,8 @@ Controllers translate HTTP only. Business rules belong in services. Prisma/datab
 
 Keep quantity stock as a separate inventory mode/module. It must not participate in the physical parent/child hierarchy. Model on-hand quantity, reserved quantity, and weighted-average DOP unit cost with decimal-safe numeric types.
 
+Quantity products use a catalog SKU chosen at create (mock: operator-entered `id`). They must not consume the per-category individually tracked item sequence. Individual units of a quantity product do not receive fabricated public codes.
+
 Normal receipts/entries are allowed for Seller and Administrator. Correcting an already recorded balance is a separate Administrator-only audited adjustment; do not expose a generic 'set quantity' operation.
 
 Reservation and sale must use conditional atomic writes so `onHand - reserved` never goes below zero. Weighted-average cost is recomputed only on eligible receipt/entry operations using the prior quantity/cost and incoming quantity/cost; completed sales preserve the cost basis used at confirmation.

@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { PaymentMethod } from '../../api/contracts/entities';
 import type { ConfirmInvoicePayment, PosDraftView } from '../../api/contracts/sales';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
-import { Button, Field, Input, Modal, Select, money } from '../../shared/ui';
+import { Button, Field, Info, Input, Modal, Select, money } from '../../shared/ui';
 import { PAYMENT_METHOD_LABELS } from './labels';
 
 const METHODS: PaymentMethod[] = ['CASH', 'CARD', 'TRANSFER', 'CHECK'];
@@ -74,9 +74,9 @@ export function ConfirmSaleModal({
     <Modal open={open} title="Confirmar venta" onClose={onClose}>
       <div className="flex flex-col gap-4 text-sm text-navy">
         {error && (
-          <p className="text-red-600" role="alert">
+          <Info tone="error" title="No se pudo confirmar">
             {error}
-          </p>
+          </Info>
         )}
         <p>
           Se emitirá una factura interna {draft.fiscal ? 'con comprobante fiscal' : 'sin comprobante fiscal'}{' '}

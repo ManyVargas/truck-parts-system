@@ -48,6 +48,7 @@ describe('UsersPage', () => {
     const row = carlos.closest('tr');
     expect(row).not.toBeNull();
     expect(within(row!).getByText('Inactivo')).toBeVisible();
+    expect(within(row!).getByRole('button', { name: 'Activar' })).toBeVisible();
 
     await user.type(screen.getByLabelText('Buscar por nombre o usuario'), 'pedro');
     expect(await screen.findByText('Pedro Santana')).toBeVisible();

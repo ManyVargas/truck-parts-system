@@ -247,7 +247,7 @@ flowchart LR
 
 `User`, `Item`, `QtyProduct`, `Customer`, `Category`, `Service`, `Invoice`, `Line`, `Payment`, `WorkOrder`, `Event`, más `fxAvailable`, `facSeq`.
 
-**Dataset seed:** jerarquía TRK-001→ENG-001→piezas (transmisión faltante), ENG-002 incompleto e independiente, ENG-003 `No desarmar` independiente, 2 productos cantidad, 3 clientes, 5 facturas, 4 OT, 4 usuarios.
+**Dataset seed:** jerarquía CAM-001→MOT-001→piezas (transmisión faltante), MOT-002 incompleto e independiente, MOT-003 `No desarmar` independiente, 2 productos cantidad, 3 clientes, 5 facturas, 4 OT, 4 usuarios.
 
 ### Relación con plan API (Release 1)
 
@@ -486,9 +486,9 @@ Agregaciones sobre `items`, `invoices`, `workOrders`, `events`.
 
 ### Criterios de aceptación
 
-- [x] Jerarquía TRK-001 navegable
-- [x] ENG-003: `No desarmar` en descendientes
-- [x] ENG-002: incompleto + faltante
+- [x] Jerarquía CAM-001 navegable
+- [x] MOT-003: `No desarmar` en descendientes
+- [x] MOT-002: incompleto + faltante
 - [x] Cantidad: disponible = onHand − reserved
 - [x] Agregar a borrador abre POS
 - [x] `No desarmar` rechazado en servicio al agregar a borrador

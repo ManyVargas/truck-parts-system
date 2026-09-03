@@ -31,6 +31,7 @@ describe('MockCategoryRepository', () => {
 
     const saved = await mockCategoryRepository.save({
       name: 'Rin',
+      codePrefix: 'RIN',
       isAssembly: true,
       expectedComponents: ['Disco', 'Tuerca'],
     });
@@ -40,7 +41,7 @@ describe('MockCategoryRepository', () => {
     expect(listed.ok).toBe(true);
     if (listed.ok) {
       expect(listed.value).toContainEqual(
-        expect.objectContaining({ id: 'CAT-RIN', name: 'Rin', isAssembly: true }),
+        expect.objectContaining({ id: 'CAT-RIN', name: 'Rin', codePrefix: 'RIN', isAssembly: true }),
       );
     }
     expect(getMockState().items.every((item) => item.categoryId !== 'CAT-RIN')).toBe(true);
@@ -58,10 +59,10 @@ describe('MockCategoryRepository', () => {
 
     expect(saved.ok).toBe(true);
     const reviews = getMockState().pendingCatalogReviews;
-    expect(reviews.map((entry) => entry.parentId).sort()).toEqual(['ENG-001', 'ENG-002', 'ENG-003']);
+    expect(reviews.map((entry) => entry.parentId).sort()).toEqual(['MOT-001', 'MOT-002', 'MOT-003']);
     expect(reviews.every((entry) => entry.expectedComponentName === 'Bomba de aceite')).toBe(true);
-    expect(getMockState().items.find((item) => item.id === 'ENG-001')?.complete).toBe(true);
-    expect(getMockState().items.find((item) => item.id === 'ENG-002')?.complete).toBe(false);
+    expect(getMockState().items.find((item) => item.id === 'MOT-001')?.complete).toBe(true);
+    expect(getMockState().items.find((item) => item.id === 'MOT-002')?.complete).toBe(false);
   });
 
   it('rejects a repeated expected-component name without changing the category', async () => {
@@ -87,7 +88,7 @@ describe('MockCategoryRepository', () => {
     const state = getMockState();
     state.pendingCatalogReviews.push({
       id: 'PCR-001',
-      parentId: 'ENG-003',
+      parentId: 'MOT-003',
       expectedComponentName: 'Alternador',
       kind: 'PENDING_NA',
     });

@@ -29,7 +29,7 @@ export function InvoiceDetailPage() {
 
   if (result.status === 'error') {
     return (
-      <Info tone="error" title="No se pudo cargar el detalle">
+      <Info tone="error" title="No se pudo cargar la factura">
         {result.error.message}
       </Info>
     );

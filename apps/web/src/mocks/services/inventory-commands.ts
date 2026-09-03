@@ -38,6 +38,7 @@ import {
   protectedAncestor,
   syncDirectParentCompleteness,
 } from './inventory-helpers';
+import { allocateItemCode } from './item-code';
 
 function optionalText(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
@@ -100,19 +101,25 @@ function validateFiniteNonNegative(value: number | undefined, label: string): Re
   return ok(undefined);
 }
 
+function takenInventoryIds(state: AppState, extra: Iterable<string> = []): string[] {
+  return [
+    ...state.items.map((entry) => entry.id),
+    ...state.qtyProducts.map((entry) => entry.id),
+    ...extra,
+  ];
+}
+
 function buildRegisteredItem(
   state: AppState,
+  seq: Record<string, number>,
+  extraTakenIds: Iterable<string>,
   input: RegisterItemInput,
   relationship: Item['physicalRelationship'],
   parentId?: string,
 ): Result<Item> {
-  const id = normalizeText(input.id);
   const name = normalizeText(input.name);
-  if (!id || !name || !normalizeText(input.categoryId)) {
-    return err({ code: 'VALIDATION', message: 'ID, nombre y categoría son obligatorios' });
-  }
-  if (inventoryIdExists(state, id)) {
-    return err({ code: 'CONFLICT', message: `El ID ${id} ya existe` });
+  if (!name || !normalizeText(input.categoryId)) {
+    return err({ code: 'VALIDATION', message: 'Nombre y categoría son obligatorios' });
   }
 
   const category = state.categories.find((entry) => entry.id === input.categoryId);
@@ -124,6 +131,17 @@ function buildRegisteredItem(
   if (!costValidation.ok) {
     return costValidation;
   }
+
+  const allocated = allocateItemCode(
+    state.categories,
+    seq,
+    takenInventoryIds(state, extraTakenIds),
+    category.id,
+  );
+  if (!allocated.ok) {
+    return allocated;
+  }
+  const id = allocated.value;
 
   const attributes = Object.fromEntries(
     Object.entries(input.attributes ?? {})
@@ -169,15 +187,17 @@ function buildRegisteredItem(
 }
 
 export function registerItem(state: AppState, actor: User, input: RegisterItemInput): Result<Item> {
-  const built = buildRegisteredItem(state, input, 'INDEPENDENT');
-  if (!built.ok) {
-    return built;
-  }
-  if (isAssemblyItem(built.value, state.categories)) {
+  const category = state.categories.find((entry) => entry.id === input.categoryId);
+  if (category?.isAssembly) {
     return err({
       code: 'VALIDATION',
       message: 'Los ensamblajes requieren completar el checklist de recepción',
     });
+  }
+
+  const built = buildRegisteredItem(state, state.itemCodeSeq, [], input, 'INDEPENDENT');
+  if (!built.ok) {
+    return built;
   }
 
   state.items.push(built.value);
@@ -262,6 +282,7 @@ export function registerAssembly(
   const stagedItems: Item[] = [];
   const missingComponents: KnownMissingComponent[] = [];
   const pendingIds = new Set<string>();
+  const seq = { ...state.itemCodeSeq };
 
   const stageNode = (
     itemInput: RegisterItemInput,
@@ -270,7 +291,7 @@ export function registerAssembly(
     parentId?: string,
     expectedCategoryName?: string,
   ): Result<{ item: Item; snapshot: BaselineSnapshot }> => {
-    const built = buildRegisteredItem(state, itemInput, relationship, parentId);
+    const built = buildRegisteredItem(state, seq, pendingIds, itemInput, relationship, parentId);
     if (!built.ok) {
       return built;
     }
@@ -400,6 +421,7 @@ export function registerAssembly(
   // Commit only after every nested node and checklist has passed validation.
   state.items.push(...stagedItems);
   state.knownMissing.push(...missingComponents);
+  state.itemCodeSeq = seq;
   appendEvent(state, 'ASSEMBLY_REGISTERED', `${parent.id} registrado con baseline inicial`, actor, {
     itemId: parent.id,
     receiptTree: rootResult.value.snapshot,
@@ -806,7 +828,7 @@ export function resolveCatalogReview(
       registered.value.parent.location = undefined;
       childId = registered.value.parent.id;
     } else {
-      const built = buildRegisteredItem(state, input.item, 'INSTALLED', item.id);
+      const built = buildRegisteredItem(state, state.itemCodeSeq, [], input.item, 'INSTALLED', item.id);
       if (!built.ok) {
         return built;
       }

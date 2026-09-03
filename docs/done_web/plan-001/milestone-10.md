@@ -89,7 +89,7 @@ Resultado: 34 archivos de prueba frontend y 224 pruebas aprobadas.
 
 1. Login `pedro` / `demo1234` → Pendientes muestra `OD-DEMO-061` y `OD-DEMO-062` (sin números `FAC-`).
 2. Mis órdenes muestra `OD-DEMO-060` (Turbo Garrett, En proceso).
-3. Abrir `060` → agregar foto AFTER → Completar desarme (ubicación opcional). En inventario admin, `TUR-009` queda Vendido + Independiente y `ENG-001` incompleto.
+3. Abrir `060` → agregar foto AFTER → Completar desarme (ubicación opcional). En inventario admin, `TUR-009` queda Vendido + Independiente y `MOT-001` incompleto.
 4. Pendientes → Tomar `061` → pasa a Mis órdenes En proceso. Un segundo take (simulado) falla.
 5. Login `laura` → `/mechanic` no autorizado.
 

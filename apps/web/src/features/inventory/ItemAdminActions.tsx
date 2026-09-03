@@ -548,7 +548,7 @@ function WorkOrderForm({
           <Input
             id="wo-dest"
             required
-            placeholder="ENG-002"
+            placeholder="MOT-002"
             value={destinationParentId}
             onChange={(event) => setDestinationParentId(event.target.value)}
           />
@@ -591,7 +591,6 @@ function PresentChildForm({
   onCancel: () => void;
   onSubmit: (item: RegisterItemInput, baseline?: AssemblyBaselineEntry[]) => Promise<void>;
 }) {
-  const [id, setId] = useState('');
   const [name, setName] = useState(expectedComponentName);
   const [condition, setCondition] = useState<ItemCondition>('USED');
   const category = categories.find((entry) => entry.id === categoryId);
@@ -614,7 +613,6 @@ function PresentChildForm({
           event.preventDefault();
           void onSubmit(
             {
-              id,
               name,
               categoryId,
               condition,
@@ -632,14 +630,10 @@ function PresentChildForm({
           Crea la pieza en inventario y la instala en este ensamblaje. No es una orden de trabajo:
           corrige la composición de recepción ahora que el catálogo espera esta pieza.
         </p>
-        <Field label="ID" htmlFor="present-id">
-          <Input
-            id="present-id"
-            required
-            value={id}
-            onChange={(event) => setId(event.target.value)}
-          />
-        </Field>
+        <p className="text-sm text-navy-400">
+          Código al guardar:{' '}
+          <span className="font-mono text-navy">{category?.codePrefix ?? '—'}</span>
+        </p>
         <Field label="Nombre" htmlFor="present-name">
           <Input
             id="present-name"
