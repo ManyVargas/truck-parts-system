@@ -101,10 +101,10 @@ Deactivation must invalidate future access while preserving historical foreign-k
 ## Implementation checklist
 
 ### Backend / domain
-- [ ] Define fixed role enum and active/inactive user state.
-- [ ] Implement user repository and unique `username` constraint.
-- [ ] Implement one-time CLI bootstrap for the first Administrator when no users exist.
-- [ ] Implement password hashing, minimum 6-character validation, and credential verification.
+- [x] Define fixed role enum and active/inactive user state.
+- [x] Implement user repository and unique `username` constraint.
+- [x] Implement one-time CLI bootstrap for the first Administrator when no users exist.
+- [x] Implement password hashing, minimum 6-character validation, and credential verification.
 - [ ] Implement server-side session creation, lookup, rotation, logout, and invalidation.
 - [ ] Implement active-account guard.
 - [ ] Implement operation-level authorization helpers/policies.

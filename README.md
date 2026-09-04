@@ -45,6 +45,38 @@ npm run db:migrate
 
 ## Scripts
 
+### First Administrator (local bootstrap)
+
+After generating Prisma Client and applying migrations, run from the repository root
+in an interactive terminal:
+
+```bash
+npm run bootstrap:admin
+```
+
+The command uses `DATABASE_URL` from the environment or the root `.env`. It asks for
+name, username, optional phone/email, and a hidden password entered twice. Passwords
+must have at least 6 Unicode characters and are preserved exactly. Usernames are
+trimmed and lowercased; blank contact fields become null. The role is always
+`ADMINISTRATOR` and the account is active. No session is created.
+
+The command rejects any existing user, including inactive users. It never updates
+or resets existing credentials. A serializable transaction protects the empty-check
+and creation against simultaneous executions: only one bootstrap can succeed.
+After a concurrency conflict, inspect the database state before rerunning.
+
+No arguments or piped credentials are accepted. Ctrl+C during input cancels without
+creating an account. Exit codes: `0` success, `1` validation/database/conflict failure,
+`130` input cancellation. Errors omit credentials, hashes and database connection
+strings. If setup is incomplete, verify `DATABASE_URL` and run
+`npm run db:migrate:deploy` before retrying. Do not erase users to rerun bootstrap.
+
+This creates a PostgreSQL account only. The web still uses mock login until the
+authentication HTTP integration milestones. Automated bootstrap tests use only
+`DATABASE_URL_TEST` and do not create the development administrator.
+
+### Available commands
+
 | Command | Description |
 |---|---|
 | `npm run dev` | Start API (port 3000) and web (port 5173) |
@@ -54,6 +86,7 @@ npm run db:migrate
 | `npm run db:generate` | Generate Prisma Client |
 | `npm run db:migrate` | Create/apply migrations in development |
 | `npm run db:migrate:deploy` | Apply existing migrations (CI/local smoke) |
+| `npm run bootstrap:admin` | Create the first Administrator interactively in an empty user database |
 
 ## Local URLs
 

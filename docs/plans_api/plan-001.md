@@ -1,7 +1,7 @@
 # Plan 001 — Release 1 Milestones: Foundation + Access and Users
 
 **Release:** 1 — Application Foundation and Access (Local Development)  
-**Estado:** Milestone 3 completado — Milestone 4 en curso
+**Estado:** Milestone 5 completado en local — Milestone 4 mantiene pendientes de CI/auditoría
 **Último milestone:** Milestone 11 — Integrar users HTTP + exit gate Release 1
 
 ---
@@ -14,7 +14,7 @@
 - **Primer despliegue productivo:** después de completar Release 2 — Billing Core ([`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) §First production deployment).
 - **Features en alcance:** [`../FEATURES/01_ACCESS_AND_USERS.md`](../FEATURES/01_ACCESS_AND_USERS.md) + slice R1 de [`../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md`](../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md).
 - **Frontend:** el prototipo mock de [`../plans_web/plan-001.md`](../plans_web/plan-001.md) está **cerrado** (WM12). Login, shell por rol, usuarios y perfil propio ya existen contra mocks (`VITE_USE_MOCK_API`). M10–M11 de este plan **no reconstruyen pantallas**; sustituyen el repositorio mock por HTTP.
-- **Estado API:** M1–M3 completados (health live/ready + contrato de errores). Ningún endpoint de Access/Users existe todavía.
+- **Estado API:** M1–M3 y M5 completados en local; M4 mantiene pendientes externos. User/Session, repositorios y bootstrap CLI disponibles. Ningún endpoint de Access/Users existe todavía.
 - **Ciclo por milestone:** plan → implementación → pruebas → revisión → commit. La integración web se hace **solo** cuando la función API cumple el criterio de la sección Integración API → Web.
 
 
@@ -59,9 +59,9 @@ El prototipo web ya está listo para Access/Users. El cuello de botella es la AP
 
 Hasta entonces: `VITE_USE_MOCK_API` distinto de `false` (mocks). No mezclar login real con listados mock de usuarios, ni al revés.
 
-### Estado ahora (después de M3, antes de M4)
+### Estado ahora (después de M5 en local)
 
-**No hay función de Access/Users integrable.** El contrato de errores está fijado. Faltan modelo User/Session, HTTP de auth, policies y CRUD de usuarios.
+**No hay función de Access/Users integrable.** El contrato de errores, los modelos User/Session, sus repositorios y el bootstrap CLI están listos. Faltan HTTP de auth, policies y gestión HTTP de usuarios.
 
 | Función API | ¿Integrable ahora? | Motivo |
 |---|---|---|
@@ -140,7 +140,7 @@ flowchart TD
 | M2 | PostgreSQL + Prisma + health readiness | completado | **Nada de producto.** Health solo CI/ops |
 | M3 | Errores, logging, validación HTTP | completado | Contrato de errores; aún sin pantallas HTTP |
 | M4 | Test harness + CI baseline (smoke R1) | en curso | Ninguna |
-| M5 | Modelo User/Session + bootstrap CLI admin | pendiente | Ninguna (CLI, no HTTP) |
+| M5 | Modelo User/Session + bootstrap CLI admin | completado en local | Ninguna (CLI, no HTTP) |
 | M6 | Login/logout/sesiones + perfil propio (AUTH-001) | pendiente | Cliente HTTP auth **preparable**; swap no default |
 | M7 | Autorización server-side (AUTH-002/005) | pendiente | **Listo para M10** (auth + shell) |
 | M8 | User management backend (AUTH-003/004) | pendiente | **Listo para M11** (`/users`) |
@@ -270,6 +270,54 @@ El usuario realizará el PR al terminar Release 1; no se abre un PR para M4 ahor
 
 ## Milestone 5 — Modelo User + Session + bootstrap CLI
 
+**Avance — paso 2 implementado:** modelos Prisma `User`, `Session` y enum `Role`,
+con UUID generados en PostgreSQL, timestamps con zona horaria, índices y FK con
+borrado restringido. La migración exige usernames no vacíos, en minúsculas y sin
+espacios exteriores; `Session` almacena `tokenHash` único. Restricciones verificadas
+con pruebas de integración sobre PostgreSQL.
+
+**Avance — paso 3 implementado:** validación Zod reutilizable para creación de
+usuarios: nombre requerido, username normalizado, roles cerrados y contacto opcional
+(vacío a `null`, email validado). Se rechazan campos ajenos al input de creación.
+Contraseña de al menos 6 caracteres Unicode, sin transformaciones ni complejidad
+adicional. Hashing/verificación con Argon2id (19 MiB, 2 iteraciones, paralelismo 1),
+salt aleatorio por hash y errores internos sin secretos. Pruebas unitarias con
+Argon2 real.
+
+**Avance — paso 4 implementado:** `UserRepository` compartible por `access` y `users`,
+con creación a partir de passwordHash, consultas por ID/username, comprobación de
+existencia incluyendo inactivos y actualización de active sin borrado. Acepta cliente
+Prisma de transacción; commit y rollback verificados contra PostgreSQL, junto con
+unicidad y conservación de identidad. Devuelve registros internos con hash, que no
+deben exponerse en HTTP ni logs. Validación, autorización, hashing e invalidación de
+sesiones se coordinan desde servicios.
+
+**Avance — paso 5 implementado:** `SessionRepository` permite crear sesiones con
+tokenHash, userId y expiresAt, consultar por hash, revocar una sesión o todas las de
+un usuario. Las revocaciones son idempotentes y devuelven el número de registros
+eliminados. Acepta cliente transaccional; persistencia, aislamiento entre usuarios y
+rollback conjunto con cambios de usuario probados en PostgreSQL. La consulta devuelve
+el registro persistido, incluso expirado: expiración y estado activo se validarán en
+el servicio de autenticación de M6. No se generan tokens ni cookies todavía.
+
+**Avance — paso 6 implementado:** `npm run bootstrap:admin` solicita datos y contraseña
+oculta con confirmación, sin argumentos ni entrada por pipes. Crea un Administrator
+activo, con Argon2id, solo si no existe ningún usuario; comprobación y creación en
+transacción serializable, con rechazo seguro de conflictos concurrentes. Sin sesión,
+sin credenciales predefinidas ni secretos en salida; cierre de conexión y cancelación
+de entrada probados. Pruebas de base vacía, cuenta previa activa/inactiva, validación
+y dos bootstraps simultáneos. Uso documentado en README. No se creó administrador
+de desarrollo durante la implementación.
+
+**Paso 7 — verificación local completada (2026-09-04):** 580 pruebas aprobadas
+(85 unitarias API, 52 integración API y 443 web), typecheck de aplicaciones y tests,
+lint sin errores y build de ambos workspaces correctos. Migraciones reaplicadas desde
+cero únicamente en la base de pruebas. Se mantienen 4 advertencias de lint web y la
+advertencia de tamaño del bundle web. `npm audit --audit-level=high` no pudo completar
+por timeout del registro; no se declara auditoría verde ni CI remoto aprobado.
+Evidencia y límites en [`milestone-5-verification.md`](milestone-5-verification.md).
+M5 cumple su definición de terminado local; siguen pendientes los gates externos de M4.
+
 **Objetivo:** Modelar usuarios, roles, sesiones y bootstrap del primer Administrator.
 
 **Alcance:**
@@ -281,7 +329,7 @@ El usuario realizará el PR al terminar Release 1; no se abre un PR para M4 ahor
 - Validación contraseña: mínimo 6 caracteres
 
 **Dependencias / decisiones:**
-- Argon2id vs. bcrypt — decidir en plan del milestone (recomendación: Argon2id)
+- Argon2id implementado: 19 MiB de memoria, 2 iteraciones y paralelismo 1; salt aleatorio por hash.
 
 **Pruebas:**
 - Unique constraint en `username`
@@ -479,7 +527,13 @@ Tras **cerrar Release 1**, la siguiente integración web de negocio es Release 2
 
 ## Próximo paso
 
-**Milestone 4:** Test harness y workflow implementados; siguiente paso: verificar el primer PR en GitHub y configurar el check obligatorio `R1 quality`.
+**Milestone 6:** Planificar autenticación HTTP, cookies, expiración de sesiones, CSRF,
+rate limiting y perfil propio antes de implementarlos. El administrador local se puede
+crear con `npm run bootstrap:admin` cuando se necesite; no es obligatorio para cerrar M5.
+
+**Pendientes de Milestone 4:** completar la auditoría npm, verificar el primer PR en
+GitHub y configurar el check obligatorio `R1 quality`. Se mantiene la decisión de
+hacer el PR al terminar Release 1.
 
 No integrar Access/Users a la web: el prototipo permanece en mock hasta M10–M11.
 

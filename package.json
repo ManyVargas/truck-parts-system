@@ -10,6 +10,7 @@
     "apps/*"
   ],
   "scripts": {
+    "bootstrap:admin": "npm run bootstrap:admin -w @truck-parts/api",
     "dev": "concurrently -n api,web -c blue,green \"npm run dev -w @truck-parts/api\" \"npm run dev -w @truck-parts/web\"",
     "build": "npm run build -w @truck-parts/api && npm run build -w @truck-parts/web",
     "lint": "eslint .",
