@@ -149,6 +149,8 @@ describe('auth HTTP (integration)', () => {
       username,
       name: user.name,
       role: user.role,
+      phone: user.phone,
+      email: user.email,
     });
 
     const me = await agent.get('/api/auth/me');

@@ -516,9 +516,58 @@ Ninguna respuesta JSON incluye `passwordHash` ni el token opaco de sesión.
 
 ## Milestone 7 — Autorización server-side
 
-**Estado:** pendiente
+**Estado:** código y pruebas unitarias completados (2026-09-04). Las integraciones PostgreSQL/HTTP están escritas; `prisma migrate reset` sobre `truck_parts_test` (localhost:5433) lo bloqueó Prisma AI safety en esta sesión.
 
-*(Se documentará al completar el milestone.)*
+### Objetivo cumplido
+
+Separar autorización de autenticación (AUTH-002 / AUTH-005): el servidor vuelve a evaluar el rol
+en cada operación protegida. Mechanic no recibe datos comerciales en `/session`. El frontend
+permanece en mock.
+
+### Policies
+
+| Helper | Comportamiento |
+|---|---|
+| `requireRole(...roles)` | Sin `req.auth` → `401 UNAUTHORIZED`. Rol no listado → `403 FORBIDDEN` (`Insufficient permissions`, distinto del CSRF). Rol permitido → `next()`. |
+| `requireAdministrator` | `requireRole('ADMINISTRATOR')` |
+
+Deben ir **después** de `requireAuth`. M8 repetirá la regla de Administrator en el service de `users`.
+
+### Proyección `GET /api/auth/session`
+
+| Rol | Cuerpo |
+|---|---|
+| Mechanic | `{ id, username, name, role }` |
+| Seller / Administrator | identidad + `phone` + `email` (contacto propio, no comercial) |
+
+`GET /api/auth/me` sigue siendo perfil propio para **todos** los roles (Feature 01 self-service).
+La proyección de Work Orders sin campos comerciales (WO-003) no forma parte de Release 1.
+
+### Placeholder
+
+`GET /api/auth/admin-probe` — `requireAuth` + `requireAdministrator` → `{ ok: true }`.
+No gestiona usuarios; existe para tests negativos y smoke hasta que M8 monte `/api/admin/users`.
+
+### Tests
+
+- Unitarias: `require-role.test.ts`, proyección Mechanic vs Seller/Admin
+- Integración: 401 sin cookie; Seller/Mechanic 403 sin mutar estado; Administrator 200; Mechanic `/session` sin phone/email y `/me` con contacto propio
+
+### Validación realizada
+
+| Verificación | Resultado |
+|---|---|
+| `npx vitest run tests/unit` (API) | **120** aprobadas |
+| `npm run typecheck --workspace @truck-parts/api` | OK |
+| Integración HTTP autorización | Escrita; no ejecutada en esta sesión (mismo bloqueo de `migrate reset` sobre `truck_parts_test`) |
+
+### Fuera de alcance (intencional)
+
+- HTTP de administración de usuarios (M8)
+- Swap web (M10)
+- Matriz completa de inventario/ventas/OT (`ROLES_AND_PERMISSIONS.md`); este milestone solo deja el mecanismo de rol
+
+---
 
 ---
 

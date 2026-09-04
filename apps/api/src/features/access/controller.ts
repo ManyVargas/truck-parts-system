@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 
 import { AppError } from '../../infrastructure/errors/app-error.js';
-import { toPublicAuthUser, toPublicProfile } from './projection.js';
+import { toPublicAuthUser, toPublicProfile, toSessionProjection } from './projection.js';
 import { accessService } from './service.js';
 import { clearSessionCookie, readSessionToken, setSessionCookie } from './session-cookie.js';
 import type { RequestAuth } from './types.js';
@@ -18,12 +18,14 @@ function requireRequestAuth(req: Request): RequestAuth {
   return req.auth;
 }
 
-function publicUserFromAuth(auth: RequestAuth) {
-  return toPublicAuthUser({
+function sessionProjectionFromAuth(auth: RequestAuth) {
+  return toSessionProjection({
     id: auth.userId,
     username: auth.username,
     name: auth.name,
     role: auth.role,
+    phone: auth.phone,
+    email: auth.email,
   });
 }
 
@@ -54,7 +56,12 @@ export async function postLogout(req: Request, res: Response): Promise<void> {
 }
 
 export function getSession(req: Request, res: Response): void {
-  res.status(200).json(publicUserFromAuth(requireRequestAuth(req)));
+  res.status(200).json(sessionProjectionFromAuth(requireRequestAuth(req)));
+}
+
+/** Placeholder until M8; proves requireAdministrator without exposing user-management commands. */
+export function getAdminProbe(_req: Request, res: Response): void {
+  res.status(200).json({ ok: true });
 }
 
 export function getMe(req: Request, res: Response): void {

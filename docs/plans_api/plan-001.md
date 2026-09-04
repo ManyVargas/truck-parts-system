@@ -1,7 +1,7 @@
 # Plan 001 — Release 1 Milestones: Foundation + Access and Users
 
 **Release:** 1 — Application Foundation and Access (Local Development)  
-**Estado:** Milestone 5 completado en local — Milestone 4 mantiene pendiente la verificación en GitHub
+**Estado:** Milestone 7 completado en local — Milestone 4 mantiene pendiente la verificación en GitHub
 **Último milestone:** Milestone 11 — Integrar users HTTP + exit gate Release 1
 
 ---
@@ -14,7 +14,7 @@
 - **Primer despliegue productivo:** después de completar Release 2 — Billing Core ([`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) §First production deployment).
 - **Features en alcance:** [`../FEATURES/01_ACCESS_AND_USERS.md`](../FEATURES/01_ACCESS_AND_USERS.md) + slice R1 de [`../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md`](../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md).
 - **Frontend:** el prototipo mock de [`../plans_web/plan-001.md`](../plans_web/plan-001.md) está **cerrado** (WM12). Login, shell por rol, usuarios y perfil propio ya existen contra mocks (`VITE_USE_MOCK_API`). M10–M11 de este plan **no reconstruyen pantallas**; sustituyen el repositorio mock por HTTP.
-- **Estado API:** M1–M3 y M5 completados en local; M4 mantiene pendientes externos. User/Session, repositorios y bootstrap CLI disponibles. Ningún endpoint de Access/Users existe todavía.
+- **Estado API:** M1–M3, M5–M7 completados en local; M4 mantiene pendientes externos. Auth HTTP, `requireAuth`/`requireRole` y proyección por rol existen. Falta gestión HTTP de usuarios (M8).
 - **Ciclo por milestone:** plan → implementación → pruebas → revisión → commit. La integración web se hace **solo** cuando la función API cumple el criterio de la sección Integración API → Web.
 
 
@@ -59,15 +59,15 @@ El prototipo web ya está listo para Access/Users. El cuello de botella es la AP
 
 Hasta entonces: `VITE_USE_MOCK_API` distinto de `false` (mocks). No mezclar login real con listados mock de usuarios, ni al revés.
 
-### Estado ahora (después de M5 en local)
+### Estado ahora (después de M7 en local)
 
-**No hay función de Access/Users integrable.** El contrato de errores, los modelos User/Session, sus repositorios y el bootstrap CLI están listos. Faltan HTTP de auth, policies y gestión HTTP de usuarios.
+**Auth HTTP está listo a nivel API; el swap web espera M10.** Falta gestión HTTP de usuarios (M8).
 
 | Función API | ¿Integrable ahora? | Motivo |
 |---|---|---|
 | `GET /api/health/live` | Opcional (ops) | API completa. El prototipo **ya no** tiene pantalla de health; no es Feature 01. Se puede usar a mano o en CI. |
 | `GET /api/health/ready` | Opcional (ops) | Igual: readiness de PostgreSQL, no flujo de usuario. |
-| Login / logout / sesión / perfil propio | No | No existen endpoints. UI lista (`/login`, shell, `/profile`, `/mechanic/profile`). |
+| Login / logout / sesión / perfil propio | No (swap en M10) | Endpoints M6–M7 listos. UI mock hasta M10. |
 | Gestión Administrator de usuarios | No | No existen endpoints. UI lista (`/users`). |
 | History de usuarios | No | Envelope aún no existe. En R1 **no hay pantalla** de historial de usuarios; es persistencia + tests. |
 | Clientes, facturas, inventario, OT, dashboard KPIs, recovery | No (fuera de R1) | UI mock existe; API y release correspondientes son R2+. |
@@ -141,8 +141,8 @@ flowchart TD
 | M3 | Errores, logging, validación HTTP | completado | Contrato de errores; aún sin pantallas HTTP |
 | M4 | Test harness + CI baseline (smoke R1) | en curso | Ninguna |
 | M5 | Modelo User/Session + bootstrap CLI admin | completado en local | Ninguna (CLI, no HTTP) |
-| M6 | Login/logout/sesiones + perfil propio (AUTH-001) | pendiente | Cliente HTTP auth **preparable**; swap no default |
-| M7 | Autorización server-side (AUTH-002/005) | pendiente | **Listo para M10** (auth + shell) |
+| M6 | Login/logout/sesiones + perfil propio (AUTH-001) | completado en local | Cliente HTTP auth **preparable**; swap no default |
+| M7 | Autorización server-side (AUTH-002/005) | completado en local | **Listo para M10** (auth + shell); swap no default |
 | M8 | User management backend (AUTH-003/004) | pendiente | **Listo para M11** (`/users`) |
 | M9 | History envelope R1 + eventos de usuarios | pendiente | Sin UI R1; tests/API en el exit gate |
 | M10 | Integrar auth HTTP (login/sesión/perfil/shell) | pendiente | Swap `AuthRepository` mock → HTTP |
@@ -382,6 +382,13 @@ M5 cumple su definición de terminado local; siguen pendientes los gates externo
 
 ## Milestone 7 — Autorización server-side (AUTH-002, AUTH-005)
 
+**Avance — implementado (2026-09-04):** `requireRole` / `requireAdministrator` después de `requireAuth`
+(401 sin sesión, 403 rol insuficiente). `GET /api/auth/session` proyecta Mechanic como identidad
+mínima y Seller/Administrator con contacto propio; `/me` sigue siendo perfil propio para todos
+los roles. `GET /api/auth/admin-probe` es un placeholder admin-only hasta M8. Tests unitarios e
+integración cubren denegaciones y proyección. La proyección completa de Work Orders (WO-003)
+queda para el release de OT. El prototipo web permanece en mock.
+
 **Objetivo:** Enforcement de roles en servidor; base para matriz de [`../ROLES_AND_PERMISSIONS.md`](../ROLES_AND_PERMISSIONS.md).
 
 **Alcance:**
@@ -528,9 +535,9 @@ Tras **cerrar Release 1**, la siguiente integración web de negocio es Release 2
 
 ## Próximo paso
 
-**Milestone 6:** Planificar autenticación HTTP, cookies, expiración de sesiones, CSRF,
-rate limiting y perfil propio antes de implementarlos. El administrador local se puede
-crear con `npm run bootstrap:admin` cuando se necesite; no es obligatorio para cerrar M5.
+**Milestone 8:** Gestión HTTP de usuarios Administrator (`/api/admin/users`), reutilizando
+`requireAdministrator`. No cablear `/users` en el web (eso es M11). El administrador local se
+puede crear con `npm run bootstrap:admin` cuando se necesite.
 
 **Pendientes de Milestone 4:** verificar el primer PR en GitHub y configurar el check
 obligatorio `R1 quality`. Se mantiene la decisión de

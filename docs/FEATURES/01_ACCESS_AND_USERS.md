@@ -107,7 +107,7 @@ Deactivation must invalidate future access while preserving historical foreign-k
 - [x] Implement password hashing, minimum 6-character validation, and credential verification.
 - [x] Implement server-side session creation, lookup, rotation, logout, and invalidation.
 - [x] Implement active-account guard.
-- [ ] Implement operation-level authorization helpers/policies.
+- [x] Implement operation-level authorization helpers/policies.
 - [ ] Implement Administrator user-management commands in the `users` module.
 - [ ] Preserve historical user identity after deactivation.
 
@@ -120,7 +120,7 @@ Deactivation must invalidate future access while preserving historical foreign-k
 
 ### Tests
 - [x] Valid/invalid/inactive login tests.
-- [ ] Role matrix negative tests through direct API requests (Release 1 Mechanic scope: minimal session projection only).
+- [x] Role matrix negative tests through direct API requests (Release 1 Mechanic scope: minimal session projection only).
 - [ ] Session invalidation after deactivation.
 - [ ] Historical records still resolve deactivated actor identity.
 

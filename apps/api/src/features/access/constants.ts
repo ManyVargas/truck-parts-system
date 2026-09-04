@@ -17,6 +17,11 @@ export const CSRF_REQUEST_HEADER_VALUE = 'XMLHttpRequest';
 
 export const INVALID_CREDENTIALS_MESSAGE = 'Invalid credentials';
 
+export const INSUFFICIENT_PERMISSIONS_MESSAGE = 'Insufficient permissions';
+
+/** Placeholder admin-only route until M8 mounts `/api/admin/users`. Used by authorization tests and smoke. */
+export const ADMIN_AUTHORIZATION_PROBE_PATH = '/admin-probe';
+
 export function isSessionCookieSecure(nodeEnv: string | undefined): boolean {
   return nodeEnv === 'production';
 }

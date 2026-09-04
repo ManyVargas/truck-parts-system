@@ -14,6 +14,18 @@ export type PublicAuthUser = {
   role: Role;
 };
 
+/** Seller/Administrator session payload: identity plus own contact. Never commercial/financial fields. */
+export type PublicSessionUser = PublicAuthUser & {
+  phone: string | null;
+  email: string | null;
+};
+
+/**
+ * Mechanic sessions stay at identity only (AUTH-002 R1). Work Order commercial stripping belongs
+ * to the Work Orders release (WO-003), not this DTO.
+ */
+export type SessionProjection = PublicAuthUser | PublicSessionUser;
+
 export type PublicProfile = PublicAuthUser & {
   phone: string | null;
   email: string | null;

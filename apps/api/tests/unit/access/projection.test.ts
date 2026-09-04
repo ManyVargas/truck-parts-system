@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { toPublicAuthUser, toPublicProfile } from '../../../src/features/access/projection.js';
+import {
+  toPublicAuthUser,
+  toPublicProfile,
+  toSessionProjection,
+} from '../../../src/features/access/projection.js';
 import type { AuthUserRecord } from '../../../src/features/access/types.js';
 
 function sampleUser(overrides: Partial<AuthUserRecord> = {}): AuthUserRecord {
@@ -50,4 +54,36 @@ describe('auth HTTP projections', () => {
     expect(JSON.stringify(projected)).not.toContain('passwordHash');
     expect(JSON.stringify(projected)).not.toContain('$argon2id$');
   });
+
+  it('keeps Mechanic session identity-only even when contact fields exist', () => {
+    const projected = toSessionProjection(sampleUser({ role: 'MECHANIC' }));
+
+    expect(projected).toEqual({
+      id: '11111111-1111-4111-8111-111111111111',
+      username: 'seller',
+      name: 'Ana Seller',
+      role: 'MECHANIC',
+    });
+    expect(projected).not.toHaveProperty('phone');
+    expect(projected).not.toHaveProperty('email');
+    expect(JSON.stringify(projected)).not.toMatch(/price|cost|invoice|customer|profit|payment/i);
+  });
+
+  it.each(['SELLER', 'ADMINISTRATOR'] as const)(
+    'includes own contact on %s session and still omits commercial fields',
+    (role) => {
+      const projected = toSessionProjection(sampleUser({ role }));
+
+      expect(projected).toEqual({
+        id: '11111111-1111-4111-8111-111111111111',
+        username: 'seller',
+        name: 'Ana Seller',
+        role,
+        phone: '8095550000',
+        email: 'ana@example.com',
+      });
+      expect(JSON.stringify(projected)).not.toMatch(/price|cost|invoice|customer|profit|payment/i);
+      expect(JSON.stringify(projected)).not.toContain('passwordHash');
+    },
+  );
 });
