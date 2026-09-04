@@ -2,7 +2,7 @@
 
 **Release:** Application Foundation and Access (Local Development)  
 **Plan de referencia:** [`../plans_api/plan-001.md`](../plans_api/plan-001.md)  
-**Estado:** en progreso (Milestones 1–3 completados; M4 implementado y verificado localmente, con auditoría y verificación en GitHub pendientes)
+**Estado:** en progreso (Milestones 1–3 y 5–6 completados; M4 implementado y verificado localmente, con verificación en GitHub pendiente; integración HTTP de M6 escrita, no ejecutada en esta sesión por el bloqueo de `prisma migrate reset`)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 1, a medida que se completan.  
 No sustituye a `plan-001.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -207,7 +207,7 @@ Instalar infraestructura transversal de errores de aplicación, logging estructu
 
 ## Milestone 4 — Test harness y CI baseline
 
-**Estado:** implementado y verificado localmente; cierre completo pendiente de auditoría y verificación en GitHub
+**Estado:** implementado y verificado localmente; cierre completo pendiente de verificación en GitHub
 
 **Fecha:** 2026-09-03
 
@@ -285,6 +285,7 @@ El owner actualizó posteriormente su npm global a **11.19.1**, y se comprobó q
 | Typecheck de aplicaciones y pruebas | OK |
 | Lint | Sin errores; 4 advertencias preexistentes de React Fast Refresh |
 | Build API + web | OK; advertencia preexistente por tamaño del bundle web |
+| `npm audit --audit-level=high` | **0 vulnerabilidades** (2026-09-04, npm 11.19.1) |
 | Conexión de test deliberadamente inaccesible | La suite falla explícitamente antes de ejecutar pruebas |
 | Instalación con npm 11.17 | Rechazada con `EBADENGINE`; lockfile sin cambios |
 | Sintaxis del workflow YAML | Parseo correcto |
@@ -293,12 +294,12 @@ Las comprobaciones locales se realizaron en Windows con Node.js 24. La ejecució
 
 ### Pendientes y acuerdo de continuidad
 
-1. **Auditoría completa:** las versiones corregidas están instaladas, pero las consultas posteriores de `npm audit --audit-level=high` no concluyeron por timeouts. El owner también obtuvo **HTTP 503 Service Unavailable** del endpoint de auditoría de npm. Esto no equivale a una auditoría sin vulnerabilidades.
-2. **Mantener el gate:** la auditoría sigue siendo obligatoria en CI, con umbral alto; debe reintentarse cuando responda el registro y verificarse antes del merge de Release 1.
-3. **PR al final de Release 1:** el owner realizará el PR cuando complete el release, no al terminar M4. Hasta entonces puede continuar el desarrollo local con estas verificaciones pendientes registradas.
+1. **Auditoría completa:** los primeros intentos posteriores a la corrección fallaron por timeout o **HTTP 503 Service Unavailable**. El reintento del 2026-09-04 con npm 11.19.1 concluyó correctamente: `found 0 vulnerabilities`.
+2. **Mantener el gate:** la auditoría sigue siendo obligatoria en CI, con umbral alto, y debe verificarse también en el workflow antes del merge de Release 1.
+3. **PR al final de Release 1:** el owner realizará el PR cuando complete el release, no al terminar M4. Hasta entonces puede continuar el desarrollo local con la verificación de GitHub pendiente.
 4. **GitHub:** comprobar la primera ejecución de **CI R1**, configurar **R1 quality** como check obligatorio para `main` y verificar que un fallo impida el merge. No se afirma que la protección de rama ya esté configurada.
 
-Por tanto, M4 queda **implementado y verificado localmente**, pero su definición de terminado completa permanece pendiente de la auditoría y de la verificación del gate en GitHub.
+Por tanto, M4 queda **implementado y verificado localmente**, incluida la auditoría sin vulnerabilidades; su definición de terminado completa permanece pendiente de la verificación del gate en GitHub.
 
 ### Fuera de alcance
 
@@ -311,17 +312,205 @@ Por tanto, M4 queda **implementado y verificado localmente**, pero su definició
 
 ## Milestone 5 — Modelo User + Session + bootstrap CLI
 
-**Estado:** pendiente
+**Estado:** completado y verificado localmente
 
-*(Se documentará al completar el milestone.)*
+**Fecha:** 2026-09-04
+
+### Objetivo cumplido
+
+Modelar usuarios, roles y sesiones en PostgreSQL, añadir persistencia reutilizable para los módulos `access` y `users`, y proporcionar un comando seguro para crear el primer Administrator en una base sin usuarios. M5 no añadió rutas HTTP ni conectó el frontend.
+
+### Qué se entregó
+
+#### Modelo User y roles
+
+- Enum Prisma `Role` cerrado con exactamente `ADMINISTRATOR`, `SELLER` y `MECHANIC`.
+- Modelo `User` con UUID generado por PostgreSQL y los campos MVP confirmados: `name`, `username`, `phone?`, `email?`, `role`, `active`, `passwordHash`, `createdAt` y `updatedAt`.
+- `active` inicia en `true`; desactivar una cuenta actualiza el estado y conserva el registro, su identidad y sus credenciales internas.
+- `username` tiene índice único y una restricción PostgreSQL adicional: debe ser no vacío, estar en minúsculas y no tener espacios exteriores.
+- `createdAt` y `updatedAt` usan timestamps con zona horaria y precisión de milisegundos.
+
+#### Modelo Session
+
+- Modelo `Session` con UUID, `tokenHash` único, `userId` y `expiresAt`.
+- Clave foránea `Session.userId → User.id`, con actualización en cascada y borrado restringido.
+- Índices sobre `userId` para revocar sesiones de una cuenta y sobre `expiresAt` para facilitar limpieza futura.
+- La base almacena el hash del token, no el token opaco utilizable. La generación y el hashing de tokens llegan con el servicio de autenticación de M6.
+- Un usuario puede tener varias sesiones; una sesión no puede pertenecer a un usuario inexistente.
+
+#### Migración
+
+- Migración `apps/api/prisma/migrations/20260904000000_user_session/migration.sql` con enum, tablas, restricciones, índices y FK.
+- La migración se aplicó correctamente a `truck_parts_dev` durante el paso de persistencia.
+- El harness de integración la reaplicó desde cero en `truck_parts_test` para demostrar reproducibilidad.
+
+#### Validación de usuarios
+
+- `apps/api/src/features/users/validation.ts` contiene schemas Zod reutilizables.
+- El nombre es obligatorio y se guarda sin espacios exteriores.
+- El username se recorta y convierte a minúsculas antes de persistirlo.
+- Teléfono y email son opcionales; una entrada vacía se representa como `null` y el email se valida cuando existe.
+- La entrada de creación es estricta y rechaza campos controlados por persistencia o administración como `id`, `passwordHash` y `active`.
+- La contraseña requiere al menos seis caracteres Unicode, sin reglas adicionales de complejidad. Se conserva exactamente como fue escrita: no se recorta, normaliza ni cambia entre mayúsculas y minúsculas.
+
+#### Hashing de contraseñas
+
+- Dependencia `argon2` 0.45.1 fijada en el workspace API y lockfile.
+- `apps/api/src/features/access/password.ts` centraliza creación y verificación de hashes Argon2id.
+- Parámetros explícitos: 19 MiB de memoria, 2 iteraciones y paralelismo 1.
+- Cada hash utiliza un salt aleatorio generado por la librería; dos hashes de la misma contraseña son diferentes y ambos se verifican correctamente.
+- Errores nativos de hashing/verificación se convierten en errores internos seguros sin incluir contraseña ni hash.
+
+#### Repositorio de usuarios
+
+- `apps/api/src/features/users/repository.ts` implementa `UserRepository`, compartible por los futuros servicios `access` y `users`.
+- Operaciones: crear con `passwordHash`, consultar por ID, consultar por username, comprobar si existe cualquier usuario y cambiar el estado activo.
+- `hasAnyUsers()` cuenta también usuarios inactivos, requisito del bootstrap one-shot.
+- El repositorio acepta el cliente Prisma normal o un `Prisma.TransactionClient`, permitiendo que el servicio agrupe operaciones atómicamente.
+- Devuelve registros internos que incluyen `passwordHash`; queda explícito que no deben enviarse por HTTP ni registrarse en logs.
+- La validación, autorización, generación del hash, mapeo de errores y revocación de sesiones permanecen en los servicios correspondientes.
+
+#### Repositorio de sesiones
+
+- `apps/api/src/features/access/repository.ts` implementa `SessionRepository`.
+- Operaciones: crear, buscar por hash, revocar por hash y revocar todas las sesiones de un usuario.
+- Las revocaciones utilizan eliminación idempotente y devuelven cuántos registros eliminaron: repetir logout o revocación sobre una sesión inexistente no falla.
+- Revocar todas las sesiones de una cuenta no afecta sesiones de otras cuentas ni elimina al usuario.
+- Admite el mismo patrón de cliente transaccional que `UserRepository`.
+- Una consulta puede devolver una sesión expirada; validar expiración y estado activo es responsabilidad del servicio de autenticación de M6.
+
+#### Bootstrap del primer Administrator
+
+- Comando raíz y de workspace: `npm run bootstrap:admin`.
+- CLI interactivo que solicita nombre, username, teléfono/email opcionales y contraseña oculta introducida dos veces.
+- No acepta argumentos ni credenciales por pipes; evita dejar secretos en historial de comandos, argumentos visibles o logs.
+- La contraseña no se muestra en terminal y la confirmación debe coincidir exactamente.
+- El servicio valida los datos, genera Argon2id y crea siempre una cuenta activa con rol `ADMINISTRATOR`; no permite seleccionar otro rol.
+- No contiene credenciales predefinidas y no crea una sesión.
+- Si existe cualquier usuario, activo o inactivo, rechaza la operación sin modificar la base.
+- La comprobación de base vacía y la creación se ejecutan dentro de una transacción serializable. Dos ejecuciones simultáneas con usernames diferentes producen exactamente un administrador; la otra recibe un conflicto seguro.
+- El hash se calcula antes de abrir la transacción para mantener corta la sección que bloquea la base.
+- Ctrl+C cancela con código 130; validación, conflicto y fallos de base terminan con código 1; éxito termina con 0.
+- La conexión Prisma se cierra al terminar, incluso cuando la operación falla o se cancela.
+- Los mensajes inesperados omiten detalles internos, hashes, contraseñas y URLs de conexión.
+
+#### Documentación operativa
+
+- `README.md` explica prerrequisitos, comando, base elegida mediante `DATABASE_URL`, normalización, códigos de salida y comportamiento one-shot/concurrente.
+- Crear el administrador en `truck_parts_dev` es opcional hasta que se necesite probar M6. Las pruebas crean usuarios únicamente en la base desechable indicada por `DATABASE_URL_TEST`.
+- Evidencia detallada del cierre en [`../plans_api/milestone-5-verification.md`](../plans_api/milestone-5-verification.md).
+
+### Decisiones técnicas
+
+| Decisión                                                      | Motivo                                                                                            |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Username canónico en minúsculas y sin espacios exteriores     | Evitar identidades visualmente equivalentes y mantener la misma regla en creación y login futuro  |
+| UUID generado en PostgreSQL                                   | Identificadores estables sin coordinación con la aplicación                                       |
+| Argon2id con parámetros explícitos                            | Algoritmo adecuado para contraseñas y configuración reproducible entre entornos                   |
+| Contraseña mínima de 6 caracteres Unicode, sin transformación | Aplicar exactamente la política MVP confirmada sin cambiar el secreto del usuario                 |
+| Guardar `tokenHash`, no el token opaco                        | Una lectura de la tabla Session no entrega directamente credenciales reutilizables                |
+| Repositorios compatibles con `TransactionClient`              | Permitir reglas atómicas sin duplicar persistencia ni acoplar repositorios a un servicio concreto |
+| Revocaciones de sesión idempotentes                           | Logout y desactivación pueden repetirse sin convertir una ausencia esperable en error             |
+| Transacción serializable en bootstrap                         | Proteger la condición global “no existe ningún usuario” ante ejecuciones simultáneas              |
+| CLI interactivo sin argumentos ni pipes                       | Reducir exposición de credenciales y evitar credenciales hardcodeadas                             |
+
+### Validación realizada
+
+| Verificación                          | Resultado                                                                                       |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Schema Prisma y migración limpia      | Válidos; migración reproducible en PostgreSQL desde cero                                        |
+| Restricciones User/Session            | Username/role/token únicos y FK verificados mediante integración                                |
+| Usuarios inactivos                    | Registro e identidad conservados; username permanece reservado                                  |
+| Argon2id                              | Parámetros, salts independientes, contraseña correcta/incorrecta y hash inválido cubiertos      |
+| Repositorio User                      | Creación, consultas, unicidad, estado, commit y rollback cubiertos                              |
+| Repositorio Session                   | Creación, consulta, revocación individual/total, aislamiento, FK, commit y rollback cubiertos   |
+| Bootstrap vacío/ocupado               | Crea en base vacía; rechaza cualquier usuario activo o inactivo                                 |
+| Bootstrap concurrente                 | Dos ejecuciones simultáneas crean una sola cuenta                                               |
+| Terminal CLI                          | Contraseña sin eco, whitespace preservado, Ctrl+C y rechazo de entrada no interactiva cubiertos |
+| Unitarias API                         | 85 aprobadas                                                                                    |
+| Integraciones API con PostgreSQL real | 52 aprobadas                                                                                    |
+| Suite web sin regresiones             | 443 aprobadas                                                                                   |
+| Total del monorepo                    | **580 pruebas aprobadas**                                                                       |
+| Typecheck de aplicaciones y tests     | OK                                                                                              |
+| Lint                                  | Sin errores; 4 advertencias preexistentes de React Fast Refresh                                 |
+| Build API + web                       | OK; advertencia preexistente por tamaño del bundle web                                          |
+
+Las integraciones utilizaron únicamente `DATABASE_URL_TEST`, reiniciaron esa base desechable y reaplicaron todas las migraciones. La verificación final no creó el administrador de desarrollo. El CLI compilado también rechazó correctamente una ejecución sin terminal interactiva.
+
+
+### Fuera de alcance (intencional)
+
+- Login/logout, emisión y hashing de tokens, cookies, expiración, rate limiting y perfil propio (M6).
+- Autorización server-side por roles (M7).
+- Gestión HTTP de usuarios y coordinación entre desactivación y revocación (M8).
+- Eventos de historial de usuarios (M9).
+- Integración web: `VITE_USE_MOCK_API` continúa usando mocks hasta M10–M11.
+- Staging, producción y despliegue.
 
 ---
 
-## Milestone 6 — Autenticación: login, logout, sesiones
+## Milestone 6 — Autenticación: login, logout, sesiones (AUTH-001)
 
-**Estado:** pendiente
+**Estado:** código y pruebas unitarias completados (2026-09-04); las integraciones PostgreSQL/HTTP están escritas pero no se ejecutaron en esta sesión porque Prisma bloqueó `npx prisma migrate reset --force --skip-generate` sobre `truck_parts_test`.
 
-*(Se documentará al completar el milestone.)*
+### Objetivo cumplido
+
+Exponer autenticación HTTP same-origin: login por `username` + password, sesiones revocables en PostgreSQL, cookie HttpOnly, perfil propio y `requireAuth` que vuelve a comprobar que la cuenta sigue activa. El frontend permanece en mock (`VITE_USE_MOCK_API` no se cambió).
+
+### Endpoints (`/api/auth`)
+
+| Método | Ruta | Auth | CSRF | Cuerpo / resultado |
+|---|---|---|---|---|
+| `POST` | `/login` | público + rate limit | no | `{ username, password }` → `PublicAuthUser` + `Set-Cookie` |
+| `POST` | `/logout` | cookie opcional (idempotente) | sí | `204`; borra cookie y revoca hash si existía |
+| `GET` | `/session` | `requireAuth` | no | `PublicAuthUser` |
+| `GET` | `/me` | `requireAuth` | no | `PublicProfile` |
+| `PATCH` | `/me` | `requireAuth` | sí | `name`, `phone?`, `email?`, cambio de password; responde `PublicProfile` |
+
+Ninguna respuesta JSON incluye `passwordHash` ni el token opaco de sesión.
+
+### Cookie, CSRF y rate limit
+
+| Decisión | Elección | Motivo |
+|---|---|---|
+| Cookie | `sid`, `HttpOnly`, `Path=/`, `SameSite=Lax`, `Secure` solo si `NODE_ENV=production` | Same-origin; HTTPS de despliegue aún no existe |
+| Token | 32 bytes aleatorios en hex; en BD solo SHA-256 hex del valor de la cookie | Una lectura de `Session` no entrega un identificador reutilizable |
+| TTL | 12 h absoluto, sin sliding | Confirmado en constantes de M6 paso 1 |
+| Rotación | Login crea sesión nueva y revoca el hash del `sid` previo si venía en la request | Evita reutilizar el identificador anterior |
+| CSRF | Header `X-Requested-With: XMLHttpRequest` en `PATCH` y `POST /logout` | Defensa adicional a SameSite=Lax; GET no lo exige; login es público |
+| Fallo CSRF | `403 FORBIDDEN` (`CSRF validation failed`) | Distinto de 401 de sesión ausente/expirada |
+| Rate limit | `express-rate-limit` 8.x solo en `POST /login`, 10 intentos / 15 min, clave IP | Fuerza bruta; exceso → `429 TOO_MANY_REQUESTS` con el envelope M3 |
+| Login fallido | Siempre `401` + `Invalid credentials` (usuario inexistente, password incorrecta o cuenta inactiva) | No filtrar cuál condición falló; verify dummy si no hay usuario |
+
+`PATCH /me` no acepta `username`, `role` ni `active` (schema Zod estricto). El repositorio de perfil propio tampoco persiste esos campos. Cambiar password exige password actual; actual incorrecta o nueva corta → `400 VALIDATION`.
+
+### Capas
+
+- Tokens: `features/access/session-token.ts`
+- Servicio: `AccessService` (sin Express) usa `UserRepository` + `SessionRepository`
+- HTTP: `routes` → `controller` → servicio; `requireAuth` / CSRF / rate limit en el feature `access`
+- `createApp()` monta `accessRouter` en `/api/auth` después de `express.json` y antes del 404
+
+### Tests
+
+- Unitarias: hashing de token, reglas de `AccessService` con dobles de repositorio, cookie/`requireAuth`/CSRF, schemas HTTP, proyección y `429` del mapper
+- Integración (archivos listos): `tests/integration/access/auth-http.test.ts` (cookie, login inválido/inactivo, logout, session/me, PATCH, CSRF 403, rate limit 429) y extensión de `UserRepository.updateOwnProfile`
+- Fixtures con `UserRepository` + `hashPassword`; no se usan credenciales mock `admin`/`demo1234`
+
+### Validación realizada
+
+| Verificación | Resultado |
+|---|---|
+| `npm run test:unit --workspace @truck-parts/api` | **113** aprobadas |
+| `npm run typecheck --workspace @truck-parts/api` | OK |
+| `npm run test:integration --workspace @truck-parts/api` | No ejecutado: Prisma AI safety bloqueó `migrate reset` sobre `truck_parts_test` (localhost:5433). No se usó `PRISMA_USER_CONSENT`. No se tocó `truck_parts_dev` ni producción. |
+
+### Fuera de alcance (intencional)
+
+- `requireRole` / proyección por rol (M7)
+- HTTP de administración de usuarios (M8)
+- Swap web: `auth-api.ts` stub y `VITE_USE_MOCK_API=false` (M10)
+- Invalidación masiva al desactivar (comando admin M8); `requireAuth` sí revoca la sesión si la cuenta ya está inactiva
 
 ---
 

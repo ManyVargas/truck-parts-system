@@ -9,3 +9,11 @@ export type CreateUserInput = z.output<typeof createUserSchema>;
 export type CreateUserRecord = Omit<CreateUserInput, 'password'> & {
   passwordHash: string;
 };
+
+// Own-profile persistence only. Username, role and active stay out of this type.
+export type UpdateOwnProfileRecord = {
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  passwordHash?: string;
+};

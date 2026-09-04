@@ -1,3 +1,5 @@
+import type { RequestAuth } from '../features/access/types.js';
+
 /* Express Request augmentation requires a namespace merge; there is no module alternative. */
 /* eslint-disable @typescript-eslint/no-namespace */
 declare global {
@@ -12,6 +14,8 @@ declare global {
         query?: unknown;
         params?: unknown;
       };
+      /** Set by requireAuth. Never includes passwordHash or the raw session token. */
+      auth?: RequestAuth;
     }
   }
 }

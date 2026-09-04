@@ -3,6 +3,7 @@ import './types/express.js';
 import express, { type Router } from 'express';
 import helmet from 'helmet';
 
+import { accessRouter } from './features/access/routes.js';
 import { healthRouter } from './features/health/routes.js';
 import {
   errorHandler,
@@ -27,6 +28,7 @@ export function createApp(options: CreateAppOptions = {}): express.Application {
   app.use(requestLoggingMiddleware);
   app.use(express.json({ limit: JSON_BODY_LIMIT_BYTES }));
   app.use('/api/health', healthRouter);
+  app.use('/api/auth', accessRouter);
 
   for (const extraRouter of options.extraRouters ?? []) {
     app.use(extraRouter.path, extraRouter.router);

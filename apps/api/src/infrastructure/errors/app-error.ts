@@ -6,6 +6,7 @@ export const APP_ERROR_CODES = [
   'PAYLOAD_TOO_LARGE',
   'UNSUPPORTED_MEDIA_TYPE',
   'CONFLICT',
+  'TOO_MANY_REQUESTS',
   'INTERNAL',
 ] as const;
 
@@ -19,6 +20,7 @@ export const HTTP_STATUS_BY_ERROR_CODE: Record<AppErrorCode, number> = {
   PAYLOAD_TOO_LARGE: 413,
   UNSUPPORTED_MEDIA_TYPE: 415,
   CONFLICT: 409,
+  TOO_MANY_REQUESTS: 429,
   INTERNAL: 500,
 };
 
@@ -59,6 +61,10 @@ export class AppError extends Error {
 
   static unsupportedMediaType(message = 'Unsupported media type'): AppError {
     return new AppError('UNSUPPORTED_MEDIA_TYPE', message);
+  }
+
+  static tooManyRequests(message = 'Too many requests'): AppError {
+    return new AppError('TOO_MANY_REQUESTS', message);
   }
 
   static internal(message = 'An unexpected error occurred'): AppError {

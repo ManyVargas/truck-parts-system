@@ -1,7 +1,7 @@
 import { Role } from '@prisma/client';
 import { z } from 'zod';
 
-import { passwordSchema } from '../access/validation.js';
+import { passwordSchema } from '../access/password-policy.js';
 
 export const usernameSchema = z.string().trim().toLowerCase().min(1, 'Username is required');
 export const nameSchema = z.string().trim().min(1, 'Name is required');

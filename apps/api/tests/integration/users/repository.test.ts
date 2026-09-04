@@ -98,6 +98,43 @@ describe('UserRepository (PostgreSQL)', () => {
     expect(user.active).toBe(false);
   });
 
+  it('updates own contact and optional hash without changing username, role or active', async () => {
+    const user = await repository.create(userData());
+    const updated = await repository.updateOwnProfile(user.id, {
+      name: 'Updated name',
+      phone: null,
+      email: 'updated@example.com',
+      passwordHash: 'rotated-hash',
+    });
+
+    expect(updated).toMatchObject({
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      active: user.active,
+      name: 'Updated name',
+      phone: null,
+      email: 'updated@example.com',
+      passwordHash: 'rotated-hash',
+    });
+    expect(await repository.findById(user.id)).toEqual(updated);
+  });
+
+  it('leaves omitted contact and hash unchanged', async () => {
+    const user = await repository.create(userData());
+    const updated = await repository.updateOwnProfile(user.id, { name: 'Name only' });
+
+    expect(updated).toMatchObject({
+      name: 'Name only',
+      phone: user.phone,
+      email: user.email,
+      passwordHash: user.passwordHash,
+      username: user.username,
+      role: user.role,
+      active: user.active,
+    });
+  });
+
   it('rolls back creation and state changes when the caller aborts the transaction', async () => {
     const existing = await repository.create(userData());
     const data = userData();
@@ -108,6 +145,7 @@ describe('UserRepository (PostgreSQL)', () => {
         const transactionalRepository = new UserRepository(transaction);
         await transactionalRepository.create(data);
         await transactionalRepository.setActive(existing.id, false);
+        await transactionalRepository.updateOwnProfile(existing.id, { name: 'Rolled back' });
         throw failure;
       }),
     ).rejects.toBe(failure);

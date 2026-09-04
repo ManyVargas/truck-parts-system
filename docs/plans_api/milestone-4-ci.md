@@ -1,6 +1,6 @@
 # Milestone 4 — CI and Release 1 smoke
 
-Status: implemented and tested locally. The owner will open the PR at the end of Release 1; the first GitHub run and required merge check remain pending until then. A complete post-update npm audit response is also pending because the registry requests timed out.
+Status: implemented and tested locally. The owner will open the PR at the end of Release 1; the first GitHub run and required merge check remain pending until then. The post-update npm audit completed successfully on 2026-09-04 with zero vulnerabilities.
 
 ## Local verification result (2026-09-03)
 
@@ -13,10 +13,9 @@ with npm 11.19.1 confirms Prisma/Client 6.19.3, deepmerge-ts 8.0.0 and qs 6.16.0
 without invalid dependency edges. An installation attempt with npm 11.17 fails with
 `EBADENGINE` and leaves the lockfile unchanged.
 
-The post-update npm audit requests timed out at the official registry. The installed
-versions fix the previously identified advisories, but a complete clean audit result
-has not been obtained. The mandatory audit step remains enabled with its original
-high-severity threshold; rerun it when the registry is responding.
+Initial post-update npm audit requests failed with a timeout or HTTP 503. A later
+retry on 2026-09-04 completed successfully with `found 0 vulnerabilities`. The
+mandatory audit step remains enabled with its original high-severity threshold.
 
 ## Dependency correction
 

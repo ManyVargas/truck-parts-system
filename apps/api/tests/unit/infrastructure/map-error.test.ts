@@ -128,6 +128,11 @@ describe('mapErrorToHttp', () => {
       status: 415,
       code: 'UNSUPPORTED_MEDIA_TYPE',
     },
+    {
+      error: AppError.tooManyRequests(),
+      status: 429,
+      code: 'TOO_MANY_REQUESTS',
+    },
   ] as const)('maps $code to HTTP $status without errorId', ({ error, status, code }) => {
     const mapped = mapErrorToHttp(error, ERROR_ID);
 

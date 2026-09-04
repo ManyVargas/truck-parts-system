@@ -44,6 +44,10 @@ function createProbeRouter(): Router {
     throw AppError.conflict('Username already exists');
   });
 
+  router.get('/rate-limited', () => {
+    throw AppError.tooManyRequests();
+  });
+
   return router;
 }
 
@@ -109,6 +113,18 @@ describe('HTTP error contract (integration)', () => {
     expect(response.body.error.errorId).toEqual(expect.any(String));
     expect(JSON.stringify(response.body)).not.toContain('secret stack');
     expect(JSON.stringify(response.body)).not.toContain('DATABASE_URL');
+  });
+
+  it('maps application TOO_MANY_REQUESTS to 429 without errorId', async () => {
+    const response = await request(createProbeApp()).get('/api/test-probe/rate-limited');
+
+    expect(response.status).toBe(429);
+    expect(response.body).toEqual({
+      error: {
+        code: 'TOO_MANY_REQUESTS',
+        message: 'Too many requests',
+      },
+    });
   });
 
   it('maps application CONFLICT to 409 without errorId', async () => {

@@ -1,7 +1,7 @@
 import type { Prisma, User } from '@prisma/client';
 
 import { prisma } from '../../infrastructure/database/index.js';
-import type { CreateUserRecord } from './types.js';
+import type { CreateUserRecord, UpdateOwnProfileRecord } from './types.js';
 
 type UserDatabase = Pick<Prisma.TransactionClient, 'user'>;
 
@@ -40,5 +40,18 @@ export class UserRepository {
   // Only persists state. Authorization and session revocation belong to services.
   setActive(id: string, active: boolean): Promise<User> {
     return this.database.user.update({ where: { id }, data: { active } });
+  }
+
+  // Never persist username, role or active from self-service profile edits.
+  updateOwnProfile(id: string, input: UpdateOwnProfileRecord): Promise<User> {
+    return this.database.user.update({
+      where: { id },
+      data: {
+        name: input.name,
+        ...(input.phone !== undefined ? { phone: input.phone } : {}),
+        ...(input.email !== undefined ? { email: input.email } : {}),
+        ...(input.passwordHash !== undefined ? { passwordHash: input.passwordHash } : {}),
+      },
+    });
   }
 }

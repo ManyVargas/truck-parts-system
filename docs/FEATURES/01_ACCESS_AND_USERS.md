@@ -105,8 +105,8 @@ Deactivation must invalidate future access while preserving historical foreign-k
 - [x] Implement user repository and unique `username` constraint.
 - [x] Implement one-time CLI bootstrap for the first Administrator when no users exist.
 - [x] Implement password hashing, minimum 6-character validation, and credential verification.
-- [ ] Implement server-side session creation, lookup, rotation, logout, and invalidation.
-- [ ] Implement active-account guard.
+- [x] Implement server-side session creation, lookup, rotation, logout, and invalidation.
+- [x] Implement active-account guard.
 - [ ] Implement operation-level authorization helpers/policies.
 - [ ] Implement Administrator user-management commands in the `users` module.
 - [ ] Preserve historical user identity after deactivation.
@@ -119,7 +119,7 @@ Deactivation must invalidate future access while preserving historical foreign-k
 - [x] Self-service profile edit (own name, optional phone/email, password) for every active role. Username, role, and active stay administrator-managed. Uses `profile.update`, not `users.manage`. Covered by unit, integration, and component tests.
 
 ### Tests
-- [ ] Valid/invalid/inactive login tests.
+- [x] Valid/invalid/inactive login tests.
 - [ ] Role matrix negative tests through direct API requests (Release 1 Mechanic scope: minimal session projection only).
 - [ ] Session invalidation after deactivation.
 - [ ] Historical records still resolve deactivated actor identity.

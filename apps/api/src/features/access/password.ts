@@ -1,7 +1,7 @@
 import { argon2id, hash, verify } from 'argon2';
 
 import { AppError } from '../../infrastructure/errors/app-error.js';
-import { passwordSchema } from './validation.js';
+import { passwordSchema } from './password-policy.js';
 
 export async function hashPassword(password: string): Promise<string> {
   const validatedPassword = passwordSchema.parse(password);

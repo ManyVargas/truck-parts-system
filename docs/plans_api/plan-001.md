@@ -1,7 +1,7 @@
 # Plan 001 — Release 1 Milestones: Foundation + Access and Users
 
 **Release:** 1 — Application Foundation and Access (Local Development)  
-**Estado:** Milestone 5 completado en local — Milestone 4 mantiene pendientes de CI/auditoría
+**Estado:** Milestone 5 completado en local — Milestone 4 mantiene pendiente la verificación en GitHub
 **Último milestone:** Milestone 11 — Integrar users HTTP + exit gate Release 1
 
 ---
@@ -244,8 +244,8 @@ y configuración/verificación del check obligatorio `R1 quality` para merge.
 Se corrigieron las dependencias identificadas: `deepmerge-ts 8.0.0` mediante override
 limitado a `@prisma/config@6.19.3`, y `qs 6.16.0`. npm 11.19.1 queda fijado para aplicar
 el override correctamente en workspaces. La instalación limpia, Prisma, pruebas,
-typecheck, lint y build pasan; la auditoría completa posterior al cambio queda
-pendiente por timeouts del registro npm. El gate de auditoría permanece obligatorio.
+typecheck, lint y build pasan. El 2026-09-04, `npm audit --audit-level=high` completó
+correctamente con cero vulnerabilidades. El gate de auditoría permanece obligatorio.
 El usuario realizará el PR al terminar Release 1; no se abre un PR para M4 ahora.
 
 **Objetivo:** Unit + integration contra PostgreSQL real; CI sin despliegue.
@@ -313,8 +313,9 @@ de desarrollo durante la implementación.
 (85 unitarias API, 52 integración API y 443 web), typecheck de aplicaciones y tests,
 lint sin errores y build de ambos workspaces correctos. Migraciones reaplicadas desde
 cero únicamente en la base de pruebas. Se mantienen 4 advertencias de lint web y la
-advertencia de tamaño del bundle web. `npm audit --audit-level=high` no pudo completar
-por timeout del registro; no se declara auditoría verde ni CI remoto aprobado.
+advertencia de tamaño del bundle web. El 2026-09-04,
+`npm audit --audit-level=high` completó correctamente con cero vulnerabilidades;
+esto no equivale a una ejecución aprobada del workflow remoto de CI.
 Evidencia y límites en [`milestone-5-verification.md`](milestone-5-verification.md).
 M5 cumple su definición de terminado local; siguen pendientes los gates externos de M4.
 
@@ -531,8 +532,8 @@ Tras **cerrar Release 1**, la siguiente integración web de negocio es Release 2
 rate limiting y perfil propio antes de implementarlos. El administrador local se puede
 crear con `npm run bootstrap:admin` cuando se necesite; no es obligatorio para cerrar M5.
 
-**Pendientes de Milestone 4:** completar la auditoría npm, verificar el primer PR en
-GitHub y configurar el check obligatorio `R1 quality`. Se mantiene la decisión de
+**Pendientes de Milestone 4:** verificar el primer PR en GitHub y configurar el check
+obligatorio `R1 quality`. Se mantiene la decisión de
 hacer el PR al terminar Release 1.
 
 No integrar Access/Users a la web: el prototipo permanece en mock hasta M10–M11.
