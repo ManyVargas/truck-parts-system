@@ -2,7 +2,7 @@
 
 **Release:** Application Foundation and Access (Local Development)  
 **Plan de referencia:** [`../plans_api/plan-001.md`](../plans_api/plan-001.md)  
-**Estado:** en progreso (Milestones 1–3 completados)
+**Estado:** en progreso (Milestones 1–3 completados; M4 implementado y verificado localmente, con auditoría y verificación en GitHub pendientes)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 1, a medida que se completan.  
 No sustituye a `plan-001.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -207,9 +207,105 @@ Instalar infraestructura transversal de errores de aplicación, logging estructu
 
 ## Milestone 4 — Test harness y CI baseline
 
-**Estado:** pendiente
+**Estado:** implementado y verificado localmente; cierre completo pendiente de auditoría y verificación en GitHub
 
-*(Se documentará al completar el milestone.)*
+**Fecha:** 2026-09-03
+
+### Objetivo implementado
+
+Completar el harness existente de Vitest + Supertest, ejecutar integraciones contra PostgreSQL real y preparar CI sin despliegue. Se reutilizaron las pruebas y helpers incorporados en milestones anteriores; M4 añadió aislamiento de la BD, preparación reproducible y un workflow para el monorepo.
+
+### Qué se entregó
+
+#### Configuración y aislamiento de pruebas
+
+- `apps/api/tests/helpers/environment.ts` — carga del entorno y validación de URLs PostgreSQL, con errores que no exponen credenciales.
+- `apps/api/tests/setup.ts` — configura `DATABASE_URL` para Prisma a partir de `DATABASE_URL_TEST` antes de cargar las pruebas.
+- Si falta `DATABASE_URL_TEST`, se elimina el fallback hacia la conexión de desarrollo; las unitarias pueden ejecutarse sin PostgreSQL y las integraciones fallan explícitamente.
+- Si ambas URLs están configuradas, deben utilizar nombres de base distintos. Cambiar usuario, alias de host o schema no se acepta como prueba de aislamiento.
+- `apps/api/vitest.config.ts` — selección de pruebas unitarias.
+- `apps/api/vitest.integration.config.ts` — selección de integraciones, preparación global y ejecución secuencial de archivos que comparten la BD.
+- `apps/api/tsconfig.test.json` — incluye también la configuración de integración en el chequeo de TypeScript.
+
+#### PostgreSQL y migraciones de test
+
+- El owner confirmó PostgreSQL 16 en Docker Compose y la existencia de `truck_parts_test`, **desechable para pruebas**. Se verificaron conexiones separadas para desarrollo y test en el puerto local 5433.
+- `apps/api/tests/integration/setup.ts` comprueba la configuración y conectividad, y prepara la BD una sola vez antes de la suite.
+- `apps/api/tests/helpers/database.ts` ejecuta `prisma migrate reset --force --skip-generate` únicamente con la URL de test validada. El comando reconstruye el esquema y reaplica las migraciones versionadas.
+- **Las integraciones borran los datos existentes de la BD de test.** Esta conducta quedó documentada y se utilizó sobre la base desechable confirmada por el owner.
+- Se eliminó `describe.skipIf` de las integraciones de health: una BD inaccesible ahora hace fallar la ejecución, en vez de producir un resultado verde con pruebas omitidas.
+
+#### Pruebas y comandos
+
+- `tests/unit/infrastructure/test-environment.test.ts` — selección de la BD correcta, rechazo de URLs inválidas, reutilización de la BD de desarrollo y errores sin credenciales.
+- `tests/unit/health/routes.test.ts` — liveness independiente de la BD; readiness HTTP `503` para BD caída y migraciones `pending`/`unavailable`, simulando esas condiciones en el repositorio.
+- `tests/integration/health/routes.test.ts` — liveness y readiness `200` contra la aplicación y PostgreSQL real, después de reconstruir la BD.
+- Se conservó la cobertura del contrato HTTP de M3.
+- `npm run test -w @truck-parts/api` ejecuta unitarias y luego integraciones. `test:watch` observa solamente unitarias; `test:integration` usa la configuración específica con reset de BD.
+
+#### CI y smoke Release 1
+
+- `.github/workflows/ci.yml` — workflow **CI R1**, con check **R1 quality**, para PRs hacia `main`, pushes a `main` y ejecución manual.
+- Runner Ubuntu 24.04, Node.js 22 y un servicio PostgreSQL 16 desechable por ejecución. No necesita credenciales de la BD local.
+- Secuencia: instalar npm fijado → `npm ci` → generar Prisma → lint → typecheck de aplicaciones y pruebas → unitarias → migraciones limpias e integraciones → componentes web → build → `npm audit --audit-level=high`.
+- Permisos de lectura del repositorio, límite de tiempo del job y cancelación de ejecuciones anteriores del mismo PR cuando llega otro commit.
+- Smoke automatizado en M4: migraciones limpias, `/api/health/live` y `/api/health/ready`. Login, sesión, logout y denegaciones/proyección por rol quedan documentados para M6–M7; no se añadieron stubs de autenticación que simulen cobertura.
+- `README.md`, `docs/plans_api/plan-001.md` y [`../plans_api/milestone-4-ci.md`](../plans_api/milestone-4-ci.md) documentan comandos, alcance y configuración de GitHub.
+
+### Corrección complementaria de dependencias
+
+Durante la preparación de CI, la auditoría identificó hallazgos en `deepmerge-ts` (a través de Prisma) y `qs`. El owner autorizó resolverlos preservando reglas y arquitectura. Estos ajustes acompañan a M4, pero se distinguen del harness y CI originales:
+
+| Cambio | Motivo y alcance |
+|---|---|
+| `qs` 6.15.3 → 6.16.0 en `package-lock.json` | Versión corregida compatible con los rangos ya declarados por Express, body-parser y Superagent |
+| Override raíz de `deepmerge-ts` a 8.0.0, limitado a `@prisma/config@6.19.3` | Corregir la dependencia interna manteniendo Prisma y Prisma Client en 6.19.3 |
+| npm 11.19.1 declarado en `package.json` | npm 11.17 ignoraba el override al atravesar el workspace; la versión nueva aplica el árbol esperado |
+| `.npmrc` con `engine-strict=true` y requisito npm `>=11.19.1 <12` | Rechazar instalaciones con un gestor incompatible antes de modificar el lockfile |
+| Ajustes en los Dockerfiles existentes de API/web y en CI | Instalar npm 11.19.1 e incluir `.npmrc` para reproducir la resolución de dependencias |
+| `tests/fixtures/prisma.config.ts` y `tests/unit/infrastructure/prisma-config.test.ts` | Validar la compatibilidad del override invocando la CLI real de Prisma con una configuración de prueba |
+
+El archivo de `fixtures` se utiliza únicamente en pruebas y no sustituye la configuración de la aplicación. La prueba cubre la carga de configuración y validación del esquema; las integraciones verifican además las migraciones. Se debe reevaluar el override cuando Prisma publique una corrección propia. No se aplicó `npm audit fix --force` ni se añadieron excepciones al gate de auditoría.
+
+El owner actualizó posteriormente su npm global a **11.19.1**, y se comprobó que esa versión quedó activa. Las herramientas temporales utilizadas para verificar la actualización se eliminaron; la carpeta vacía `scripts` ya existía antes de este trabajo.
+
+### Validación realizada
+
+| Verificación | Resultado |
+|---|---|
+| Instalación limpia con `npm ci` y npm 11.19.1 | OK |
+| Árbol instalado mediante `npm ls` | Prisma/Client 6.19.3, deepmerge-ts 8.0.0, qs 6.16.0; sin dependencias inválidas con npm 11.19.1 |
+| Generación de Prisma y carga real de configuración | OK |
+| Unitarias API | 43 aprobadas |
+| Integraciones API con PostgreSQL real | 15 aprobadas |
+| Unitarias web | 256 aprobadas |
+| Integraciones web | 68 aprobadas |
+| Componentes web | 119 aprobadas |
+| Total del monorepo | **501 pruebas aprobadas** |
+| Typecheck de aplicaciones y pruebas | OK |
+| Lint | Sin errores; 4 advertencias preexistentes de React Fast Refresh |
+| Build API + web | OK; advertencia preexistente por tamaño del bundle web |
+| Conexión de test deliberadamente inaccesible | La suite falla explícitamente antes de ejecutar pruebas |
+| Instalación con npm 11.17 | Rechazada con `EBADENGINE`; lockfile sin cambios |
+| Sintaxis del workflow YAML | Parseo correcto |
+
+Las comprobaciones locales se realizaron en Windows con Node.js 24. La ejecución real del workflow en Ubuntu/Node.js 22 sigue pendiente; las pruebas locales no se presentan como una ejecución verde de GitHub Actions.
+
+### Pendientes y acuerdo de continuidad
+
+1. **Auditoría completa:** las versiones corregidas están instaladas, pero las consultas posteriores de `npm audit --audit-level=high` no concluyeron por timeouts. El owner también obtuvo **HTTP 503 Service Unavailable** del endpoint de auditoría de npm. Esto no equivale a una auditoría sin vulnerabilidades.
+2. **Mantener el gate:** la auditoría sigue siendo obligatoria en CI, con umbral alto; debe reintentarse cuando responda el registro y verificarse antes del merge de Release 1.
+3. **PR al final de Release 1:** el owner realizará el PR cuando complete el release, no al terminar M4. Hasta entonces puede continuar el desarrollo local con estas verificaciones pendientes registradas.
+4. **GitHub:** comprobar la primera ejecución de **CI R1**, configurar **R1 quality** como check obligatorio para `main` y verificar que un fallo impida el merge. No se afirma que la protección de rama ya esté configurada.
+
+Por tanto, M4 queda **implementado y verificado localmente**, pero su definición de terminado completa permanece pendiente de la auditoría y de la verificación del gate en GitHub.
+
+### Fuera de alcance
+
+- Modelos User/Session y bootstrap del primer administrador (M5).
+- Endpoints de autenticación y autorización (M6–M7).
+- Integración HTTP del frontend: `VITE_USE_MOCK_API` permanece en modo mock.
+- Despliegue, staging o producción.
 
 ---
 

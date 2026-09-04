@@ -1,7 +1,7 @@
 # Plan 001 — Release 1 Milestones: Foundation + Access and Users
 
 **Release:** 1 — Application Foundation and Access (Local Development)  
-**Estado:** Milestone 3 completado — Milestone 4 pendiente  
+**Estado:** Milestone 3 completado — Milestone 4 en curso
 **Último milestone:** Milestone 11 — Integrar users HTTP + exit gate Release 1
 
 ---
@@ -139,7 +139,7 @@ flowchart TD
 | M1 | Scaffold monorepo FE/BE + convenciones + health stub | completado | Health stub (histórico; ya no es UI de producto) |
 | M2 | PostgreSQL + Prisma + health readiness | completado | **Nada de producto.** Health solo CI/ops |
 | M3 | Errores, logging, validación HTTP | completado | Contrato de errores; aún sin pantallas HTTP |
-| M4 | Test harness + CI baseline (smoke R1) | pendiente | Ninguna |
+| M4 | Test harness + CI baseline (smoke R1) | en curso | Ninguna |
 | M5 | Modelo User/Session + bootstrap CLI admin | pendiente | Ninguna (CLI, no HTTP) |
 | M6 | Login/logout/sesiones + perfil propio (AUTH-001) | pendiente | Cliente HTTP auth **preparable**; swap no default |
 | M7 | Autorización server-side (AUTH-002/005) | pendiente | **Listo para M10** (auth + shell) |
@@ -233,6 +233,20 @@ flowchart TD
 ---
 
 ## Milestone 4 — Test harness y CI baseline
+
+**Avance local:** aislamiento de `DATABASE_URL_TEST`, fallo explícito si PostgreSQL
+no está disponible, preparación global de integración con reset de la BD desechable
+y reaplicación de migraciones, health real y respuestas HTTP negativas verificadas.
+La suite API pasa con 43 pruebas unitarias y 15 de integración; el monorepo suma 501 pruebas.
+Workflow GitHub Actions y smoke R1 documentados en
+[`milestone-4-ci.md`](milestone-4-ci.md). Pendientes: primera ejecución verde en GitHub
+y configuración/verificación del check obligatorio `R1 quality` para merge.
+Se corrigieron las dependencias identificadas: `deepmerge-ts 8.0.0` mediante override
+limitado a `@prisma/config@6.19.3`, y `qs 6.16.0`. npm 11.19.1 queda fijado para aplicar
+el override correctamente en workspaces. La instalación limpia, Prisma, pruebas,
+typecheck, lint y build pasan; la auditoría completa posterior al cambio queda
+pendiente por timeouts del registro npm. El gate de auditoría permanece obligatorio.
+El usuario realizará el PR al terminar Release 1; no se abre un PR para M4 ahora.
 
 **Objetivo:** Unit + integration contra PostgreSQL real; CI sin despliegue.
 
@@ -465,7 +479,7 @@ Tras **cerrar Release 1**, la siguiente integración web de negocio es Release 2
 
 ## Próximo paso
 
-**Milestone 4:** Test harness + CI baseline (smoke R1) — pendiente de aprobación para iniciar.
+**Milestone 4:** Test harness y workflow implementados; siguiente paso: verificar el primer PR en GitHub y configurar el check obligatorio `R1 quality`.
 
 No integrar Access/Users a la web: el prototipo permanece en mock hasta M10–M11.
 
