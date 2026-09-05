@@ -24,6 +24,7 @@ function sessionProjectionFromAuth(auth: RequestAuth) {
     username: auth.username,
     name: auth.name,
     role: auth.role,
+    mustChangePassword: auth.mustChangePassword,
     phone: auth.phone,
     email: auth.email,
   });
@@ -38,6 +39,7 @@ function publicProfileFromAuth(auth: RequestAuth) {
     phone: auth.phone,
     email: auth.email,
     active: auth.active,
+    mustChangePassword: auth.mustChangePassword,
     createdAt: auth.createdAt,
     updatedAt: auth.updatedAt,
   });
@@ -59,7 +61,7 @@ export function getSession(req: Request, res: Response): void {
   res.status(200).json(sessionProjectionFromAuth(requireRequestAuth(req)));
 }
 
-/** Placeholder until M8; proves requireAdministrator without exposing user-management commands. */
+/** Retained M7 smoke endpoint. Real account management is mounted at /api/admin/users. */
 export function getAdminProbe(_req: Request, res: Response): void {
   res.status(200).json({ ok: true });
 }
@@ -73,5 +75,7 @@ export async function patchMe(req: Request, res: Response): Promise<void> {
     requireRequestAuth(req).userId,
     requireValidatedBody(req),
   );
+  if ((req.validated?.body as { password?: string }).password !== undefined)
+    clearSessionCookie(res);
   res.status(200).json(toPublicProfile(user));
 }

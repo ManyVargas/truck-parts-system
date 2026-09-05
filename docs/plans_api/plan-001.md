@@ -1,7 +1,7 @@
 # Plan 001 — Release 1 Milestones: Foundation + Access and Users
 
 **Release:** 1 — Application Foundation and Access (Local Development)  
-**Estado:** Milestone 7 completado en local — Milestone 4 mantiene pendiente la verificación en GitHub
+**Estado:** Milestone 8 completado en local — Milestone 4 mantiene pendiente la verificación en GitHub
 **Último milestone:** Milestone 11 — Integrar users HTTP + exit gate Release 1
 
 ---
@@ -13,8 +13,8 @@
 - **Entorno:** desarrollo y pruebas **únicamente en local** durante Release 1. No hay staging ni producción.
 - **Primer despliegue productivo:** después de completar Release 2 — Billing Core ([`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) §First production deployment).
 - **Features en alcance:** [`../FEATURES/01_ACCESS_AND_USERS.md`](../FEATURES/01_ACCESS_AND_USERS.md) + slice R1 de [`../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md`](../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md).
-- **Frontend:** el prototipo mock de [`../plans_web/plan-001.md`](../plans_web/plan-001.md) está **cerrado** (WM12). Login, shell por rol, usuarios y perfil propio ya existen contra mocks (`VITE_USE_MOCK_API`). M10–M11 de este plan **no reconstruyen pantallas**; sustituyen el repositorio mock por HTTP.
-- **Estado API:** M1–M3, M5–M7 completados en local; M4 mantiene pendientes externos. Auth HTTP, `requireAuth`/`requireRole` y proyección por rol existen. Falta gestión HTTP de usuarios (M8).
+- **Frontend:** el prototipo mock de [`../plans_web/plan-001.md`](../plans_web/plan-001.md) está **cerrado** (WM12). Login, shell por rol, usuarios y perfil propio ya existen contra mocks (`VITE_USE_MOCK_API`). M10–M11 sustituyen el repositorio mock por HTTP y adaptan las pantallas existentes al cambio obligatorio de contraseña y a la creación sin contraseña elegida por Administrator.
+- **Estado API:** M1–M3, M5–M8 completados en local; M4 mantiene pendientes externos. Auth HTTP, `requireAuth`/`requireRole` y proyección por rol existen. Gestión HTTP y recuperación M8 disponibles; history M9 pendiente.
 - **Ciclo por milestone:** plan → implementación → pruebas → revisión → commit. La integración web se hace **solo** cuando la función API cumple el criterio de la sección Integración API → Web.
 
 
@@ -35,8 +35,8 @@ Documentadas en [`../FEATURES/01_ACCESS_AND_USERS.md`](../FEATURES/01_ACCESS_AND
 
 1. Login identity: `username` único.
 2. Primer Administrator: comando CLI one-shot; rechaza si ya existen usuarios; sin credenciales hardcodeadas de producción.
-3. Perfil MVP: `name`, `username`, `phone?`, `email?`, `role`, `active`, `passwordHash`, `createdAt`, `updatedAt`.
-4. Contraseña MVP: mínimo 6 caracteres; sin reglas extra de complejidad.
+3. Perfil MVP: `name`, `username`, `phone?`, `email?`, `role`, `active`, `passwordHash`, `mustChangePassword` (controlado por servidor), `createdAt`, `updatedAt`.
+4. Contraseña MVP: mínimo 6 caracteres; sin reglas extra de complejidad. Decisión del owner (2026-09-05): las cuentas creadas por Administrator reciben `solocamiones` como contraseña inicial y deben cambiarla desde su propio perfil antes de operar. Administrator no elige ni edita contraseñas libremente; solo puede aprobar recuperación solicitada y el sistema genera una contraseña temporal sin vencimiento. El bootstrap CLI mantiene su contraseña elegida interactivamente.
 5. Release 0 completado; Release 1 activo.
 6. Hosting / RPO / RTO: pendientes; requeridos solo antes del primer despliegue productivo (post Release 2); **no bloquean Milestones 1–11**.
 7. CI smoke R1: migraciones, `/health/live`, `/health/ready`, login, sesión, autorización.
@@ -59,16 +59,16 @@ El prototipo web ya está listo para Access/Users. El cuello de botella es la AP
 
 Hasta entonces: `VITE_USE_MOCK_API` distinto de `false` (mocks). No mezclar login real con listados mock de usuarios, ni al revés.
 
-### Estado ahora (después de M7 en local)
+### Estado ahora (después de M8 en local)
 
-**Auth HTTP está listo a nivel API; el swap web espera M10.** Falta gestión HTTP de usuarios (M8).
+**Auth HTTP está listo a nivel API; el swap web espera M10.** Gestión HTTP y recuperación M8 disponibles; history M9 pendiente.
 
 | Función API | ¿Integrable ahora? | Motivo |
 |---|---|---|
 | `GET /api/health/live` | Opcional (ops) | API completa. El prototipo **ya no** tiene pantalla de health; no es Feature 01. Se puede usar a mano o en CI. |
 | `GET /api/health/ready` | Opcional (ops) | Igual: readiness de PostgreSQL, no flujo de usuario. |
 | Login / logout / sesión / perfil propio | No (swap en M10) | Endpoints M6–M7 listos. UI mock hasta M10. |
-| Gestión Administrator de usuarios | No | No existen endpoints. UI lista (`/users`). |
+| Gestión Administrator de usuarios | Backend listo; swap M11 pendiente | M8 implementado; UI permanece mock. |
 | History de usuarios | No | Envelope aún no existe. En R1 **no hay pantalla** de historial de usuarios; es persistencia + tests. |
 | Clientes, facturas, inventario, OT, dashboard KPIs, recovery | No (fuera de R1) | UI mock existe; API y release correspondientes son R2+. |
 
@@ -143,7 +143,7 @@ flowchart TD
 | M5 | Modelo User/Session + bootstrap CLI admin | completado en local | Ninguna (CLI, no HTTP) |
 | M6 | Login/logout/sesiones + perfil propio (AUTH-001) | completado en local | Cliente HTTP auth **preparable**; swap no default |
 | M7 | Autorización server-side (AUTH-002/005) | completado en local | **Listo para M10** (auth + shell); swap no default |
-| M8 | User management backend (AUTH-003/004) | pendiente | **Listo para M11** (`/users`) |
+| M8 | User management backend (AUTH-003/004) | completado en local | **Listo para M11** (`/users`) |
 | M9 | History envelope R1 + eventos de usuarios | pendiente | Sin UI R1; tests/API en el exit gate |
 | M10 | Integrar auth HTTP (login/sesión/perfil/shell) | pendiente | Swap `AuthRepository` mock → HTTP |
 | M11 | Integrar users HTTP + exit gate Release 1 | pendiente | Swap `UserRepository` mock → HTTP |
@@ -414,42 +414,44 @@ queda para el release de OT. El prototipo web permanece en mock.
 
 ## Milestone 8 — Gestión de usuarios Administrator (backend, AUTH-003/004)
 
-**Objetivo:** CRUD operacional de cuentas en módulo `users`; deactivación sin borrado físico.
+**Estado:** completado y verificado localmente (2026-09-05). Alcance final según decisiones del owner: cuentas existentes sin cambio obligatorio; recuperación solicitada y aprobada por otro administrador; contraseña temporal sin vencimiento.
 
-**Alcance:**
-- `POST /api/admin/users` — crear (`name`, `username`, password, role, optional phone/email)
-- `GET /api/admin/users` — listar paginado
-- `PATCH /api/admin/users/:id` — rol, activar/desactivar, editar perfil permitido
-- Solo Administrator
-- `username` único
-- Deactivación soft; invalidar sesiones al desactivar
-- Contraseña mínima 6 caracteres en creación/cambio
+**Objetivo cumplido:** administración HTTP de cuentas, desactivación sin borrado, primer acceso restringido, cambio propio de contraseña y recuperación autorizada. Implementación y contrato detallados en [`milestone-8-verification.md`](milestone-8-verification.md); evidencia de cierre en [`../done_api/release-1.md`](../done_api/release-1.md).
 
-**Principales cambios esperados:**
-- `users/{routes,controller,service,validation,types}`
+**Endpoints entregados:**
+- `POST /api/admin/users`: name, username, role y contacto opcional; sin contraseña elegida por Administrator. Servidor asigna `solocamiones` y `mustChangePassword=true`.
+- `GET /api/admin/users`: listado paginado, incluye inactivos.
+- `PATCH /api/admin/users/:id`: perfil, username, rol y estado; rechaza credenciales y manipulación del flag.
+- `POST /api/auth/recovery-requests`: solicitud pública por username, respuesta genérica, rate limit y una pendiente por usuario; vence a las 24 horas.
+- `GET /api/admin/users/recovery-requests`: solicitudes pendientes vigentes, paginadas.
+- `POST /api/admin/users/recovery-requests/:id/resolve`: otro Administrator aprueba con `identityVerified=true` o rechaza. Al aprobar el sistema genera contraseña temporal aleatoria, sin vencimiento, devuelta una sola vez para entrega personal.
 
-**Pruebas:**
-- Admin crea usuarios con cada rol
-- Seller/Mechanic → 403
-- Duplicate username → 409
-- Deactivate → login bloqueado + sesiones invalidadas
-- Usuario desactivado permanece en BD
+**Reglas implementadas:**
+- Solo Administrator activo y sin cambio pendiente administra cuentas/solicitudes; autorización repetida dentro del servicio.
+- Ningún administrador puede desactivarse, quitarse su rol o resolver su propia solicitud. Las transacciones protegen la permanencia de un Administrator activo ante concurrencia.
+- Cuentas existentes y bootstrap conservan contraseña y flag false. Activación/rol no restablecen credenciales ni eliminan restricciones pendientes.
+- Login/session/me incluyen `mustChangePassword` para los tres roles. El guard bloquea operaciones normales hasta cambiar contraseña; permite perfil, sesión y logout.
+- Todo cambio desde perfil requiere contraseña actual y nueva distinta, mínimo seis caracteres Unicode; guarda hash, elimina flag, revoca todas las sesiones y cancela solicitudes pendientes atómicamente. Limpia cookie y exige nuevo login.
+- Recuperación aprobada guarda hash temporal, establece flag, revoca sesiones y consume solicitud dentro de una transacción. No existe reset libre ni contraseña elegida por Administrator.
+- Desactivar conserva identidad/hash, revoca sesiones y cancela solicitudes; reactivar no recupera sesiones ni modifica flag.
+- No hay correo, comando local de recuperación ni obligación de segundo Administrator. Si el único administrador pierde acceso, la aplicación no ofrece recuperación para él.
 
-**Definición de terminado:**
-- Checklist backend Feature 01 completo excepto history events (M9).
-- API usable sin frontend.
+**Persistencia:** migración aditiva User.mustChangePassword + PasswordRecoveryRequest con FK restrictivas e índice único parcial para pendientes. Repositorios transaccionales reutilizados; errores HTTP M3 y CSRF en escrituras autenticadas. No se guardan contraseñas en texto plano ni en solicitudes/logs.
 
-**Integración web (después de M8):** **Sí — ejecutar M11** para `/users`. El cliente HTTP debe hablar con `/api/admin/users` (este plan), aunque el mapa mock del web diga `/api/users`. Create vs update: el web usa un `save()` único; el cliente parte create (`POST`) y patch (`PATCH`). No integrar clientes/facturas.
+**Pruebas:** unitarias de validación/policies; integraciones PostgreSQL/HTTP de tres roles, primer acceso, cambio voluntario/obligatorio, recuperación, vencimiento de solicitud, contraseña temporal sin vencimiento, concurrencia, rollback, unicidad, paginación, secretos excluidos y desactivación. Integraciones M6–M7 también ejecutadas en el cierre.
+
+**Definición de terminado:** API usable y verificada sin frontend. History queda en M9. Evidencia y cifras finales en release-1.
+
+**Integración web pendiente:** M10 adapta perfil/login/solicitud de recuperación; M11 conecta administración y resolución de solicitudes y elimina contraseña del formulario. M8 no modifica frontend ni activa HTTP web.
 
 ---
-
 ## Milestone 9 — History mínimo Release 1 (HIST-001/002 slice)
 
 **Objetivo:** Envelope reutilizable + eventos de administración de usuarios.
 
 **Alcance:**
 - Tabla event envelope: `occurredAt`, `actorUserId` (FK User), `eventType`, `subjectType`, `subjectId`, `payload`
-- Tipos R1: `USER_CREATED`, `USER_ROLE_CHANGED`, `USER_ACTIVATED`, `USER_DEACTIVATED`
+- Tipos R1: `USER_CREATED`, `USER_ROLE_CHANGED`, `USER_ACTIVATED`, `USER_DEACTIVATED`; incorporar eventos de solicitud/resolución de recuperación entregada en M8, sin credenciales en payload. Pendiente de M9.
 - Append en misma transacción que mutación de usuario
 - Actor desactivado sigue resolviendo en lectura histórica
 
@@ -468,12 +470,15 @@ queda para el release de OT. El prototipo web permanece en mock.
 
 ## Milestone 10 — Integrar auth HTTP: login, sesión, perfil y shell
 
-**Objetivo:** Sustituir el mock de `AuthRepository` por la API de M6–M7. La UI de login/shell/perfil **ya existe** (prototipo WM2 + perfil); no se rediseña.
+**Objetivo:** Sustituir el mock de `AuthRepository` por la API de M6–M7. La UI de login/shell/perfil **ya existe** (prototipo WM2 + perfil); se adapta al cambio obligatorio añadido en M8.
 
 **Alcance:**
 - Implementar `HttpAuthRepository` / `auth-api.ts`: login, logout, session, me, `updateOwnProfile`
 - `credentials: 'include'` y manejo de cookie HttpOnly
 - Mapear 401 (sesión expirada / inactive) y errores de validación a la UX existente
+- Consumir `mustChangePassword` en login/session/me: redirigir al perfil propio y bloquear navegación operativa mientras esté pendiente, incluso tras recarga o acceso por URL. Permitir logout. La API M8 aplica la misma restricción.
+- Solicitud de recuperación desde login: username, confirmación genérica y manejo de 429; consumir contrato M8 sin revelar existencia de cuentas.
+- Perfil en primer acceso: contraseña actual, nueva y confirmación; explicar que debe cambiar la inicial. Al completar, limpiar estado autenticado y volver a login con la nueva contraseña porque M8 revoca todas las sesiones.
 - App shell por rol usando la proyección de `/api/auth/session` (Admin → Users en nav; Seller/Mechanic shells ya montados)
 - Mechanic: sin datos comerciales en la sesión HTTP
 - Route guards UX complementarios (la seguridad sigue en el servidor)
@@ -484,6 +489,7 @@ queda para el release de OT. El prototipo web permanece en mock.
 - Browser: login/logout por 3 roles con usuarios de bootstrap/M8 (no las credenciales demo del mock)
 - Mechanic no ve nav admin/comercial
 - Perfil propio persiste tras recargar
+- Browser: primer acceso de los tres roles obliga a cambiar contraseña; errores mantienen la restricción; completar exige nuevo login y permite después el shell correspondiente.
 
 **Definición de terminado:**
 - Checklist frontend Feature 01 de login/logout/session/nav/perfil contra API local.
@@ -500,12 +506,13 @@ queda para el release de OT. El prototipo web permanece en mock.
 **Alcance:**
 - `HttpUserRepository`: list → `GET /api/admin/users`; create → `POST`; update/deactivate/role → `PATCH /api/admin/users/:id`
 - Listado: `name`, `username`, rol, estado, phone/email si existen
+- Quitar contraseña de creación/edición en `UserFormModal`, contratos y adaptadores de usuarios, incluidos mocks usados por pruebas. No ofrecer reset libre; agregar atención de solicitudes de recuperación y entrega única de contraseña temporal generada por el sistema. Informar al crear que la contraseña inicial es `solocamiones` y debe cambiarse al entrar; no obtenerla de una respuesta API.
 - Errores 409/403/validation en la UI existente (`UserFormModal` / toasts)
 - Actualizar checklists Feature 01 y slice R1 de Feature 14
 - Confirmar que history `USER_*` se escribe (tests/API), sin pantalla nueva de historial
 
 **Pruebas:**
-- Browser E2E local: Admin crea Seller, desactiva, login falla
+- Browser E2E local: Admin crea Seller sin elegir contraseña; Seller entra con `solocamiones`, cambia desde perfil, vuelve a iniciar sesión y obtiene acceso; Admin desactiva y login falla.
 - Seller intenta ruta admin → 403 API + UX coherente
 - Suite CI smoke R1 completa: migraciones, health, login, sesión, autorización
 - Feature 01 acceptance criteria verificables end-to-end en local
@@ -524,7 +531,7 @@ queda para el release de OT. El prototipo web permanece en mock.
 
 Secuencial: **M1 → M2 → M3 → M4 → M5 → M6 → M7 → M8 → M9 → M10 → M11**.
 
-El prototipo web no es dependencia: M10/M11 son swaps HTTP. En la secuencia de este plan, M10 va **después de M8** para poder verificar Administrator, Seller y Mechanic con cuentas de PostgreSQL (el CLI de M5 solo crea el primer Administrator). M11 espera M8 + M10; M9 debe estar hecho para el exit gate (eventos), no para pintar `/users`.
+El prototipo web no es dependencia: M10/M11 incluyen swaps HTTP y las adaptaciones de contraseña inicial definidas en M8. En la secuencia de este plan, M10 va **después de M8** para poder verificar Administrator, Seller y Mechanic con cuentas de PostgreSQL (el CLI de M5 solo crea el primer Administrator). M11 espera M8 + M10; M9 debe estar hecho para el exit gate (eventos), no para pintar `/users`.
 
 Tras **cerrar Release 1**, la siguiente integración web de negocio es Release 2 (clientes/facturas), no un cableado anticipado del prototipo.
 
@@ -535,9 +542,7 @@ Tras **cerrar Release 1**, la siguiente integración web de negocio es Release 2
 
 ## Próximo paso
 
-**Milestone 8:** Gestión HTTP de usuarios Administrator (`/api/admin/users`), reutilizando
-`requireAdministrator`. No cablear `/users` en el web (eso es M11). El administrador local se
-puede crear con `npm run bootstrap:admin` cuando se necesite.
+**Milestone 9:** History envelope y eventos de usuarios/recuperación, usando las transacciones de M8. M8 está cerrado; no cablear frontend hasta M10–M11.
 
 **Pendientes de Milestone 4:** verificar el primer PR en GitHub y configurar el check
 obligatorio `R1 quality`. Se mantiene la decisión de

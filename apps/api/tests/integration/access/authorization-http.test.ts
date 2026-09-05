@@ -18,7 +18,9 @@ const PASSWORD = 'correct-password';
 const ADMIN_PROBE = `/api/auth${ADMIN_AUTHORIZATION_PROBE_PATH}`;
 
 function assertNoCommercialFields(body: unknown) {
-  expect(JSON.stringify(body)).not.toMatch(/price|cost|invoice|customer|profit|payment|passwordHash/i);
+  expect(JSON.stringify(body)).not.toMatch(
+    /price|cost|invoice|customer|profit|payment|passwordHash/i,
+  );
 }
 
 async function createUser(role: Role) {
@@ -27,6 +29,7 @@ async function createUser(role: Role) {
     name: `${role} Fixture`,
     username,
     role,
+    mustChangePassword: false,
     passwordHash: await hashPassword(PASSWORD),
     phone: '8095550000',
     email: `${username}@example.com`,
@@ -93,6 +96,7 @@ describe('authorization HTTP (integration)', () => {
       username,
       name: user.name,
       role: Role.MECHANIC,
+      mustChangePassword: false,
     });
     expect(session.body).not.toHaveProperty('phone');
     expect(session.body).not.toHaveProperty('email');
@@ -106,6 +110,7 @@ describe('authorization HTTP (integration)', () => {
       phone: user.phone,
       email: user.email,
       role: Role.MECHANIC,
+      mustChangePassword: false,
       active: true,
     });
     assertNoCommercialFields(me.body);
@@ -121,6 +126,7 @@ describe('authorization HTTP (integration)', () => {
         username,
         name: user.name,
         role,
+        mustChangePassword: false,
         phone: user.phone,
         email: user.email,
       });

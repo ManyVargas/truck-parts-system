@@ -19,6 +19,7 @@ export class UserRepository {
         email: input.email,
         role: input.role,
         passwordHash: input.passwordHash,
+        mustChangePassword: input.mustChangePassword ?? false,
       },
     });
   }
@@ -51,6 +52,46 @@ export class UserRepository {
         ...(input.phone !== undefined ? { phone: input.phone } : {}),
         ...(input.email !== undefined ? { email: input.email } : {}),
         ...(input.passwordHash !== undefined ? { passwordHash: input.passwordHash } : {}),
+        ...(input.mustChangePassword !== undefined
+          ? { mustChangePassword: input.mustChangePassword }
+          : {}),
+      },
+    });
+  }
+
+  async list(page: number, pageSize: number) {
+    const items = await this.database.user.findMany({
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+    return { items, total: await this.database.user.count(), page, pageSize };
+  }
+
+  countActiveAdministrators() {
+    return this.database.user.count({ where: { active: true, role: 'ADMINISTRATOR' } });
+  }
+
+  updateAdministrative(
+    id: string,
+    input: {
+      name?: string;
+      username?: string;
+      phone?: string | null;
+      email?: string | null;
+      role?: User['role'];
+      active?: boolean;
+    },
+  ) {
+    return this.database.user.update({
+      where: { id },
+      data: {
+        name: input.name,
+        username: input.username,
+        phone: input.phone,
+        email: input.email,
+        role: input.role,
+        active: input.active,
       },
     });
   }

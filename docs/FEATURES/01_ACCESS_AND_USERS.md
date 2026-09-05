@@ -53,11 +53,15 @@ These decisions close prior documentation gaps and are authoritative for Release
    - `role` — required (`ADMINISTRATOR`, `SELLER`, `MECHANIC`)
    - `active` — required
    - `passwordHash` — required
+   - `mustChangePassword` — server-managed boolean for mandatory initial password change (M8 decision, 2026-09-05)
    - `createdAt` / `updatedAt`
    - Do not add other required MVP fields.
 4. **Password policy (MVP):** minimum 6 characters; no additional complexity rules in the MVP.
 5. **Mechanic scope in Release 1:** verify only a minimal session projection and negative authorization tests. Full Work Order data projection belongs to the release that implements Work Orders.
 6. **History in Release 1:** implement the reusable event envelope and record user-lifecycle events only. Other event types are added with their owning features.
+7. **Administrator-created credentials (owner decision, 2026-09-05):** creation accepts no password. The server assigns the initial password `solocamiones`, stores only its Argon2id hash and sets `mustChangePassword = true`. Administrators cannot freely change or reset another user's password; recovery requires a pending user request and approval by another administrator after identity verification; administrative create/update schemas reject credential fields and the flag. Every user, including Administrator, changes their own password only through their own profile, verifying their current password.
+8. **Mandatory initial change:** initial login establishes restricted access to session lookup, own profile and logout only. All other authenticated operations are denied server-side until the user chooses a password of at least six Unicode characters different from the initial password. Editing profile contact data alone does not clear the flag. Login/session/profile responses expose the flag for every role. Use `403 FORBIDDEN` with `details.reason = PASSWORD_CHANGE_REQUIRED` for restricted operations.
+9. **Completion and compatibility:** atomically update the password hash, clear the flag and revoke all sessions; clear the current cookie and require login with the new password. Concurrent attempts must not overwrite a completed password change. Existing users and the interactive bootstrap retain their credentials with the flag set to `false`; new administrative accounts explicitly set it to `true`. Activation and role changes never reset credentials or the flag. Forgotten-password recovery is implemented in M8: one pending request per active account, expiring after 24 hours. Another active Administrator without a pending password change may approve (explicit personal/phone identity verification) or reject, never their own request. Approval generates a random temporary password without expiration, shown once for personal delivery, stores only its hash, requires change and revokes all sessions atomically. There is no email recovery, local recovery command or mandatory second administrator; a sole locked-out administrator cannot recover through the application.
 
 ### Recommended implementation shape
 
@@ -97,6 +101,8 @@ Deactivation must invalidate future access while preserving historical foreign-k
 - Server rejects direct unauthorized requests even when the UI is bypassed.
 - Deactivation does not erase historical actor attribution.
 - Mechanic authorization never grants commercial/financial visibility.
+- New administrative accounts must complete a password change in their own profile before operational access, enforced by the API for every role.
+- Administrators cannot supply passwords during creation or ordinary updates. Only approved recovery requests can assign a system-generated temporary password.
 
 ## Implementation checklist
 
@@ -108,21 +114,26 @@ Deactivation must invalidate future access while preserving historical foreign-k
 - [x] Implement server-side session creation, lookup, rotation, logout, and invalidation.
 - [x] Implement active-account guard.
 - [x] Implement operation-level authorization helpers/policies.
-- [ ] Implement Administrator user-management commands in the `users` module.
-- [ ] Preserve historical user identity after deactivation.
+- [x] Implement Administrator user-management commands in the `users` module (M8).
+- [x] Implement initial server-assigned password, persisted change-required flag, restricted access and atomic own-profile completion with session revocation (M8).
+- [x] Preserve the user record and identity after deactivation (M8); historical event attribution remains pending M9.
 
 ### Frontend
 - [x] Login/logout flow.
 - [x] Session-expired / inactive-account handling.
-- [x] Administrator user-management screen (`name`, `username`, optional `phone`/`email`, role, active state). Prototype mock: `/users`, `users.manage`, password required on create. Covered by unit, integration, and component tests (WM11).
+- [x] Original Administrator user-management prototype (`name`, `username`, optional `phone`/`email`, role, active state), covered by tests (WM11). Its password field predates the 2026-09-05 decision and must be removed before HTTP integration.
+- [ ] Remove password inputs/free reset actions from administrative UI and user payloads; explain initial password, add recovery request resolution and one-time temporary-password display (M11).
+- [ ] Adapt login and own profile to mandatory password change, including reload/direct navigation and fresh login after completion (M10).
 - [x] Role-aware navigation without treating hidden controls as security. Prototype mock 2.0-M1.2 also hides on-screen actions the role cannot perform (`can()` + route guards).
 - [x] Self-service profile edit (own name, optional phone/email, password) for every active role. Username, role, and active stay administrator-managed. Uses `profile.update`, not `users.manage`. Covered by unit, integration, and component tests.
 
 ### Tests
 - [x] Valid/invalid/inactive login tests.
 - [x] Role matrix negative tests through direct API requests (Release 1 Mechanic scope: minimal session projection only).
-- [ ] Session invalidation after deactivation.
+- [x] Session invalidation after deactivation (M8).
 - [ ] Historical records still resolve deactivated actor identity.
+- [x] Initial login restriction, credential-field rejection, mandatory change errors/success/concurrency, old-session invalidation and existing-user/bootstrap compatibility (M8).
+- [x] Recovery request/approval/rejection, expiry, concurrency and credential delivery; prevention of own resolution and own demotion/deactivation (M8).
 
 ## Canonical validated requirements
 
@@ -137,10 +148,10 @@ The blocks below are the final reconciled requirements retained from the previou
 **Business Reason:** Operational and financial actions must be attributable to a person.  
 **Preconditions:** The account exists and is active.  
 **Main Flow:** User submits credentials; the system verifies the account and starts an authenticated session.  
-**Business Rules:** Shared anonymous operational accounts are not allowed.  
+**Business Rules:** Shared anonymous operational accounts are not allowed. Administrator-created accounts initially use `solocamiones` with mandatory own-profile password change before operational access. Only the account owner changes their password, with current-password verification.
 **Important Exceptions/Edge Cases:** Historical actions remain attributable after account deactivation.  
 **Dependencies:** None.  
-**Acceptance Notes:** Valid active credentials succeed; invalid or inactive credentials do not.
+**Acceptance Notes:** Valid active credentials succeed; invalid or inactive credentials do not. Accounts with a pending initial change receive restricted access only; completing the change revokes all sessions and requires a new login.
 
 ---
 
@@ -168,7 +179,7 @@ The blocks below are the final reconciled requirements retained from the previou
 **Business Reason:** Access must be controlled without direct data changes.  
 **Preconditions:** The acting user is an Administrator.  
 **Main Flow:** Administrator enters user information, assigns a role, and saves the account state.  
-**Business Rules:** Seller and Mechanic cannot manage accounts or roles.  
+**Business Rules:** Seller and Mechanic cannot manage accounts or roles. Administrator creation accepts no password: the server assigns the initial credential and mandatory-change flag. Administrators cannot freely change/reset existing account passwords or clear that flag through ordinary user endpoints, including for their own account; own-password changes use the profile flow. The only recovery exception is a pending request approved by another administrator with identity verification; the system generates the temporary credential. Self-deactivation/demotion is forbidden and at least one active Administrator must remain.
 **Important Exceptions/Edge Cases:** A unique `username` cannot be assigned to conflicting accounts.  
 **Dependencies:** AUTH-001, AUTH-002.  
 **Acceptance Notes:** Server-side checks allow Administrators and reject Seller and Mechanic.

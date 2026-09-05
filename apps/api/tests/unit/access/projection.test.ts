@@ -13,6 +13,7 @@ function sampleUser(overrides: Partial<AuthUserRecord> = {}): AuthUserRecord {
     username: 'seller',
     name: 'Ana Seller',
     role: 'SELLER',
+    mustChangePassword: false,
     phone: '8095550000',
     email: 'ana@example.com',
     active: true,
@@ -32,6 +33,7 @@ describe('auth HTTP projections', () => {
       username: 'seller',
       name: 'Ana Seller',
       role: 'SELLER',
+      mustChangePassword: false,
     });
     expect(JSON.stringify(projected)).not.toContain('passwordHash');
     expect(JSON.stringify(projected)).not.toContain('$argon2id$');
@@ -45,6 +47,7 @@ describe('auth HTTP projections', () => {
       username: 'seller',
       name: 'Ana Seller',
       role: 'SELLER',
+      mustChangePassword: false,
       phone: null,
       email: null,
       active: false,
@@ -63,6 +66,7 @@ describe('auth HTTP projections', () => {
       username: 'seller',
       name: 'Ana Seller',
       role: 'MECHANIC',
+      mustChangePassword: false,
     });
     expect(projected).not.toHaveProperty('phone');
     expect(projected).not.toHaveProperty('email');
@@ -79,6 +83,7 @@ describe('auth HTTP projections', () => {
         username: 'seller',
         name: 'Ana Seller',
         role,
+        mustChangePassword: false,
         phone: '8095550000',
         email: 'ana@example.com',
       });

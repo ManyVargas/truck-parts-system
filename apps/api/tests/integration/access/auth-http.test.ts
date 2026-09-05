@@ -14,7 +14,10 @@ import {
 import { resetLoginRateLimit } from '../../../src/features/access/login-rate-limit.js';
 import { hashPassword } from '../../../src/features/access/password.js';
 import { SessionRepository } from '../../../src/features/access/repository.js';
-import { generateSessionToken, hashSessionToken } from '../../../src/features/access/session-token.js';
+import {
+  generateSessionToken,
+  hashSessionToken,
+} from '../../../src/features/access/session-token.js';
 import { UserRepository } from '../../../src/features/users/repository.js';
 import { disconnectPrisma, prisma } from '../../../src/infrastructure/database/index.js';
 import { createTestApp } from '../../helpers/app.js';
@@ -43,6 +46,7 @@ async function createUser(overrides: { active?: boolean; role?: Role } = {}) {
     name: 'Auth Fixture',
     username,
     role: overrides.role ?? Role.SELLER,
+    mustChangePassword: false,
     passwordHash: await hashPassword(PASSWORD),
     phone: '8095550000',
     email: 'auth@example.com',
@@ -66,7 +70,9 @@ describe('auth HTTP (integration)', () => {
 
   it('logs in with valid credentials, sets sid, and persists only the token hash', async () => {
     const { user, username, password } = await createUser();
-    const response = await request(createTestApp()).post('/api/auth/login').send({ username, password });
+    const response = await request(createTestApp())
+      .post('/api/auth/login')
+      .send({ username, password });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -74,6 +80,7 @@ describe('auth HTTP (integration)', () => {
       username,
       name: user.name,
       role: user.role,
+      mustChangePassword: false,
     });
     expect(JSON.stringify(response.body)).not.toContain('passwordHash');
     expect(JSON.stringify(response.body)).not.toContain(user.passwordHash);
@@ -149,6 +156,7 @@ describe('auth HTTP (integration)', () => {
       username,
       name: user.name,
       role: user.role,
+      mustChangePassword: false,
       phone: user.phone,
       email: user.email,
     });
@@ -186,6 +194,7 @@ describe('auth HTTP (integration)', () => {
       email: 'updated@example.com',
       username,
       role: 'SELLER',
+      mustChangePassword: false,
       active: true,
     });
     expect(JSON.stringify(updated.body)).not.toContain('passwordHash');
@@ -195,6 +204,7 @@ describe('auth HTTP (integration)', () => {
       name: 'Updated Name',
       username,
       role: Role.SELLER,
+      mustChangePassword: false,
       active: true,
     });
 

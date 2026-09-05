@@ -12,6 +12,7 @@ import type { AuthUserRecord } from '../../../src/features/access/types.js';
 import { AppError } from '../../../src/infrastructure/errors/app-error.js';
 import type { UserRepository } from '../../../src/features/users/repository.js';
 import type { SessionRepository } from '../../../src/features/access/repository.js';
+import type { AccountRepositories } from '../../../src/features/users/transaction.js';
 
 const NOW = new Date('2026-09-04T12:00:00.000Z');
 const PASSWORD = 'correct-password';
@@ -23,6 +24,7 @@ const users = {
 };
 
 const sessions = {
+  revokeAllByUserId: vi.fn(),
   create: vi.fn(),
   findByTokenHash: vi.fn(),
   revokeByTokenHash: vi.fn(),
@@ -33,6 +35,12 @@ function createService() {
     users as unknown as UserRepository,
     sessions as unknown as SessionRepository,
     () => NOW,
+    async (work) =>
+      work({
+        users,
+        sessions,
+        recoveries: { cancelForUser: vi.fn() },
+      } as unknown as AccountRepositories),
   );
 }
 
@@ -42,6 +50,7 @@ async function activeUser(overrides: Partial<AuthUserRecord> = {}): Promise<Auth
     username: 'seller',
     name: 'Ana Seller',
     role: Role.SELLER,
+    mustChangePassword: false,
     phone: '8095550000',
     email: 'ana@example.com',
     active: true,
@@ -54,7 +63,8 @@ async function activeUser(overrides: Partial<AuthUserRecord> = {}): Promise<Auth
 
 describe('AccessService', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    users.findById.mockImplementation(async () => users.findByUsername());
     sessions.create.mockImplementation(async (input) => input);
     sessions.revokeByTokenHash.mockResolvedValue(0);
   });
@@ -72,7 +82,9 @@ describe('AccessService', () => {
       expect(result.user).toEqual(user);
       expect(result.expiresAt).toEqual(new Date(NOW.getTime() + SESSION_TTL_MS));
       expect(result.sessionToken).toMatch(/^[0-9a-f]{64}$/);
-      expect(sessions.revokeByTokenHash).toHaveBeenCalledWith(hashSessionToken('previous-raw-token'));
+      expect(sessions.revokeByTokenHash).toHaveBeenCalledWith(
+        hashSessionToken('previous-raw-token'),
+      );
       expect(sessions.create).toHaveBeenCalledWith({
         tokenHash: hashSessionToken(result.sessionToken),
         userId: user.id,
@@ -96,21 +108,26 @@ describe('AccessService', () => {
         user: 'inactive',
         password: PASSWORD,
       },
-    ])('rejects $title with the same generic message and without a session', async ({ user, password }) => {
-      if (user === 'active') {
-        users.findByUsername.mockResolvedValue(await activeUser());
-      } else if (user === 'inactive') {
-        users.findByUsername.mockResolvedValue(await activeUser({ active: false }));
-      } else {
-        users.findByUsername.mockResolvedValue(null);
-      }
+    ])(
+      'rejects $title with the same generic message and without a session',
+      async ({ user, password }) => {
+        if (user === 'active') {
+          users.findByUsername.mockResolvedValue(await activeUser());
+        } else if (user === 'inactive') {
+          users.findByUsername.mockResolvedValue(await activeUser({ active: false }));
+        } else {
+          users.findByUsername.mockResolvedValue(null);
+        }
 
-      await expect(createService().login({ username: 'seller', password })).rejects.toMatchObject({
-        code: 'UNAUTHORIZED',
-        message: INVALID_CREDENTIALS_MESSAGE,
-      });
-      expect(sessions.create).not.toHaveBeenCalled();
-    });
+        await expect(createService().login({ username: 'seller', password })).rejects.toMatchObject(
+          {
+            code: 'UNAUTHORIZED',
+            message: INVALID_CREDENTIALS_MESSAGE,
+          },
+        );
+        expect(sessions.create).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe('logout', () => {

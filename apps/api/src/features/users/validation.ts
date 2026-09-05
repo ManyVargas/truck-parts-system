@@ -25,3 +25,23 @@ export const createUserSchema = z.strictObject({
   role: roleSchema,
   password: passwordSchema,
 });
+
+// Bootstrap/internal creation retains its password input; HTTP administration never accepts it.
+export const createAdministrativeUserSchema = createUserSchema.omit({ password: true });
+export const updateAdministrativeUserSchema = createAdministrativeUserSchema
+  .partial()
+  .extend({
+    active: z.boolean().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, 'At least one field is required');
+
+export const userIdSchema = z.strictObject({ id: z.uuid() });
+export const paginationSchema = z.strictObject({
+  page: z.coerce.number().int().min(1).max(1000000).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+});
+export const recoveryRequestSchema = z.strictObject({ username: usernameSchema });
+export const recoveryResolutionSchema = z.discriminatedUnion('action', [
+  z.strictObject({ action: z.literal('approve'), identityVerified: z.literal(true) }),
+  z.strictObject({ action: z.literal('reject') }),
+]);

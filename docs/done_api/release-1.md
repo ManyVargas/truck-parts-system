@@ -2,7 +2,7 @@
 
 **Release:** Application Foundation and Access (Local Development)  
 **Plan de referencia:** [`../plans_api/plan-001.md`](../plans_api/plan-001.md)  
-**Estado:** en progreso (Milestones 1–3 y 5–6 completados; M4 implementado y verificado localmente, con verificación en GitHub pendiente; integración HTTP de M6 escrita, no ejecutada en esta sesión por el bloqueo de `prisma migrate reset`)
+**Estado:** en progreso: M1–M3 y M5–M8 completados en local; M4 mantiene verificación GitHub pendiente. M9–M11 pendientes. Integraciones M6–M7 ejecutadas satisfactoriamente durante el cierre de M8.
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 1, a medida que se completan.  
 No sustituye a `plan-001.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -571,14 +571,60 @@ No gestiona usuarios; existe para tests negativos y smoke hasta que M8 monte `/a
 
 ---
 
-## Milestone 8 — Gestión de usuarios Administrator (backend)
+## Milestone 8 — Gestión de usuarios Administrator y recuperación (backend)
 
-**Estado:** pendiente
+**Estado:** completado y verificado localmente.
 
-*(Se documentará al completar el milestone.)*
+**Fecha:** 2026-09-05.
+
+### Objetivo cumplido
+
+Implementar administración HTTP de cuentas con primer acceso restringido, cambio de contraseña propio y recuperación aprobada por otro Administrator. Únicamente backend M8; frontend permanece mock y history envelope queda pendiente M9.
+
+### Qué se entregó
+
+- Stack `users` routes/controller/service/repository/validation/types; policies de servicio, repositorio de recuperación y helper transaccional compartido con `access`.
+- `POST/GET/PATCH /api/admin/users`: creación, listado paginado y edición de perfil/username/rol/estado, exclusivos de Administrator activo sin cambio pendiente. Schemas estrictos rechazan credenciales y flag en administración normal.
+- Creación administrativa sin contraseña en input: Argon2id de `solocamiones`, cuenta activa y `mustChangePassword=true`. Bootstrap conserva contraseña interactiva; cuentas existentes mantienen hash y flag false.
+- Migración `20260905000000_user_management`: flag y tabla `PasswordRecoveryRequest`, estados, FK restrictivas, índice único parcial por usuario pendiente y checks de resolución por otro administrador/verificación.
+- Login/session/me exponen flag para todos los roles. `requireAuth` bloquea operaciones normales con 403 y `details.reason=PASSWORD_CHANGE_REQUIRED`; perfil/sesión usan guard restringido explícito y logout permanece disponible.
+- Todo cambio desde perfil verifica contraseña actual y nueva distinta, mínimo seis caracteres Unicode. Hash/flag/revocación de todas las sesiones/cancelación de solicitudes pendientes se confirman juntos; respuesta limpia cookie y requiere login nuevo. Contacto solo no elimina restricción.
+- Recuperación pública `POST /api/auth/recovery-requests`: username, respuesta 202 genérica, una pendiente vigente por usuario activo, vencimiento 24 horas y límite 10 solicitudes/IP/15 minutos. No cambia credenciales ni sesiones al solicitar.
+- `GET /api/admin/users/recovery-requests` y `POST /api/admin/users/recovery-requests/:id/resolve`: otro administrador lista y resuelve; aprobar exige `identityVerified=true` después de verificación personal/telefónica. Rechazar no modifica acceso.
+- Aprobación genera contraseña temporal criptográfica (24 bytes/32 caracteres base64url), sin vencimiento, devuelta una sola vez para entrega personal; guarda solo hash, exige cambio, revoca sesiones y consume solicitud atómicamente. No se devuelve en listas ni se almacena en solicitudes/logs. Respuestas sensibles usan `Cache-Control: no-store`.
+- Desactivación conserva registro/hash y revoca sesiones/cancela solicitudes. Reactivar no recupera sesiones ni cambia flag. No se permite auto-desactivación, auto-degradación ni auto-resolución. Transacciones serializables protegen un mínimo de un Administrator activo y carreras de cambios/recuperación/login.
+- Sin correo, CLI de recuperación ni segundo administrador obligatorio. Un único administrador sin credenciales no puede recuperarse mediante la aplicación.
+
+### Verificación realizada
+
+| Verificación | Resultado |
+|---|---|
+| Unitarias API | **130 aprobadas** |
+| Integraciones API PostgreSQL/HTTP | **87 aprobadas**, incluidas M6–M7 y 17 casos M8 |
+| Suite web sin cambios | **443 aprobadas** |
+| Total | **660 pruebas aprobadas** |
+| Typecheck API, tests API y web | OK |
+| Build API + web | OK; advertencia preexistente de tamaño del bundle web |
+| Lint | Sin errores; cuatro advertencias preexistentes de React Fast Refresh |
+| Migraciones limpias | Harness estándar reaplica las tres migraciones en `DATABASE_URL_TEST` |
+| Migración local de desarrollo | Aplicada a `truck_parts_dev` en localhost:5433 con `npm run db:migrate:deploy`, sin reset ni modificación de contraseñas |
+| Diff whitespace | `git diff --check` sin errores |
+
+Pruebas M8: tres roles, validación/inyección, secretos excluidos, CSRF, paginación, duplicados, desactivación/reactivación, solicitudes genéricas/duplicadas/vencidas, contraseña temporal sin vencimiento, aprobación entre administradores, prohibición de auto-resolución, concurrencia y rollback ante fallos simulados. El cambio desde perfil se prueba tanto obligatorio como voluntario. Se comprueba relectura de credenciales antes de emitir sesión.
+
+Las integraciones M6–M7 previamente documentadas como no ejecutadas sí pasaron durante este cierre. Se conserva su nota histórica de aquella sesión. No se ejecutó CI en GitHub ni se configura su protección de rama desde M8; M4 mantiene esos pendientes. No se cambiaron dependencias ni se afirma una nueva auditoría npm.
+
+### Documentación y operación
+
+Contrato de endpoints, ejemplos JSON, estructura, reglas y explicación paso a paso en [`../plans_api/milestone-8-verification.md`](../plans_api/milestone-8-verification.md). Plan principal y Feature 01 alineados con las decisiones finales. Se conserva el endpoint M7 `admin-probe` como smoke compatible, además de las rutas reales de usuarios.
+
+### Fuera de alcance
+
+- History append-only y eventos de usuarios/recuperación (M9); las solicitudes no reemplazan ese envelope.
+- Pantallas y swap HTTP de login/perfil/solicitud (M10), administración/resolución (M11).
+- Correo, recuperación local de emergencia, staging o producción.
 
 ---
-
 ## Milestone 9 — History mínimo Release 1
 
 **Estado:** pendiente

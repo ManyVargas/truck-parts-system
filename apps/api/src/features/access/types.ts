@@ -8,6 +8,7 @@ export type CreateSessionRecord = {
 };
 
 export type PublicAuthUser = {
+  mustChangePassword: boolean;
   id: string;
   username: string;
   name: string;
@@ -21,7 +22,7 @@ export type PublicSessionUser = PublicAuthUser & {
 };
 
 /**
- * Mechanic sessions stay at identity only (AUTH-002 R1). Work Order commercial stripping belongs
+ * Mechanic sessions expose identity and the password-change flag (AUTH-002 R1). Commercial stripping belongs
  * to the Work Orders release (WO-003), not this DTO.
  */
 export type SessionProjection = PublicAuthUser | PublicSessionUser;
@@ -35,6 +36,7 @@ export type PublicProfile = PublicAuthUser & {
 };
 
 export type AuthUserRecord = {
+  mustChangePassword: boolean;
   id: string;
   username: string;
   name: string;
@@ -54,6 +56,7 @@ export type LoginResult = {
 };
 
 export type RequestAuth = {
+  mustChangePassword: boolean;
   userId: string;
   username: string;
   name: string;

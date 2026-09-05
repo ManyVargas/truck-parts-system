@@ -1,10 +1,8 @@
 import { AppError } from '../../infrastructure/errors/app-error.js';
 import { UserRepository } from '../users/repository.js';
 import { usernameSchema } from '../users/validation.js';
-import {
-  INVALID_CREDENTIALS_MESSAGE,
-  SESSION_TTL_MS,
-} from './constants.js';
+import { accountTransaction, type AccountTransaction } from '../users/transaction.js';
+import { INVALID_CREDENTIALS_MESSAGE, SESSION_TTL_MS } from './constants.js';
 import { hashPassword, verifyPassword } from './password.js';
 import { SessionRepository } from './repository.js';
 import type { AuthUserRecord, LoginResult, RequestAuth } from './types.js';
@@ -27,6 +25,7 @@ export function toRequestAuth(user: AuthUserRecord): RequestAuth {
     phone: user.phone,
     email: user.email,
     active: user.active,
+    mustChangePassword: user.mustChangePassword,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -37,6 +36,7 @@ export class AccessService {
     private readonly users: UserRepository = new UserRepository(),
     private readonly sessions: SessionRepository = new SessionRepository(),
     private readonly now: () => Date = () => new Date(),
+    private readonly transaction: AccountTransaction = accountTransaction,
   ) {}
 
   async login(input: unknown, previousSessionToken?: string): Promise<LoginResult> {
@@ -54,8 +54,15 @@ export class AccessService {
       throw AppError.unauthorized(INVALID_CREDENTIALS_MESSAGE);
     }
 
-    const session = await this.rotateSession(user.id, previousSessionToken);
-    return { user, ...session };
+    return this.transaction(async ({ users, sessions }) => {
+      // Serialize session issuance with password resets and deactivation.
+      const current = await users.findById(user.id);
+      if (!current?.active || current.passwordHash !== user.passwordHash) {
+        throw AppError.unauthorized(INVALID_CREDENTIALS_MESSAGE);
+      }
+      const session = await this.rotateSession(user.id, previousSessionToken, sessions);
+      return { user: current, ...session };
+    });
   }
 
   async logout(rawToken: string | undefined): Promise<void> {
@@ -95,28 +102,45 @@ export class AccessService {
       if (!currentMatches) {
         throw AppError.validation('Current password is incorrect');
       }
+      if (profile.password === currentPassword) {
+        throw AppError.validation('New password must differ from current password');
+      }
       passwordHash = await hashPassword(profile.password);
     }
 
-    return this.users.updateOwnProfile(userId, {
-      name: profile.name,
-      phone: profile.phone,
-      email: profile.email,
-      passwordHash,
+    return this.transaction(async ({ users, sessions, recoveries }) => {
+      const current = await users.findById(userId);
+      if (!current?.active) throw AppError.unauthorized();
+      if (current.passwordHash !== user.passwordHash) {
+        throw AppError.conflict('Credentials changed; sign in again');
+      }
+      const updated = await users.updateOwnProfile(userId, {
+        name: profile.name,
+        phone: profile.phone,
+        email: profile.email,
+        passwordHash,
+        ...(passwordHash ? { mustChangePassword: false } : {}),
+      });
+      if (passwordHash) {
+        await sessions.revokeAllByUserId(userId);
+        await recoveries.cancelForUser(userId, this.now());
+      }
+      return updated;
     });
   }
 
   private async rotateSession(
     userId: string,
     previousSessionToken?: string,
+    sessions: SessionRepository = this.sessions,
   ): Promise<{ sessionToken: string; expiresAt: Date }> {
     if (previousSessionToken) {
-      await this.sessions.revokeByTokenHash(hashSessionToken(previousSessionToken));
+      await sessions.revokeByTokenHash(hashSessionToken(previousSessionToken));
     }
 
     const sessionToken = generateSessionToken();
     const expiresAt = new Date(this.now().getTime() + SESSION_TTL_MS);
-    await this.sessions.create({
+    await sessions.create({
       tokenHash: hashSessionToken(sessionToken),
       userId,
       expiresAt,

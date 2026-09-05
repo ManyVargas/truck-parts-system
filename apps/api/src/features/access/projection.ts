@@ -1,24 +1,23 @@
-import type {
-  AuthUserRecord,
-  PublicAuthUser,
-  PublicProfile,
-  SessionProjection,
-} from './types.js';
+import type { AuthUserRecord, PublicAuthUser, PublicProfile, SessionProjection } from './types.js';
 
 export function toPublicAuthUser(
-  user: Pick<AuthUserRecord, 'id' | 'username' | 'name' | 'role'>,
+  user: Pick<AuthUserRecord, 'id' | 'username' | 'name' | 'role' | 'mustChangePassword'>,
 ): PublicAuthUser {
   return {
     id: user.id,
     username: user.username,
     name: user.name,
     role: user.role,
+    mustChangePassword: user.mustChangePassword,
   };
 }
 
 /** Role-aware GET /session body. Own contact is not commercial data; Mechanic still omits it here. */
 export function toSessionProjection(
-  user: Pick<AuthUserRecord, 'id' | 'username' | 'name' | 'role' | 'phone' | 'email'>,
+  user: Pick<
+    AuthUserRecord,
+    'id' | 'username' | 'name' | 'role' | 'phone' | 'email' | 'mustChangePassword'
+  >,
 ): SessionProjection {
   const identity = toPublicAuthUser(user);
   if (user.role === 'MECHANIC') {

@@ -172,3 +172,9 @@ credentials or deployment secrets are needed.
 The repository owner must require **R1 quality** in the protection for `main` to
 block merges on failure. See [the M4 CI guide](docs/plans_api/milestone-4-ci.md) for
 setup instructions, local commands, and the smoke checks that M6–M7 must add.
+
+## Administración de usuarios — M8
+
+El backend incluye gestión de cuentas y recuperación autorizada. Aplicar migraciones locales con `npm run db:migrate:deploy` antes de iniciar la API. El frontend continúa en mock hasta M10–M11.
+
+Contrato HTTP, ejemplos JSON y secuencias de alta, cambio obligatorio, recuperación y desactivación: [guía M8](docs/plans_api/milestone-8-verification.md). Las cuentas existentes conservan sus contraseñas; nuevas cuentas administrativas usan `solocamiones` y deben cambiarla. No hay recuperación por correo ni comando local de recuperación.
