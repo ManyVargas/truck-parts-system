@@ -21,6 +21,7 @@ import {
 import { UserRepository } from '../../../src/features/users/repository.js';
 import { disconnectPrisma, prisma } from '../../../src/infrastructure/database/index.js';
 import { createTestApp } from '../../helpers/app.js';
+import { clearTestHistory } from '../../helpers/history.js';
 
 const users = new UserRepository();
 const sessions = new SessionRepository();
@@ -61,6 +62,7 @@ async function createUser(overrides: { active?: boolean; role?: Role } = {}) {
 
 describe('auth HTTP (integration)', () => {
   afterEach(async () => {
+    await clearTestHistory();
     await prisma.session.deleteMany();
     await prisma.user.deleteMany();
     await resetLoginRateLimit();

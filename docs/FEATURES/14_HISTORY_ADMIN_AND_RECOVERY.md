@@ -46,9 +46,15 @@ In Release 1, implement only:
 
 - the reusable event envelope (actor, time, subject, event type, references/payload);
 - user-lifecycle events such as user creation, role change, activation, and deactivation;
+- profile changes (name, username, phone, email) with immutable before/after snapshots, and voluntary/required own-password changes with metadata only (owner approval, 2026-09-05);
+- password-recovery requests, approval/rejection, expiry and cancellation from Feature 01 M8, without credentials;
 - proof that deactivated users remain resolvable as historical actors.
 
-Do **not** implement recovery, diagnostics, or non-user business events in Release 1. Add other event types when their owning features are implemented.
+The envelope distinguishes `USER` (required user FK), `ANONYMOUS` and `SYSTEM` (null user FK). Public recovery requests do not prove the account owner's identity: record the account as subject and the actor as anonymous. Expiry is attributed to the system. Initial bootstrap creation uses a system actor with explicit `BOOTSTRAP_CLI` source; it does not claim an authenticated human actor. Do not fabricate historical creation events for pre-existing accounts.
+
+Do **not** implement operational recovery, diagnostics, or non-user business events in Release 1. Password recovery from Feature 01 is included; operational recovery under ADMIN-002 remains Release 8. Add other event types when their owning features are implemented.
+
+M9 uses an internal transaction-aware history module (service/repository/validation/types), without HTTP routes/controllers or a history UI in Release 1. The runtime repository only appends; PostgreSQL rejects event UPDATE/DELETE. This is not protection against database-owner DDL or privileged TRUNCATE; deployment privileges belong to the production preparation scope.
 
 Protected corrections are named commands with explicit eligibility, reason, actor, before/after state, and additive event. They must never become an arbitrary status editor.
 
@@ -69,9 +75,9 @@ Diagnostics should surface affected business records and safe next-action contex
 ## Implementation checklist
 
 ### History
-- [ ] Define event envelope and typed event categories.
-- [ ] Append events inside the same DB transaction as business changes.
-- [ ] Preserve relevant immutable references/before-after values.
+- [x] Define event envelope and typed event categories (R1 user events).
+- [x] Append events inside the same DB transaction as business changes (R1; extend per owning release).
+- [x] Preserve relevant immutable references/before-after values (R1 profiles, roles and recovery references).
 - [ ] Add history projections per item/invoice/order as needed.
 
 ### Protected administration

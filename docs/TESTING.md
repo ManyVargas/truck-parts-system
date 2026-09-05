@@ -2,9 +2,9 @@
 
 ## Resultado de la verificación
 
-Última ejecución: **5 de septiembre de 2026**, sobre el estado local del proyecto, incluidos los cambios de gestión de usuarios y recuperación de contraseñas.
+Última ejecución: **5 de septiembre de 2026**, durante el cierre local de Milestone 9, incluidos gestión de usuarios, recuperación de contraseñas e historial transaccional de cuentas.
 
-Se ejecutaron `npm run test -w @truck-parts/web`, `npm run test:unit -w @truck-parts/api` y `npm run test:integration -w @truck-parts/api`. Los conteos proceden de los reportes JSON de Vitest e incluyen cada caso expandido de `it.each`. Todos los archivos de pruebas encontrados están inventariados abajo; las rutas son relativas a `apps/web/tests` o `apps/api/tests`, según la aplicación.
+Se ejecutaron `npm run test:web` (invoca `npm run test -w @truck-parts/web`), `npm run test:unit -w @truck-parts/api` y `npm run test:integration -w @truck-parts/api`. Los conteos de cierre proceden de los resultados de Vitest e incluyen cada caso expandido de `it.each`; el desglose web conserva el inventario previo, sin cambios en sus pruebas. Todos los archivos de pruebas encontrados están inventariados abajo; las rutas son relativas a `apps/web/tests` o `apps/api/tests`, según la aplicación.
 
 | Aplicación            | Tipo        | Archivos | Pruebas | Resultado obtenido |
 | --------------------- | ----------- | -------: | ------: | ------------------ |
@@ -12,12 +12,16 @@ Se ejecutaron `npm run test -w @truck-parts/web`, `npm run test:unit -w @truck-p
 | Frontend              | Integración |       10 |      68 | 68 aprobadas       |
 | Frontend              | Componentes |       27 |     119 | 119 aprobadas      |
 | **Subtotal frontend** |             |   **67** | **443** | **443 aprobadas**  |
-| Backend               | Unitarias   |       19 |     130 | 130 aprobadas      |
-| Backend               | Integración |        9 |      87 | 87 aprobadas       |
-| **Subtotal backend**  |             |   **28** | **217** | **217 aprobadas**  |
-| **Total**             |             |   **95** | **660** | **660 aprobadas**  |
+| Backend               | Unitarias   |       20 |     139 | 139 aprobadas      |
+| Backend               | Integración |       10 |      97 | 97 aprobadas       |
+| **Subtotal backend**  |             |   **30** | **236** | **236 aprobadas**  |
+| **Total**             |             |   **97** | **679** | **679 aprobadas**  |
 
-No hubo pruebas fallidas, omitidas ni pendientes. También aprobaron `npm run typecheck` (código de ambas aplicaciones y pruebas de API) y `npm run typecheck:test -w @truck-parts/web`.
+Las ejecuciones finales no tuvieron pruebas fallidas, omitidas ni pendientes. La primera ejecución web tuvo un fallo en `component/sales/PosPage.test.tsx`, caso `discards a draft with lines via undo toast instead of a confirm dialog`: el elemento `Alternador 24V` seguía presente al comprobar su eliminación. El archivo pasó aislado (**12 pruebas**) y la repetición completa de web pasó (**443 pruebas**). Se registra como intermitencia observada; M9 no modificó ni corrigió código web.
+
+También aprobaron `npm run typecheck` (código de ambas aplicaciones y pruebas de API), `npm run lint` y `npm run build`. Persisten cuatro advertencias preexistentes de React Fast Refresh y el aviso de tamaño del bundle web. `npm run typecheck:test -w @truck-parts/web` había aprobado en la verificación anterior; no se volvió a ejecutar durante M9.
+
+Evidencia del cierre: [`plans_api/milestone-9-verification.md`](plans_api/milestone-9-verification.md).
 
 > La integración de API exige PostgreSQL accesible y `DATABASE_URL_TEST` aislada. Su preparación reinicia la base de pruebas y aplica las migraciones; si falta la configuración o la base no responde, la suite falla en lugar de omitir casos.
 
@@ -124,7 +128,7 @@ Renderizan React en jsdom con Testing Library y validan comportamiento visible. 
 
 ### Pruebas unitarias
 
-Validan salud, errores, configuración de pruebas, credenciales, sesiones, autorización, proyecciones y validación de usuarios con dependencias aisladas. Hay **130 pruebas en 19 archivos**.
+Validan salud, errores, configuración de pruebas, credenciales, sesiones, autorización, proyecciones y validación de usuarios e historial con dependencias aisladas. Hay **139 pruebas en 20 archivos**.
 
 | Archivo                                        | Cantidad | Pruebas realizadas                                                                                                                                                     | Resultado esperado                                                                                                                                        |
 | ---------------------------------------------- | -------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -147,10 +151,11 @@ Validan salud, errores, configuración de pruebas, credenciales, sesiones, autor
 | `unit/users/validation.test.ts`                |       20 | Normalización de identidad/contacto; tres roles; contacto opcional; entradas inválidas y campos reservados.                                                            | Valida alta con contraseña para bootstrap, conserva contraseña exacta y rechaza inyección de campos de persistencia.                                      |
 | `unit/users/bootstrap-cli.test.ts`             |        9 | Entrada oculta y confirmación; BD poblada; contraseñas distintas; cancelación/Ctrl+C; errores; entrada no interactiva.                                                 | No filtra credenciales, evita mutaciones inválidas, restaura la entrada visible y desconecta la BD.                                                       |
 | `unit/users/management.test.ts`                |       10 | Alta administrativa separada de bootstrap; inyección de credenciales; parches; paginación; verificación de identidad; políticas de administrador y cambio obligatorio. | Rechaza campos reservados/parches vacíos, normaliza contacto, limita páginas y exige actor autorizado y verificación explícita para aprobar recuperación. |
+| `unit/users/history-validation.test.ts` | 9 | Evento de contraseña con metadata permitida; rechazo de seis campos de credenciales en envelope/payload; actores, sujetos y categorías incompatibles; hash anidado en perfil antes/después. | Acepta solo el contrato tipado; rechaza propiedades inesperadas y secretos, incluso anidados, y exige atribución válida por evento. |
 
 ### Pruebas de integración
 
-Ejercitan persistencia y transacciones contra PostgreSQL y rutas HTTP con Supertest. Hay **87 pruebas en 9 archivos**. Los archivos se ejecutan secuencialmente (`fileParallelism: false`) porque comparten la base de pruebas.
+Ejercitan persistencia y transacciones contra PostgreSQL y rutas HTTP con Supertest. Hay **97 pruebas en 10 archivos**. Los archivos se ejecutan secuencialmente (`fileParallelism: false`) porque comparten la base de pruebas.
 
 | Archivo                                         | Cantidad | Pruebas realizadas                                                                                                                                                                                                                                    | Resultado esperado                                                                                                                                                                                                                                                                     |
 | ----------------------------------------------- | -------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -163,12 +168,23 @@ Ejercitan persistencia y transacciones contra PostgreSQL y rutas HTTP con Supert
 | `integration/users/repository.test.ts`          |        9 | Alta/lectura; identidad ausente; desactivar/reactivar; unicidad; perfil propio; campos omitidos; commit/rollback.                                                                                                                                     | Conserva identidad y credenciales, modifica solo campos solicitados y revierte operaciones abortadas.                                                                                                                                                                                  |
 | `integration/users/bootstrap.test.ts`           |        9 | Primer administrador; BD poblada con usuario activo/inactivo; entradas inválidas; dos altas concurrentes.                                                                                                                                             | Crea un único administrador activo con hash verificable y sin sesión; rechaza BD poblada e inputs inválidos sin mutación.                                                                                                                                                              |
 | `integration/users/management-http.test.ts`     |       17 | Alta y cambio obligatorio para los tres roles; cambio voluntario; autenticación/rol/CSRF; inyección y duplicados; listado/edición; protección del último administrador; recuperación pública, aprobación/rechazo, caducidad, concurrencia y rollback. | Credenciales temporales se entregan una sola vez; restricciones persisten hasta cambiar contraseña; revoca sesiones; recuperación genérica, deduplicada y limitada; exige otro administrador y verificación de identidad; caduca a 24 h; carreras y fallos no dejan cambios parciales. |
+| `integration/users/history.test.ts` | 10 | Ciclo de usuario y perfil; actores desactivados; protección UPDATE/DELETE y FK; comandos rechazados; cuatro casos de rollback por fallo del historial; solicitudes/aprobación/cambio de contraseña concurrentes; rechazo, vencimiento y cancelaciones; bootstrap concurrente. | Eventos atómicos, sin duplicados por reintento ni eventos por no-op; conserva antes/después y actor; revierte cuenta, sesiones, solicitudes y eventos ante fallo; excluye credenciales; diferencia USER, ANONYMOUS y SYSTEM. |
+
+### Cobertura añadida en Milestone 9
+
+- **9 unitarias nuevas:** validación estricta del envelope y payload, incluyendo `password`, `passwordHash`, `currentPassword`, `temporaryPassword`, `tokenHash` y `sessionToken`.
+- **10 integraciones nuevas:** todos los eventos de cuenta, perfil, contraseña y recuperación; historial previo intacto tras desactivar al actor; restricciones PostgreSQL de actor/FK e inmutabilidad; operaciones rechazadas sin evento de éxito; rollback de creación, desactivación, aprobación y cambio propio de contraseña incluso si el evento ya se había insertado; concurrencia de solicitud, aprobación, cambio de contraseña y bootstrap.
+- **Aserciones adicionales en los 17 casos HTTP de M8**, sin aumentar su conteo: creación administrativa para los tres roles produce `USER_CREATED`; desactivación produce su evento; rechazo por autorización no escribe historial; sustituir una solicitud vencida produce `USER_RECOVERY_EXPIRED` con actor SYSTEM.
+- El perfil conserva name, username, phone y email anteriores/nuevos. Contraseña obligatoria/voluntaria solo conserva metadata; la contraseña temporal de recuperación no aparece en los eventos. Cancelaciones distinguen cambio propio de contraseña y desactivación administrativa.
+- Las solicitudes públicas se atribuyen a ANONYMOUS; vencimientos y bootstrap a SYSTEM, con origen `BOOTSTRAP_CLI` para este último. La resolución administrativa y el cambio propio conservan la FK de su actor autenticado.
+- La suite demuestra protección frente a UPDATE/DELETE ordinarios; no afirma protección contra DDL o TRUNCATE ejecutados por un administrador de base de datos. No se incorporó una pantalla ni endpoint público de historial.
 
 ### Preparación de PostgreSQL para integración
 
 - Configurar `DATABASE_URL_TEST` en el entorno, `.env` o `.env.test` de la raíz, apuntando a una base exclusiva de pruebas. Debe tener un nombre diferente de `DATABASE_URL`; cambiar host, usuario o esquema no prueba aislamiento.
 - `tests/helpers/environment.ts` carga `.env` y luego `.env.test` sin sobrescribir valores ya definidos, elimina el fallback de desarrollo y asigna a Prisma la URL de pruebas validada.
 - `tests/integration/setup.ts` comprueba conectividad y ejecuta `prisma migrate reset --force --skip-generate` sobre esa base antes de correr la suite. Esto elimina sus datos y aplica las migraciones del proyecto.
+- En M9 se reaplicaron las **cuatro migraciones**, incluida `20260905010000_history`. Las suites que generan historial limpian sus fixtures mediante `tests/helpers/history.ts`: verifica `NODE_ENV=test`, coincidencia de `DATABASE_URL` con `DATABASE_URL_TEST` y el nombre efectivo mediante `current_database()` antes de TRUNCATE sobre `HistoryEvent`. No desactiva el trigger de inmutabilidad y no forma parte de la aplicación.
 - Si falta la URL, no es válida/no está aislada o PostgreSQL no responde, la ejecución falla. Ya no se usa `describe.skipIf` para health. Aunque el router del contrato de errores no consulta PostgreSQL, el comando de integración completo exige la preparación global de BD.
 
 ## Comandos
@@ -191,12 +207,16 @@ npm run typecheck
 
 # Tipos de la suite web
 npm run typecheck:test -w @truck-parts/web
+
+# Casos específicos de M9 (la integración prepara y reinicia DATABASE_URL_TEST)
+npm exec -w @truck-parts/api -- vitest run tests/unit/users/history-validation.test.ts
+npm run test:integration -w @truck-parts/api -- tests/integration/users/history.test.ts
 ```
 
 ## Alcance actual
 
 - No hay pruebas E2E de navegador; las pruebas React actuales son de componentes en jsdom.
 - La integración del frontend usa repositorios mock y memoria; no sustituye pruebas transaccionales contra PostgreSQL.
-- El backend cubre salud, acceso/sesiones, perfil propio, autorización, bootstrap, administración de usuarios y recuperación de contraseñas, con persistencia, concurrencia y rollback en PostgreSQL. El contrato transversal de errores se prueba con un router de tests; las suites HTTP de acceso y usuarios también validan endpoints de producto. Estos resultados no implican integración real de inventario, ventas, POS u OT en el backend.
+- El backend cubre salud, acceso/sesiones, perfil propio, autorización, bootstrap, administración de usuarios, recuperación de contraseñas e historial append-only de cuentas, con persistencia, concurrencia y rollback en PostgreSQL. El contrato transversal de errores se prueba con un router de tests; las suites HTTP de acceso y usuarios también validan endpoints de producto. El historial se verifica mediante servicios, PostgreSQL y aserciones sobre operaciones HTTP existentes. Estos resultados no implican integración real de inventario, ventas, POS u OT en el backend.
 - Ventas (listado, detalle, pagos, cancelación, PDF), POS (borrador, ITBIS fiscal, confirmación `FAC-`, pago inicial, undo de líneas), OT de escritorio (WM9), app Mecánico (WM10) y catálogos/usuarios admin (WM11) tienen suites unitarias, de repositorio y de componente. Un esperado nuevo en categoría de ensamblaje rellena NA provisional en unidades no vendidas y avisa al administrador. Los atributos de categoría se definen en catálogo y se capturan como campos generados en el alta y la edición. Rentabilidad incluye reintento FX y registro admin de ganancia bruta cuando el costo es desconocido. Las capabilities de UX-0 siguen los releases del Development Plan (`release-1` … `release-8` y `prototype`). Las pruebas de componente usan el preset `prototype` por defecto para no heredar `VITE_CAPABILITIES_PRESET` del `.env` local. UX-1 cubre Modal/Field/Tabs con teclado, Button `busy` y Skeleton anunciado. UX-2 agrupa el sidebar comercial por intención de trabajo y compacta/overlay según breakpoint. UX-3 aplica progressive disclosure al registro de inventario (INV-002). UX-4 jerarquiza estados de inventario y unifica tablas (click de fila al detalle más enlace para teclado; columnas operativas separadas). UX-5 endurece el POS. UX-6 endurece la app del mecánico (targets, evidencia con progreso/reintento, historial completado, copy de red). El listado de inventario y ventas lee filtros operativos desde la URL (p. ej. KPIs del escritorio). Siguen fuera: carga real de fotos.
 - Cada cambio de negocio debe agregar una prueba en el nivel más bajo que demuestre la regla y una integración cuando intervengan autorización o estado compartido.

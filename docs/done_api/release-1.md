@@ -2,7 +2,7 @@
 
 **Release:** Application Foundation and Access (Local Development)  
 **Plan de referencia:** [`../plans_api/plan-001.md`](../plans_api/plan-001.md)  
-**Estado:** en progreso: M1–M3 y M5–M8 completados en local; M4 mantiene verificación GitHub pendiente. M9–M11 pendientes. Integraciones M6–M7 ejecutadas satisfactoriamente durante el cierre de M8.
+**Estado:** en progreso: M1–M3 y M5–M9 completados en local; M4 mantiene verificación GitHub pendiente. M10–M11 pendientes. Integraciones M6–M7 ejecutadas satisfactoriamente durante el cierre de M8.
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 1, a medida que se completan.  
 No sustituye a `plan-001.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -627,9 +627,38 @@ Contrato de endpoints, ejemplos JSON, estructura, reglas y explicación paso a p
 ---
 ## Milestone 9 — History mínimo Release 1
 
-**Estado:** pendiente
+**Estado:** completado y verificado localmente.
 
-*(Se documentará al completar el milestone.)*
+**Fecha:** 2026-09-05.
+
+### Qué se entregó
+
+- Tabla `HistoryEvent` con UUID, fecha PostgreSQL, actor USER/ANONYMOUS/SYSTEM, FK restrictiva al actor humano, sujeto, tipo y payload JSONB; índices por sujeto/fecha y actor/fecha.
+- Módulo interno `history` con tipos, validación estricta, helpers de contexto y repositorio transaccional de inserción. Sin endpoints ni pantalla nuevos.
+- Eventos de creación administrativa y bootstrap, cambios reales de rol/estado, perfil antes/después, cambio propio de contraseña y solicitud/aprobación/rechazo/vencimiento/cancelación de recuperación.
+- Los cambios de perfil guardan name, username, phone y email anteriores/nuevos. Los eventos de contraseña guardan solo flags; los de recuperación, referencia, estado y contexto seguro. No incluyen contraseñas, hashes ni tokens.
+- Solicitudes públicas atribuidas a ANONYMOUS: el username identifica al sujeto, no demuestra identidad del solicitante. Bootstrap SYSTEM con `BOOTSTRAP_CLI`; vencimientos SYSTEM; acciones autenticadas con FK del usuario.
+- Integración en las transacciones serializables de M8 y la transacción propia del bootstrap. Los reintentos no duplican eventos confirmados; fallar el append revierte cambios, solicitudes y sesiones.
+- Protección PostgreSQL contra UPDATE/DELETE de eventos, con tests de inmutabilidad y referencia de actores desactivados. El helper exclusivo de tests limpia fixtures con TRUNCATE solo después de verificar `DATABASE_URL_TEST` y la base efectiva; no es una capacidad de la aplicación.
+- Migración aditiva `20260905010000_history`, sin modificar cuentas existentes ni inventar acontecimientos históricos anteriores.
+
+### Verificación realizada
+
+| Verificación | Resultado |
+|---|---|
+| Unitarias API | **139 aprobadas** |
+| Integraciones PostgreSQL/HTTP | **97 aprobadas**, incluidas 10 nuevas de M9 y regresiones M6–M8 |
+| Suite web | **443 aprobadas** en repetición completa |
+| Total | **679 pruebas aprobadas** |
+| Typecheck API, tests y web | OK |
+| Lint | Sin errores; cuatro advertencias preexistentes de React Fast Refresh |
+| Build API + web | OK; advertencia preexistente de tamaño del bundle web |
+| Migraciones limpias | Harness estándar reaplica las cuatro migraciones en `DATABASE_URL_TEST` |
+| Base local de desarrollo | Migración M9 aplicada a `truck_parts_dev` en localhost:5433 mediante `db:migrate:deploy`, sin reset ni cambios a cuentas existentes |
+
+La primera ejecución web tuvo un fallo de sincronización en `PosPage.test.tsx` al descartar un borrador. La suite de ese archivo pasó aislada (12 pruebas) y la repetición web completa pasó (443); no se modificó código web. Se registra la intermitencia, sin atribuirle una corrección en M9.
+
+Detalle de decisiones, eventos, integración y operación en [`../plans_api/milestone-9-verification.md`](../plans_api/milestone-9-verification.md). M4 conserva los pendientes GitHub. M10–M11 conservan la integración web; no se añadieron eventos comerciales ni recuperación operativa de Release 8.
 
 ---
 

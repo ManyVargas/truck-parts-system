@@ -29,6 +29,28 @@ model User {
   sessions           Session[]
   recoveryRequests   PasswordRecoveryRequest[] @relation("RecoverySubject")
   resolvedRecoveries PasswordRecoveryRequest[] @relation("RecoveryResolver")
+  historyEvents      HistoryEvent[]
+}
+
+enum HistoryActorType {
+  USER
+  ANONYMOUS
+  SYSTEM
+}
+
+model HistoryEvent {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  occurredAt  DateTime         @default(now()) @db.Timestamptz(3)
+  actorType   HistoryActorType
+  actorUserId String?          @db.Uuid
+  eventType   String
+  subjectType String
+  subjectId   String           @db.Uuid
+  payload     Json             @db.JsonB
+  actor       User?            @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([subjectType, subjectId, occurredAt, id])
+  @@index([actorUserId, occurredAt])
 }
 
 enum RecoveryStatus {

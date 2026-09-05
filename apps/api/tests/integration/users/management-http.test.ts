@@ -15,6 +15,7 @@ import { INITIAL_PASSWORD, UserService } from '../../../src/features/users/servi
 import { accountTransaction } from '../../../src/features/users/transaction.js';
 import { disconnectPrisma, prisma } from '../../../src/infrastructure/database/index.js';
 import { createTestApp } from '../../helpers/app.js';
+import { clearTestHistory } from '../../helpers/history.js';
 
 const app = createTestApp();
 const users = new UserRepository();
@@ -51,6 +52,7 @@ async function pending(userId: string) {
 describe('M8 account management HTTP and transactions', () => {
   afterEach(async () => {
     vi.restoreAllMocks();
+    await clearTestHistory();
     await prisma.passwordRecoveryRequest.deleteMany();
     await prisma.session.deleteMany();
     await prisma.user.deleteMany();
@@ -75,6 +77,15 @@ describe('M8 account management HTTP and transactions', () => {
         active: true,
       });
       expect(JSON.stringify(created.body)).not.toMatch(/passwordHash|solocamiones|argon2/);
+      expect(
+        await prisma.historyEvent.findMany({ where: { subjectId: created.body.id } }),
+      ).toMatchObject([
+        {
+          eventType: 'USER_CREATED',
+          actorUserId: admin.user.id,
+          payload: { role, source: 'ADMINISTRATION' },
+        },
+      ]);
       const stored = await users.findById(created.body.id);
       expect(await verifyPassword(stored!.passwordHash, INITIAL_PASSWORD)).toBe(true);
       const agent = request.agent(app);
@@ -165,6 +176,7 @@ describe('M8 account management HTTP and transactions', () => {
     const admin = await fixture();
     expect((await admin.agent.post(ROOT).send({})).status).toBe(403);
     expect(await prisma.user.count()).toBe(3);
+    expect(await prisma.historyEvent.count()).toBe(0);
   });
 
   it('rejects credential injection, invalid IDs, empty patches and duplicate normalized usernames', async () => {
@@ -228,6 +240,11 @@ describe('M8 account management HTTP and transactions', () => {
         .status,
     ).toBe(200);
     expect((await target.agent.get('/api/auth/session')).status).toBe(401);
+    expect(
+      await prisma.historyEvent.count({
+        where: { subjectId: target.user.id, eventType: 'USER_DEACTIVATED' },
+      }),
+    ).toBe(1);
     expect(await users.findById(target.user.id)).toMatchObject({
       active: false,
       passwordHash: target.user.passwordHash,
@@ -377,14 +394,11 @@ describe('M8 account management HTTP and transactions', () => {
     expect(changed.status).toBe(200);
     expect(
       (
-        await target.agent
-          .patch('/api/auth/me')
-          .set(CSRF)
-          .send({
-            name: target.user.name,
-            currentPassword: approved.body.temporaryPassword,
-            password: 'new-personal-password',
-          })
+        await target.agent.patch('/api/auth/me').set(CSRF).send({
+          name: target.user.name,
+          currentPassword: approved.body.temporaryPassword,
+          password: 'new-personal-password',
+        })
       ).status,
     ).toBe(200);
     await expect(
@@ -427,6 +441,11 @@ describe('M8 account management HTTP and transactions', () => {
     expect((await prisma.passwordRecoveryRequest.findUniqueOrThrow({ where: { id } })).status).toBe(
       'EXPIRED',
     );
+    expect(
+      await prisma.historyEvent.findMany({
+        where: { subjectId: target.user.id, eventType: 'USER_RECOVERY_EXPIRED' },
+      }),
+    ).toMatchObject([{ actorType: 'SYSTEM', actorUserId: null, payload: { requestId: id } }]);
     expect(await prisma.passwordRecoveryRequest.count({ where: { status: 'PENDING' } })).toBe(1);
     const next = await pending(target.user.id);
     await service.update(admin.user.id, target.user.id, { active: false });

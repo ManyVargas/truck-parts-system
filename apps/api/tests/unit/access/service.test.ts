@@ -39,7 +39,8 @@ function createService() {
       work({
         users,
         sessions,
-        recoveries: { cancelForUser: vi.fn() },
+        recoveries: { cancelForUser: vi.fn().mockResolvedValue([]) },
+        history: { append: vi.fn() },
       } as unknown as AccountRepositories),
   );
 }

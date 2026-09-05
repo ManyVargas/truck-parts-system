@@ -8,7 +8,7 @@ export class RecoveryRepository {
   ) {}
 
   expire(now: Date, userId?: string) {
-    return this.database.passwordRecoveryRequest.updateMany({
+    return this.database.passwordRecoveryRequest.updateManyAndReturn({
       where: { status: 'PENDING', expiresAt: { lte: now }, ...(userId ? { userId } : {}) },
       data: { status: 'EXPIRED', resolvedAt: now },
     });
@@ -61,7 +61,7 @@ export class RecoveryRepository {
   }
 
   cancelForUser(userId: string, now: Date) {
-    return this.database.passwordRecoveryRequest.updateMany({
+    return this.database.passwordRecoveryRequest.updateManyAndReturn({
       where: { userId, status: 'PENDING' },
       data: { status: 'CANCELLED', resolvedAt: now },
     });

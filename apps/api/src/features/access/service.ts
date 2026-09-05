@@ -2,6 +2,7 @@ import { AppError } from '../../infrastructure/errors/app-error.js';
 import { UserRepository } from '../users/repository.js';
 import { usernameSchema } from '../users/validation.js';
 import { accountTransaction, type AccountTransaction } from '../users/transaction.js';
+import { appendProfileChange, appendRecoveryCancellations } from '../history/service.js';
 import { INVALID_CREDENTIALS_MESSAGE, SESSION_TTL_MS } from './constants.js';
 import { hashPassword, verifyPassword } from './password.js';
 import { SessionRepository } from './repository.js';
@@ -108,7 +109,7 @@ export class AccessService {
       passwordHash = await hashPassword(profile.password);
     }
 
-    return this.transaction(async ({ users, sessions, recoveries }) => {
+    return this.transaction(async ({ users, sessions, recoveries, history }) => {
       const current = await users.findById(userId);
       if (!current?.active) throw AppError.unauthorized();
       if (current.passwordHash !== user.passwordHash) {
@@ -121,9 +122,23 @@ export class AccessService {
         passwordHash,
         ...(passwordHash ? { mustChangePassword: false } : {}),
       });
+      await appendProfileChange(history, userId, current, updated);
       if (passwordHash) {
         await sessions.revokeAllByUserId(userId);
-        await recoveries.cancelForUser(userId, this.now());
+        const actor = { actorType: 'USER' as const, actorUserId: userId };
+        await appendRecoveryCancellations(
+          history,
+          await recoveries.cancelForUser(userId, this.now()),
+          actor,
+          'PASSWORD_CHANGED',
+        );
+        await history.append({
+          actor,
+          subjectType: 'USER',
+          subjectId: userId,
+          eventType: 'USER_PASSWORD_CHANGED',
+          payload: { wasChangeRequired: current.mustChangePassword, mustChangePassword: false },
+        });
       }
       return updated;
     });

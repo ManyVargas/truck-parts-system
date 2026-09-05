@@ -5,11 +5,13 @@ import { AppError } from '../../infrastructure/errors/app-error.js';
 import { SessionRepository } from '../access/repository.js';
 import { UserRepository } from './repository.js';
 import { RecoveryRepository } from './recovery-repository.js';
+import { HistoryRepository } from '../history/repository.js';
 
 export type AccountRepositories = {
   users: UserRepository;
   sessions: SessionRepository;
   recoveries: RecoveryRepository;
+  history: HistoryRepository;
 };
 export type AccountTransaction = <T>(
   work: (repositories: AccountRepositories) => Promise<T>,
@@ -25,6 +27,7 @@ export const accountTransaction: AccountTransaction = async (work) => {
             users: new UserRepository(tx),
             sessions: new SessionRepository(tx),
             recoveries: new RecoveryRepository(tx),
+            history: new HistoryRepository(tx),
           }),
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );

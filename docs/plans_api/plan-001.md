@@ -1,7 +1,7 @@
 # Plan 001 — Release 1 Milestones: Foundation + Access and Users
 
 **Release:** 1 — Application Foundation and Access (Local Development)  
-**Estado:** Milestone 8 completado en local — Milestone 4 mantiene pendiente la verificación en GitHub
+**Estado:** Milestone 9 completado en local — Milestone 4 mantiene pendiente la verificación en GitHub
 **Último milestone:** Milestone 11 — Integrar users HTTP + exit gate Release 1
 
 ---
@@ -14,7 +14,7 @@
 - **Primer despliegue productivo:** después de completar Release 2 — Billing Core ([`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) §First production deployment).
 - **Features en alcance:** [`../FEATURES/01_ACCESS_AND_USERS.md`](../FEATURES/01_ACCESS_AND_USERS.md) + slice R1 de [`../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md`](../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md).
 - **Frontend:** el prototipo mock de [`../plans_web/plan-001.md`](../plans_web/plan-001.md) está **cerrado** (WM12). Login, shell por rol, usuarios y perfil propio ya existen contra mocks (`VITE_USE_MOCK_API`). M10–M11 sustituyen el repositorio mock por HTTP y adaptan las pantallas existentes al cambio obligatorio de contraseña y a la creación sin contraseña elegida por Administrator.
-- **Estado API:** M1–M3, M5–M8 completados en local; M4 mantiene pendientes externos. Auth HTTP, `requireAuth`/`requireRole` y proyección por rol existen. Gestión HTTP y recuperación M8 disponibles; history M9 pendiente.
+- **Estado API:** M1–M3, M5–M9 completados en local; M4 mantiene pendientes externos. Auth HTTP, `requireAuth`/`requireRole`, gestión y recuperación disponibles. History M9 persiste eventos atómicos de usuarios, perfil, contraseña y recuperación.
 - **Ciclo por milestone:** plan → implementación → pruebas → revisión → commit. La integración web se hace **solo** cuando la función API cumple el criterio de la sección Integración API → Web.
 
 
@@ -59,9 +59,9 @@ El prototipo web ya está listo para Access/Users. El cuello de botella es la AP
 
 Hasta entonces: `VITE_USE_MOCK_API` distinto de `false` (mocks). No mezclar login real con listados mock de usuarios, ni al revés.
 
-### Estado ahora (después de M8 en local)
+### Estado ahora (después de M9 en local)
 
-**Auth HTTP está listo a nivel API; el swap web espera M10.** Gestión HTTP y recuperación M8 disponibles; history M9 pendiente.
+**Auth HTTP está listo a nivel API; el swap web espera M10.** Gestión HTTP y recuperación M8 disponibles; history M9 completado sin UI nueva.
 
 | Función API | ¿Integrable ahora? | Motivo |
 |---|---|---|
@@ -69,7 +69,7 @@ Hasta entonces: `VITE_USE_MOCK_API` distinto de `false` (mocks). No mezclar logi
 | `GET /api/health/ready` | Opcional (ops) | Igual: readiness de PostgreSQL, no flujo de usuario. |
 | Login / logout / sesión / perfil propio | No (swap en M10) | Endpoints M6–M7 listos. UI mock hasta M10. |
 | Gestión Administrator de usuarios | Backend listo; swap M11 pendiente | M8 implementado; UI permanece mock. |
-| History de usuarios | No | Envelope aún no existe. En R1 **no hay pantalla** de historial de usuarios; es persistencia + tests. |
+| History de usuarios | Sin integración UI R1 | Envelope y eventos implementados y verificados. Es persistencia interna + tests, sin endpoint público de historial. |
 | Clientes, facturas, inventario, OT, dashboard KPIs, recovery | No (fuera de R1) | UI mock existe; API y release correspondientes son R2+. |
 
 ### Matriz Release 1 — primer momento integrable
@@ -144,7 +144,7 @@ flowchart TD
 | M6 | Login/logout/sesiones + perfil propio (AUTH-001) | completado en local | Cliente HTTP auth **preparable**; swap no default |
 | M7 | Autorización server-side (AUTH-002/005) | completado en local | **Listo para M10** (auth + shell); swap no default |
 | M8 | User management backend (AUTH-003/004) | completado en local | **Listo para M11** (`/users`) |
-| M9 | History envelope R1 + eventos de usuarios | pendiente | Sin UI R1; tests/API en el exit gate |
+| M9 | History envelope R1 + eventos de usuarios | completado en local | Sin UI R1; tests/API en el exit gate |
 | M10 | Integrar auth HTTP (login/sesión/perfil/shell) | pendiente | Swap `AuthRepository` mock → HTTP |
 | M11 | Integrar users HTTP + exit gate Release 1 | pendiente | Swap `UserRepository` mock → HTTP |
 
@@ -447,13 +447,17 @@ queda para el release de OT. El prototipo web permanece en mock.
 ---
 ## Milestone 9 — History mínimo Release 1 (HIST-001/002 slice)
 
+**Estado:** completado y verificado localmente (2026-09-05). Evidencia en [`milestone-9-verification.md`](milestone-9-verification.md).
+
 **Objetivo:** Envelope reutilizable + eventos de administración de usuarios.
 
 **Alcance:**
-- Tabla event envelope: `occurredAt`, `actorUserId` (FK User), `eventType`, `subjectType`, `subjectId`, `payload`
-- Tipos R1: `USER_CREATED`, `USER_ROLE_CHANGED`, `USER_ACTIVATED`, `USER_DEACTIVATED`; incorporar eventos de solicitud/resolución de recuperación entregada en M8, sin credenciales en payload. Pendiente de M9.
+- Tabla `HistoryEvent`: UUID, `occurredAt`, `actorType`, `actorUserId` (FK User para actores autenticados; null para ANONYMOUS/SYSTEM), `eventType`, `subjectType`, `subjectId`, `payload` JSONB.
+- Tipos R1: `USER_CREATED`, `USER_ROLE_CHANGED`, `USER_ACTIVATED`, `USER_DEACTIVATED`, `USER_PROFILE_CHANGED`, `USER_PASSWORD_CHANGED` y `USER_RECOVERY_REQUESTED/APPROVED/REJECTED/EXPIRED/CANCELLED`.
+- Decisiones aprobadas por el owner: perfil con valores anteriores/nuevos (name, username, phone, email); cambio propio de contraseña obligatorio/voluntario solo con metadata; bootstrap con actor SYSTEM y origen CLI; solicitudes públicas con actor ANONYMOUS; vencimientos SYSTEM; cancelaciones con actor y motivo. Sin backfill de acontecimientos desconocidos.
 - Append en misma transacción que mutación de usuario
 - Actor desactivado sigue resolviendo en lectura histórica
+- Validación estricta por evento y payload; repositorio interno solo append; trigger PostgreSQL rechaza UPDATE/DELETE. No-op no genera evento de cambio.
 
 **Pruebas:**
 - Crear/desactivar → eventos append-only
@@ -462,7 +466,7 @@ queda para el release de OT. El prototipo web permanece en mock.
 
 **Definición de terminado:**
 - AUTH-004 + HIST-002 demostrables con integration test.
-- Sin recovery/diagnostics/otros eventos.
+- Sin recuperación operativa/diagnósticos de Release 8 ni eventos de otros dominios. Recuperación de contraseña M8 sí incluida.
 
 **Integración web (después de M9):** **Ninguna pantalla nueva.** Release 1 no tiene timeline de usuarios. M11 comprueba eventos con tests/API (crear/desactivar produce `USER_*`). Recovery UI del prototipo sigue mock (Release 8).
 
@@ -542,7 +546,7 @@ Tras **cerrar Release 1**, la siguiente integración web de negocio es Release 2
 
 ## Próximo paso
 
-**Milestone 9:** History envelope y eventos de usuarios/recuperación, usando las transacciones de M8. M8 está cerrado; no cablear frontend hasta M10–M11.
+**Milestone 10:** integrar auth HTTP (login, sesión, perfil, cambio obligatorio de contraseña y solicitud de recuperación). M9 está cerrado localmente; la administración HTTP de usuarios se integra en M11.
 
 **Pendientes de Milestone 4:** verificar el primer PR en GitHub y configurar el check
 obligatorio `R1 quality`. Se mantiene la decisión de

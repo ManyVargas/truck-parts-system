@@ -3,11 +3,13 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { bootstrapAdministrator } from '../../../src/features/users/bootstrap.js';
 import { verifyPassword } from '../../../src/features/access/password.js';
 import { disconnectPrisma, prisma } from '../../../src/infrastructure/database/index.js';
+import { clearTestHistory } from '../../helpers/history.js';
 
 const input = { name: ' Ana ', username: ' ADMIN ', password: ' AbC12 ', email: '', phone: '' };
 
 describe('initial administrator bootstrap (PostgreSQL)', () => {
   afterEach(async () => {
+    await clearTestHistory();
     await prisma.session.deleteMany();
     await prisma.user.deleteMany();
   });

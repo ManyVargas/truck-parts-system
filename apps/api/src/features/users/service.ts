@@ -4,6 +4,12 @@ import { AppError } from '../../infrastructure/errors/app-error.js';
 import { hashPassword } from '../access/password.js';
 import { toPublicProfile } from '../access/projection.js';
 import { assertAdministrator } from './policies.js';
+import {
+  appendProfileChange,
+  appendRecoveryCancellations,
+  appendRecoveryExpirations,
+  profileSnapshot,
+} from '../history/service.js';
 import { accountTransaction, type AccountTransaction } from './transaction.js';
 import {
   createAdministrativeUserSchema,
@@ -28,11 +34,23 @@ export class UserService {
   async create(actorId: string, input: unknown) {
     const profile = createAdministrativeUserSchema.parse(input);
     const passwordHash = await hashPassword(INITIAL_PASSWORD);
-    return this.transaction(async ({ users }) => {
+    return this.transaction(async ({ users, history }) => {
       assertAdministrator(await users.findById(actorId));
-      return toPublicProfile(
-        await users.create({ ...profile, passwordHash, mustChangePassword: true }),
-      );
+      const user = await users.create({ ...profile, passwordHash, mustChangePassword: true });
+      await history.append({
+        actor: { actorType: 'USER', actorUserId: actorId },
+        subjectType: 'USER',
+        subjectId: user.id,
+        eventType: 'USER_CREATED',
+        payload: {
+          ...profileSnapshot(user),
+          role: user.role,
+          active: user.active,
+          mustChangePassword: user.mustChangePassword,
+          source: 'ADMINISTRATION',
+        },
+      });
+      return toPublicProfile(user);
     });
   }
 
@@ -48,7 +66,7 @@ export class UserService {
   async update(actorId: string, id: string, input: unknown) {
     userIdSchema.parse({ id });
     const patch = updateAdministrativeUserSchema.parse(input);
-    return this.transaction(async ({ users, sessions, recoveries }) => {
+    return this.transaction(async ({ users, sessions, recoveries, history }) => {
       assertAdministrator(await users.findById(actorId));
       const target = await users.findById(id);
       if (!target) throw AppError.notFound('User not found');
@@ -66,9 +84,44 @@ export class UserService {
         throw AppError.conflict('At least one active administrator is required');
       }
       const updated = await users.updateAdministrative(id, patch);
+      const actor = { actorType: 'USER' as const, actorUserId: actorId };
+      await appendProfileChange(history, actorId, target, updated);
+      if (target.role !== updated.role) {
+        await history.append({
+          actor,
+          subjectType: 'USER',
+          subjectId: id,
+          eventType: 'USER_ROLE_CHANGED',
+          payload: { before: target.role, after: updated.role },
+        });
+      }
+      if (target.active !== updated.active) {
+        await history.append(
+          updated.active
+            ? {
+                actor,
+                subjectType: 'USER',
+                subjectId: id,
+                eventType: 'USER_ACTIVATED',
+                payload: { before: false, after: true },
+              }
+            : {
+                actor,
+                subjectType: 'USER',
+                subjectId: id,
+                eventType: 'USER_DEACTIVATED',
+                payload: { before: true, after: false },
+              },
+        );
+      }
       if (patch.active === false) {
         await sessions.revokeAllByUserId(id);
-        await recoveries.cancelForUser(id, this.now());
+        await appendRecoveryCancellations(
+          history,
+          await recoveries.cancelForUser(id, this.now()),
+          actor,
+          'USER_DEACTIVATED',
+        );
       }
       return toPublicProfile(updated);
     });
@@ -77,13 +130,27 @@ export class UserService {
   async requestRecovery(input: unknown): Promise<{ message: string }> {
     const { username } = recoveryRequestSchema.parse(input);
     try {
-      await this.transaction(async ({ users, recoveries }) => {
+      await this.transaction(async ({ users, recoveries, history }) => {
         const user = await users.findByUsername(username);
         if (!user?.active) return;
         const now = this.now();
-        await recoveries.expire(now, user.id);
+        await appendRecoveryExpirations(history, await recoveries.expire(now, user.id));
         if (!(await recoveries.findPending(user.id))) {
-          await recoveries.create(user.id, new Date(now.getTime() + RECOVERY_REQUEST_TTL_MS));
+          const recovery = await recoveries.create(
+            user.id,
+            new Date(now.getTime() + RECOVERY_REQUEST_TTL_MS),
+          );
+          await history.append({
+            actor: { actorType: 'ANONYMOUS', actorUserId: null },
+            subjectType: 'USER',
+            subjectId: user.id,
+            eventType: 'USER_RECOVERY_REQUESTED',
+            payload: {
+              requestId: recovery.id,
+              after: 'PENDING',
+              expiresAt: recovery.expiresAt.toISOString(),
+            },
+          });
         }
       });
     } catch (error) {
@@ -95,9 +162,9 @@ export class UserService {
 
   async listRecoveries(actorId: string, query: unknown) {
     const { page, pageSize } = paginationSchema.parse(query);
-    return this.transaction(async ({ users, recoveries }) => {
+    return this.transaction(async ({ users, recoveries, history }) => {
       assertAdministrator(await users.findById(actorId));
-      await recoveries.expire(this.now());
+      await appendRecoveryExpirations(history, await recoveries.expire(this.now()));
       return recoveries.list(page, pageSize);
     });
   }
@@ -109,7 +176,7 @@ export class UserService {
     const temporaryPassword =
       resolution.action === 'approve' ? randomBytes(24).toString('base64url') : undefined;
     const passwordHash = temporaryPassword ? await hashPassword(temporaryPassword) : undefined;
-    return this.transaction(async ({ users, sessions, recoveries }) => {
+    return this.transaction(async ({ users, sessions, recoveries, history }) => {
       assertAdministrator(await users.findById(actorId));
       const recovery = await recoveries.findById(id);
       if (!recovery) throw AppError.notFound('Recovery request not found');
@@ -135,6 +202,30 @@ export class UserService {
         actorId,
         now,
         resolution.action === 'approve',
+      );
+      const envelope = {
+        actor: { actorType: 'USER' as const, actorUserId: actorId },
+        subjectType: 'USER' as const,
+        subjectId: user.id,
+      };
+      await history.append(
+        resolution.action === 'approve'
+          ? {
+              ...envelope,
+              eventType: 'USER_RECOVERY_APPROVED',
+              payload: {
+                requestId: id,
+                before: 'PENDING',
+                after: 'APPROVED',
+                identityVerified: true,
+                mustChangePassword: true,
+              },
+            }
+          : {
+              ...envelope,
+              eventType: 'USER_RECOVERY_REJECTED',
+              payload: { requestId: id, before: 'PENDING', after: 'REJECTED' },
+            },
       );
       return { request: result, ...(temporaryPassword ? { temporaryPassword } : {}) };
     });
