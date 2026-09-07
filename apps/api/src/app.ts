@@ -16,13 +16,33 @@ import {
 export type CreateAppOptions = {
   /** Test-only routers, mounted after feature routes and before the 404 handler. */
   extraRouters?: Array<{ path: string; router: Router }>;
+  /**
+   * When true, honor one X-Forwarded-For hop from the immediate peer.
+   * Defaults to TRUST_PROXY=1|true. Leave unset unless the API is reached only via nginx.
+   */
+  trustProxy?: boolean;
 };
 
 /** Matches body-parser's default; bodies over this size map to 413 PAYLOAD_TOO_LARGE. */
 export const JSON_BODY_LIMIT_BYTES = 100 * 1024;
 
+export function isTrustProxyEnabled(value: string | undefined): boolean {
+  return value === '1' || value === 'true';
+}
+
+/** Honor X-Forwarded-For only for the immediate hop, and only when explicitly enabled. */
+export function trustImmediateProxyHop(_address: string, hop: number, enabled: boolean): boolean {
+  return enabled && hop === 0;
+}
+
 export function createApp(options: CreateAppOptions = {}): express.Application {
   const app = express();
+  const trustProxy = options.trustProxy ?? isTrustProxyEnabled(process.env.TRUST_PROXY);
+
+  // nginx replaces X-Forwarded-For with one client address. Enable only behind that unpublished hop.
+  app.set('trust proxy', (address: string, hop: number) =>
+    trustImmediateProxyHop(address, hop, trustProxy),
+  );
 
   app.use(requestIdMiddleware);
   app.use(helmet());

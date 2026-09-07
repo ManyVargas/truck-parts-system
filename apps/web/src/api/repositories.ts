@@ -1,8 +1,8 @@
 /**
  * Composition root: features import repositories from here, never from mocks/.
  *
- * Vite inlines `import.meta.env.VITE_USE_MOCK_API`. Default is mock (`!== 'false'`).
- * With VITE_USE_MOCK_API=false the HTTP stubs boot without calling mock services.
+ * Vite inlines `import.meta.env.VITE_USE_MOCK_API`. Mock only when the value is `true`.
+ * Unset, empty, or `false` selects HTTP repositories.
  */
 import { useMockApi } from './client/http-client';
 import type { AuthRepository } from './contracts/repositories';

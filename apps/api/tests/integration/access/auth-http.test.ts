@@ -251,14 +251,28 @@ describe('auth HTTP (integration)', () => {
   it('rate-limits login attempts from the same client with 429 TOO_MANY_REQUESTS', async () => {
     const app = createTestApp();
     const body = { username: 'rate-limit-user', password: 'wrong-password' };
+    const firstClientIp = '203.0.113.10';
+    const secondClientIp = '203.0.113.11';
 
     for (let attempt = 0; attempt < LOGIN_RATE_LIMIT_MAX_ATTEMPTS; attempt += 1) {
-      const response = await request(app).post('/api/auth/login').send(body);
+      const response = await request(app)
+        .post('/api/auth/login')
+        .set('X-Forwarded-For', firstClientIp)
+        .send(body);
       expect(response.status).toBe(401);
     }
 
-    const limited = await request(app).post('/api/auth/login').send(body);
+    const limited = await request(app)
+      .post('/api/auth/login')
+      .set('X-Forwarded-For', firstClientIp)
+      .send(body);
     expect(limited.status).toBe(429);
     expect(limited.body.error.code).toBe('TOO_MANY_REQUESTS');
+
+    const otherClient = await request(app)
+      .post('/api/auth/login')
+      .set('X-Forwarded-For', secondClientIp)
+      .send(body);
+    expect(otherClient.status).toBe(401);
   });
 });

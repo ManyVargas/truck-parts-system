@@ -84,6 +84,9 @@ jobs:
 
       - name: Build API and web
         run: npm run build
+        env:
+          # Build the actual Release 1 HTTP surface; tests keep their isolated mock baseline.
+          VITE_USE_MOCK_API: 'false'
 
       - name: Audit dependencies
         run: npm audit --audit-level=high

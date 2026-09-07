@@ -1,8 +1,10 @@
 import { Outlet } from 'react-router-dom';
 
 import { useAuth } from '../auth/useAuth';
+import { APP_NAME } from '../../shared/config/brand';
 import { DemoControls } from '../../shared/layout/DemoControls';
 import { UserMenu } from '../../shared/layout/UserMenu';
+import { Logo } from '../../shared/ui';
 import { MechanicBottomNav } from './MechanicBottomNav';
 
 /**
@@ -18,10 +20,12 @@ export function MechanicLayout() {
 
   return (
     <div className="mx-auto flex h-dvh w-full max-w-[430px] min-w-0 flex-col bg-surface text-navy touch-manipulation [&_input]:min-h-12 [&_input]:text-base">
-      <header className="flex min-w-0 shrink-0 items-center justify-between gap-2 border-b border-navy-100 bg-white px-4 py-3">
-        <div className="min-w-0">
-          <p className="text-sm text-navy-400">App Mecánico</p>
-          <p className="truncate text-base font-semibold">{user.name}</p>
+      <header className="flex min-w-0 shrink-0 items-center justify-between gap-2 border-b border-navy-100 bg-white px-4 py-2.5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span aria-hidden="true" className="shrink-0">
+            <Logo size="sm" />
+          </span>
+          <p className="truncate text-base font-semibold tracking-tight">{APP_NAME}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {!user.mustChangePassword && <DemoControls />}

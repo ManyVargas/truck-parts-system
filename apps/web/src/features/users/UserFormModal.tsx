@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import type { Role } from '../../api/contracts/entities';
 import type { ManagedUser, SaveUserInput } from '../../api/contracts/users';
 import { roleLabel } from '../../shared/auth/policies';
-import { Button, Field, Info, Input, Modal, Select } from '../../shared/ui';
+import { Button, Field, GuardedModal, Info, Input, Select, isFormDirty } from '../../shared/ui';
 
 export type UserFormModalProps = {
   open: boolean;
@@ -19,7 +19,6 @@ const ROLES: Role[] = ['ADMINISTRATOR', 'SELLER', 'MECHANIC'];
 type FormFields = {
   name: string;
   username: string;
-  password: string;
   role: Role;
   active: boolean;
   phone: string;
@@ -29,7 +28,6 @@ type FormFields = {
 const EMPTY_FIELDS: FormFields = {
   name: '',
   username: '',
-  password: '',
   role: 'SELLER',
   active: true,
   phone: '',
@@ -45,6 +43,7 @@ export function UserFormModal({
   onSubmit,
 }: UserFormModalProps) {
   const [fields, setFields] = useState<FormFields>(EMPTY_FIELDS);
+  const [baseline, setBaseline] = useState<FormFields>(EMPTY_FIELDS);
   const isEdit = user != null;
 
   useEffect(() => {
@@ -52,38 +51,41 @@ export function UserFormModal({
       return;
     }
 
-    if (!user) {
-      setFields(EMPTY_FIELDS);
-      return;
-    }
-
-    setFields({
-      name: user.name,
-      username: user.username,
-      password: '',
-      role: user.role,
-      active: user.active,
-      phone: user.phone ?? '',
-      email: user.email ?? '',
-    });
+    const next = user
+      ? {
+          name: user.name,
+          username: user.username,
+          role: user.role,
+          active: user.active,
+          phone: user.phone ?? '',
+          email: user.email ?? '',
+        }
+      : EMPTY_FIELDS;
+    setFields(next);
+    setBaseline(next);
   }, [open, user]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     onSubmit({
-      id: user?.id,
+      ...(user ? { id: user.id, active: fields.active } : { active: true }),
       name: fields.name,
       username: fields.username,
-      password: fields.password || undefined,
       role: fields.role,
-      active: fields.active,
       phone: fields.phone,
       email: fields.email,
     });
   }
 
   return (
-    <Modal open={open} title={isEdit ? 'Editar usuario' : 'Nuevo usuario'} onClose={onClose}>
+    <GuardedModal
+      open={open}
+      title={isEdit ? 'Editar usuario' : 'Nuevo usuario'}
+      onClose={onClose}
+      hasUnsavedChanges={isFormDirty(fields, baseline)}
+      isBusy={isSaving}
+    >
+      {({ requestClose }) => (
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <Info tone="error" title="No se pudo guardar">
@@ -111,22 +113,12 @@ export function UserFormModal({
             autoComplete="username"
           />
         </Field>
-        <Field
-          label={isEdit ? 'Nueva contraseña' : 'Contraseña'}
-          htmlFor="user-password"
-          hint={isEdit ? 'Déjela en blanco para no cambiarla' : 'Mínimo 6 caracteres'}
-        >
-          <Input
-            id="user-password"
-            type="password"
-            value={fields.password}
-            onChange={(event) =>
-              setFields((current) => ({ ...current, password: event.target.value }))
-            }
-            required={!isEdit}
-            autoComplete={isEdit ? 'new-password' : 'new-password'}
-          />
-        </Field>
+        {!isEdit && (
+          <Info title="Contraseña inicial">
+            El sistema asignará <strong>solocamiones</strong>. La persona deberá cambiarla desde Mi
+            perfil antes de poder operar.
+          </Info>
+        )}
         <Field label="Rol" htmlFor="user-role">
           <Select
             id="user-role"
@@ -146,7 +138,9 @@ export function UserFormModal({
           <Input
             id="user-phone"
             value={fields.phone}
-            onChange={(event) => setFields((current) => ({ ...current, phone: event.target.value }))}
+            onChange={(event) =>
+              setFields((current) => ({ ...current, phone: event.target.value }))
+            }
             autoComplete="tel"
           />
         </Field>
@@ -155,31 +149,36 @@ export function UserFormModal({
             id="user-email"
             type="email"
             value={fields.email}
-            onChange={(event) => setFields((current) => ({ ...current, email: event.target.value }))}
+            onChange={(event) =>
+              setFields((current) => ({ ...current, email: event.target.value }))
+            }
             autoComplete="email"
           />
         </Field>
-        <label htmlFor="user-active" className="flex items-center gap-2 text-sm text-navy">
-          <input
-            id="user-active"
-            type="checkbox"
-            checked={fields.active}
-            onChange={(event) =>
-              setFields((current) => ({ ...current, active: event.target.checked }))
-            }
-          />
-          Cuenta activa
-        </label>
+        {isEdit && (
+          <label htmlFor="user-active" className="flex items-center gap-2 text-sm text-navy">
+            <input
+              id="user-active"
+              type="checkbox"
+              checked={fields.active}
+              onChange={(event) =>
+                setFields((current) => ({ ...current, active: event.target.checked }))
+              }
+            />
+            Cuenta activa
+          </label>
+        )}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
+          <Button type="button" variant="secondary" onClick={requestClose} disabled={isSaving}>
             Cancelar
           </Button>
           <Button type="submit" disabled={isSaving}>
-            {isSaving ? 'Guardando…' : 'Guardar'}
+            {isSaving ? 'Guardando…' : isEdit ? 'Guardar' : 'Crear usuario'}
           </Button>
         </div>
       </form>
-    </Modal>
+      )}
+    </GuardedModal>
   );
 }

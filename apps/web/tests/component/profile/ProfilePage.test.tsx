@@ -54,5 +54,17 @@ describe('ProfilePage', () => {
     expect(getMockState().users.find((entry) => entry.id === 'U-LAURA')?.phone).toBe(
       '809-555-8888',
     );
+    expect(screen.queryByText('Debe cambiar su contraseña')).not.toBeInTheDocument();
+  });
+
+  it('shows a warning when the signed-in user must change their password', () => {
+    const auth = sellerAuth();
+    auth.user = { ...auth.user!, mustChangePassword: true };
+    renderWithProviders(<ProfilePage />, { route: '/profile', auth });
+
+    expect(screen.getByText('Debe cambiar su contraseña')).toBeVisible();
+    expect(
+      screen.getByText(/Esta cuenta usa una contraseña inicial o temporal/),
+    ).toBeVisible();
   });
 });

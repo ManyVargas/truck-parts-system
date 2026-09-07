@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { UserMenu } from '../../../src/shared/layout/UserMenu';
 import { createAuthValue, renderWithProviders } from '../../support/render';
@@ -40,6 +40,40 @@ describe('UserMenu', () => {
     expect(screen.getByRole('menu')).toBeVisible();
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('asks before logging out and stays signed in if cancelled', async () => {
+    const user = userEvent.setup();
+    const logout = vi.fn(async () => undefined);
+    const auth = createAuthValue('SELLER');
+
+    renderWithProviders(<UserMenu user={auth.user!} onLogout={logout} />, { auth });
+
+    await user.click(screen.getByRole('button', { name: /Cuenta de SELLER/i }));
+    await user.click(screen.getByRole('menuitem', { name: 'Cerrar sesión' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Cerrar sesión' });
+    expect(logout).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+
+    expect(screen.queryByRole('dialog', { name: 'Cerrar sesión' })).not.toBeInTheDocument();
+    expect(logout).not.toHaveBeenCalled();
+  });
+
+  it('logs out only after confirmation', async () => {
+    const user = userEvent.setup();
+    const logout = vi.fn(async () => undefined);
+    const auth = createAuthValue('SELLER');
+
+    renderWithProviders(<UserMenu user={auth.user!} onLogout={logout} />, { auth });
+
+    await user.click(screen.getByRole('button', { name: /Cuenta de SELLER/i }));
+    await user.click(screen.getByRole('menuitem', { name: 'Cerrar sesión' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Cerrar sesión' });
+    await user.click(within(dialog).getByRole('button', { name: 'Cerrar sesión' }));
+
+    expect(logout).toHaveBeenCalledTimes(1);
   });
 
   it('navigates a mechanic to /mechanic/profile', async () => {

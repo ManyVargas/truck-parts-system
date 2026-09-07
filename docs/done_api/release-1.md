@@ -2,7 +2,7 @@
 
 **Release:** Application Foundation and Access (Local Development)  
 **Plan de referencia:** [`../plans_api/plan-001.md`](../plans_api/plan-001.md)  
-**Estado:** en progreso: M1–M3 y M5–M10 completados en local; M4 mantiene verificación GitHub pendiente. M11 pendiente. Integraciones M6–M7 ejecutadas satisfactoriamente durante el cierre de M8.
+**Estado:** alcance funcional local completado: M1–M3 y M5–M11 verificados en local. El owner confirmó el exit gate manual de M11 el 2026-09-07. M4 mantiene la verificación GitHub pendiente.
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 1, a medida que se completan.  
 No sustituye a `plan-001.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -586,7 +586,7 @@ Implementar administración HTTP de cuentas con primer acceso restringido, cambi
 - Stack `users` routes/controller/service/repository/validation/types; policies de servicio, repositorio de recuperación y helper transaccional compartido con `access`.
 - `POST/GET/PATCH /api/admin/users`: creación, listado paginado y edición de perfil/username/rol/estado, exclusivos de Administrator activo sin cambio pendiente. Schemas estrictos rechazan credenciales y flag en administración normal.
 - Creación administrativa sin contraseña en input: Argon2id de `solocamiones`, cuenta activa y `mustChangePassword=true`. Bootstrap conserva contraseña interactiva; cuentas existentes mantienen hash y flag false.
-- Migración `20260905000000_user_management`: flag y tabla `PasswordRecoveryRequest`, estados, FK restrictivas, índice único parcial por usuario pendiente y checks de resolución por otro administrador/verificación.
+- Migración `20260905000000_user_management`: flag y tabla `PasswordRecoveryRequest`, estados, FK restrictivas, índice único parcial por usuario pendiente y checks de resolución por otro administrador/verificación. El índice parcial `recovery_one_pending_per_user` se mantiene deliberadamente en el SQL de migración porque su predicado `WHERE status = 'PENDING'` no se representa en el modelo Prisma; los índices ordinarios sí permanecen declarados en `schema.prisma`.
 - Login/session/me exponen flag para todos los roles. `requireAuth` bloquea operaciones normales con 403 y `details.reason=PASSWORD_CHANGE_REQUIRED`; perfil/sesión usan guard restringido explícito y logout permanece disponible.
 - Todo cambio desde perfil verifica contraseña actual y nueva distinta, mínimo seis caracteres Unicode. Hash/flag/revocación de todas las sesiones/cancelación de solicitudes pendientes se confirman juntos; respuesta limpia cookie y requiere login nuevo. Contacto solo no elimina restricción.
 - Recuperación pública `POST /api/auth/recovery-requests`: username, respuesta 202 genérica, una pendiente vigente por usuario activo, vencimiento 24 horas y límite 10 solicitudes/IP/15 minutos. No cambia credenciales ni sesiones al solicitar.
@@ -676,6 +676,33 @@ Detalle de decisiones, eventos, integración y operación en [`../plans_api/mile
 
 ## Milestone 11 — Frontend usuarios + exit gate Release 1
 
-**Estado:** pendiente
+**Estado:** completado y verificado localmente (2026-09-07), incluida la verificación manual de navegador confirmada por el owner. El alcance funcional local de Release 1 queda cerrado; permanece el pendiente externo de GitHub de M4.
 
-*(Se documentará al completar el milestone.)*
+### Qué se entregó
+
+- `HttpUserRepository` real contra `GET/POST/PATCH /api/admin/users`, con cookie same-origin, CSRF en escrituras, paginación completa y proyecciones explícitas que no copian credenciales.
+- Contrato y formulario administrativos sin contraseña ni reset libre. Al crear se informa que el servidor asigna `solocamiones` y exige cambio desde el perfil propio.
+- Listado con nombre, username, rol, estado, contacto y estado de cambio obligatorio.
+- Solicitudes pendientes dentro de `/users`, separadas de la recuperación operacional de Release 8. Aprobar exige confirmación explícita de verificación personal/telefónica; rechazar no cambia credenciales.
+- La contraseña temporal aprobada se conserva solo en memoria y se muestra una vez para entrega personal. No se almacena en estado persistente, mocks, logs ni respuestas posteriores.
+- Modo `VITE_USE_MOCK_API=false` habilita únicamente Access/Users de Release 1. Clientes, ventas, inventario, Work Orders y demás módulos posteriores continúan deshabilitados.
+- El mock administrativo dejó de aceptar contraseñas elegidas y asigna internamente la credencial inicial para conservar el prototipo y sus regresiones.
+- CI construye el frontend con el modo HTTP de Release 1; las pruebas mantienen su entorno mock aislado.
+
+### Verificación realizada
+
+| Verificación | Resultado |
+|---|---|
+| Unitarias API | **139 aprobadas** |
+| Integraciones API/PostgreSQL | **97 aprobadas**, incluidas migraciones limpias, auth, autorización, users, recovery e history |
+| Suite web | **482 aprobadas** en 70 archivos; incluye cliente HTTP, UI HTTP y regresiones mock |
+| Total | **718 pruebas aprobadas** |
+| Typecheck aplicación y tests | OK |
+| Lint | Sin errores; cuatro advertencias preexistentes de React Fast Refresh |
+| Build API + web | OK; advertencia preexistente de tamaño del bundle web |
+
+La cobertura nueva verifica `POST` sin contraseña, `PATCH`, cookie, CSRF, varias páginas, exclusión de campos sensibles, errores HTTP, visibilidad exclusiva de Administrator, aprobación/rechazo y entrega única de contraseña temporal. Las integraciones M8–M9 vuelven a demostrar restricciones server-side, revocación, concurrencia e historial `USER_*` atómico.
+
+### Exit gate de navegador
+
+El owner confirmó el 2026-09-07 que pasaron todas las pruebas manuales indicadas en `plan-001.md`: administración de usuarios, creación sin contraseña elegida, cambio obligatorio, autorización server-side, edición/desactivación y aprobación/rechazo de recuperación con entrega única de contraseña temporal. M11 y el alcance funcional local de Release 1 quedan cerrados. M4 conserva la primera ejecución y protección del check `R1 quality` en GitHub como único pendiente de la release.

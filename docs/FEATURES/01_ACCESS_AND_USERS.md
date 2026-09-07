@@ -116,13 +116,13 @@ Deactivation must invalidate future access while preserving historical foreign-k
 - [x] Implement operation-level authorization helpers/policies.
 - [x] Implement Administrator user-management commands in the `users` module (M8).
 - [x] Implement initial server-assigned password, persisted change-required flag, restricted access and atomic own-profile completion with session revocation (M8).
-- [x] Preserve the user record and identity after deactivation (M8); historical event attribution remains pending M9.
+- [x] Preserve the user record and identity after deactivation (M8), including historical actor attribution verified by M9 integration coverage.
 
 ### Frontend
 - [x] Login/logout flow.
 - [x] Session-expired / inactive-account handling.
 - [x] Original Administrator user-management prototype (`name`, `username`, optional `phone`/`email`, role, active state), covered by tests (WM11). Its password field predates the 2026-09-05 decision and must be removed before HTTP integration.
-- [ ] Remove password inputs/free reset actions from administrative UI and user payloads; explain initial password, add recovery request resolution and one-time temporary-password display (M11).
+- [x] Remove password inputs/free reset actions from administrative UI and user payloads; explain initial password, add recovery request resolution and one-time temporary-password display (M11; automated coverage and owner browser verification completed 2026-09-07).
 - [x] Adapt login and own profile to mandatory password change, including reload/direct navigation and fresh login after completion (M10: automated component/HTTP coverage and local browser verification; owner confirmed password change and fresh login for all three roles).
 - [x] Role-aware navigation without treating hidden controls as security. Prototype mock 2.0-M1.2 also hides on-screen actions the role cannot perform (`can()` + route guards).
 - [x] Self-service profile edit (own name, optional phone/email, password) for every active role. Username, role, and active stay administrator-managed. Uses `profile.update`, not `users.manage`. Covered by unit, integration, and component tests.
@@ -131,7 +131,7 @@ Deactivation must invalidate future access while preserving historical foreign-k
 - [x] Valid/invalid/inactive login tests.
 - [x] Role matrix negative tests through direct API requests (Release 1 Mechanic scope: minimal session projection only).
 - [x] Session invalidation after deactivation (M8).
-- [ ] Historical records still resolve deactivated actor identity.
+- [x] Historical records still resolve deactivated actor identity (M9 integration coverage).
 - [x] Initial login restriction, credential-field rejection, mandatory change errors/success/concurrency, old-session invalidation and existing-user/bootstrap compatibility (M8).
 - [x] Recovery request/approval/rejection, expiry, concurrency and credential delivery; prevention of own resolution and own demotion/deactivation (M8).
 

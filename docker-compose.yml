@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_NAME}
-    
+
     volumes:
       - truck_parts_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -28,6 +28,8 @@ services:
       NODE_ENV: ${NODE_ENV}
       PORT: 3000
       DATABASE_URL: ${DATABASE_URL_DOCKER}
+      # API is unpublished; nginx is the only client. Do not publish port 3000.
+      TRUST_PROXY: '1'
     depends_on:
       db:
         condition: service_healthy
@@ -69,7 +71,8 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: truck_parts_cloudflared
     restart: unless-stopped
-    command: tunnel --no-autoupdate --protocol http2 --url http://web:80/
+    # Port 8080 lets nginx distinguish the trusted tunnel from the host-published local path.
+    command: tunnel --no-autoupdate --protocol http2 --url http://web:8080/
     depends_on:
       web:
         condition: service_healthy

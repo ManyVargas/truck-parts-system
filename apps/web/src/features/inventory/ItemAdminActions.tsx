@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { Category, ItemCondition } from '../../api/contracts/entities';
 import type {
@@ -8,7 +8,7 @@ import type {
 } from '../../api/contracts/inventory';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
 import { UX_TERMS } from '../../shared/copy/glossary';
-import { Button, Field, Info, Input, Modal, Select, Textarea } from '../../shared/ui';
+import { Button, Field, GuardedModal, Info, Input, Select, Textarea, isFormDirty } from '../../shared/ui';
 import { BaselineChecklist } from './BaselineChecklist';
 
 type ItemAdminActionsProps = {
@@ -53,6 +53,9 @@ export function ItemAdminActions({
   const [woOpen, setWoOpen] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [presentFor, setPresentFor] = useState<string | null>(null);
+  const [costDirty, setCostDirty] = useState(false);
+  const [baselineDirty, setBaselineDirty] = useState(false);
+  const [woDirty, setWoDirty] = useState(false);
 
   const flagOnThisItem = detail.protectedRootId === detail.id;
 
@@ -242,14 +245,18 @@ export function ItemAdminActions({
         )}
       </div>
 
-      <Modal
+      <GuardedModal
         open={costOpen}
         title="Corregir costo de adquisición"
         onClose={() => {
           setError(null);
           setCostOpen(false);
+          setCostDirty(false);
         }}
+        hasUnsavedChanges={costDirty}
+        isBusy={isMutating}
       >
+        {({ requestClose }) => (
         <div className="space-y-3">
           {error && (
             <Info tone="error" title="No se pudo corregir el costo">
@@ -260,10 +267,8 @@ export function ItemAdminActions({
             current={detail.acquisitionCostDop}
             provenance={detail.costProvenance}
             disabled={isMutating}
-            onCancel={() => {
-              setError(null);
-              setCostOpen(false);
-            }}
+            onDirtyChange={setCostDirty}
+            onCancel={requestClose}
             onSubmit={async (input) => {
               const message = await onCorrectCost(input);
               if (message) {
@@ -272,19 +277,25 @@ export function ItemAdminActions({
               }
               setError(null);
               setCostOpen(false);
+              setCostDirty(false);
             }}
           />
         </div>
-      </Modal>
+        )}
+      </GuardedModal>
 
-      <Modal
+      <GuardedModal
         open={baselineOpen}
         title={`Corregir ${UX_TERMS.receiptRecord.toLowerCase()}`}
         onClose={() => {
           setError(null);
           setBaselineOpen(false);
+          setBaselineDirty(false);
         }}
+        hasUnsavedChanges={baselineDirty}
+        isBusy={isMutating}
       >
+        {({ requestClose }) => (
         <div className="space-y-3">
           {error && (
             <Info tone="error" title={`No se pudo corregir el ${UX_TERMS.receiptRecord.toLowerCase()}`}>
@@ -296,10 +307,8 @@ export function ItemAdminActions({
               .filter((entry) => entry.origin === 'MISSING_AT_RECEIPT')
               .map((entry) => entry.expectedComponentName)}
             disabled={isMutating}
-            onCancel={() => {
-              setError(null);
-              setBaselineOpen(false);
-            }}
+            onDirtyChange={setBaselineDirty}
+            onCancel={requestClose}
             onSubmit={async (input) => {
               const message = await onCorrectBaseline(input);
               if (message) {
@@ -308,19 +317,25 @@ export function ItemAdminActions({
               }
               setError(null);
               setBaselineOpen(false);
+              setBaselineDirty(false);
             }}
           />
         </div>
-      </Modal>
+        )}
+      </GuardedModal>
 
-      <Modal
+      <GuardedModal
         open={woOpen && workOrders}
         title="Crear orden de trabajo manual"
         onClose={() => {
           setError(null);
           setWoOpen(false);
+          setWoDirty(false);
         }}
+        hasUnsavedChanges={woDirty}
+        isBusy={isMutating}
       >
+        {({ requestClose }) => (
         <div className="space-y-3">
           {error && (
             <Info tone="error" title="No se pudo crear la orden de trabajo">
@@ -331,10 +346,8 @@ export function ItemAdminActions({
             pieceId={detail.id}
             relationship={detail.physicalRelationship}
             disabled={isMutating}
-            onCancel={() => {
-              setError(null);
-              setWoOpen(false);
-            }}
+            onDirtyChange={setWoDirty}
+            onCancel={requestClose}
             onSubmit={async (input) => {
               const message = await onCreateWorkOrder(input);
               if (message) {
@@ -343,10 +356,12 @@ export function ItemAdminActions({
               }
               setError(null);
               setWoOpen(false);
+              setWoDirty(false);
             }}
           />
         </div>
-      </Modal>
+        )}
+      </GuardedModal>
     </div>
   );
 }
@@ -355,12 +370,14 @@ function CostForm({
   current,
   provenance,
   disabled,
+  onDirtyChange,
   onCancel,
   onSubmit,
 }: {
   current?: number;
   provenance?: string;
   disabled: boolean;
+  onDirtyChange: (dirty: boolean) => void;
   onCancel: () => void;
   onSubmit: (input: {
     acquisitionCostDop?: number;
@@ -372,6 +389,25 @@ function CostForm({
   const [unknown, setUnknown] = useState(current == null);
   const [costProvenance, setCostProvenance] = useState(provenance ?? '');
   const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    onDirtyChange(
+      isFormDirty(
+        {
+          amount,
+          unknown,
+          costProvenance,
+          reason,
+        },
+        {
+          amount: current != null ? String(current) : '',
+          unknown: current == null,
+          costProvenance: provenance ?? '',
+          reason: '',
+        },
+      ),
+    );
+  }, [amount, unknown, costProvenance, reason, current, provenance, onDirtyChange]);
 
   return (
     <form
@@ -436,16 +472,22 @@ function CostForm({
 function BaselineForm({
   missing,
   disabled,
+  onDirtyChange,
   onCancel,
   onSubmit,
 }: {
   missing: string[];
   disabled: boolean;
+  onDirtyChange: (dirty: boolean) => void;
   onCancel: () => void;
   onSubmit: (input: { reason: string; markNotApplicable: string[] }) => Promise<void>;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    onDirtyChange(selected.length > 0 || reason !== '');
+  }, [selected, reason, onDirtyChange]);
 
   return (
     <form
@@ -500,12 +542,14 @@ function WorkOrderForm({
   pieceId,
   relationship,
   disabled,
+  onDirtyChange,
   onCancel,
   onSubmit,
 }: {
   pieceId: string;
   relationship: ItemDetailView['physicalRelationship'];
   disabled: boolean;
+  onDirtyChange: (dirty: boolean) => void;
   onCancel: () => void;
   onSubmit: (input: {
     type: 'DISMANTLING' | 'INSTALLATION';
@@ -517,6 +561,15 @@ function WorkOrderForm({
   const [type, setType] = useState<'DISMANTLING' | 'INSTALLATION'>(defaultType);
   const [destinationParentId, setDestinationParentId] = useState('');
   const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    onDirtyChange(
+      isFormDirty(
+        { type, destinationParentId, notes },
+        { type: defaultType, destinationParentId: '', notes: '' },
+      ),
+    );
+  }, [type, destinationParentId, notes, defaultType, onDirtyChange]);
 
   return (
     <form
@@ -595,19 +648,29 @@ function PresentChildForm({
   const [name, setName] = useState(expectedComponentName);
   const [condition, setCondition] = useState<ItemCondition>('USED');
   const category = categories.find((entry) => entry.id === categoryId);
-  const [baseline, setBaseline] = useState<AssemblyBaselineEntry[]>(() =>
+  const [entries, setEntries] = useState<AssemblyBaselineEntry[]>(() =>
     (category?.expectedComponents ?? []).map((expectedName) => ({
       expectedComponentName: expectedName,
       status: 'MISSING',
     })),
   );
+  const initialEntries = (category?.expectedComponents ?? []).map((expectedName) => ({
+    expectedComponentName: expectedName,
+    status: 'MISSING' as const,
+  }));
 
   return (
-    <Modal
+    <GuardedModal
       open
       title={`Registrar ${expectedComponentName} presente`}
       onClose={onCancel}
+      hasUnsavedChanges={isFormDirty(
+        { name, condition, entries },
+        { name: expectedComponentName, condition: 'USED', entries: initialEntries },
+      )}
+      isBusy={disabled}
     >
+      {({ requestClose }) => (
       <form
         className="flex flex-col gap-3"
         onSubmit={(event) => {
@@ -618,7 +681,7 @@ function PresentChildForm({
               categoryId,
               condition,
             },
-            category?.isAssembly ? baseline : undefined,
+            category?.isAssembly ? entries : undefined,
           );
         }}
       >
@@ -659,14 +722,14 @@ function PresentChildForm({
             <BaselineChecklist
               expectedComponents={category.expectedComponents ?? []}
               categories={categories}
-              entries={baseline}
-              onChange={setBaseline}
+              entries={entries}
+              onChange={setEntries}
               path={`catalog-review.${expectedComponentName}`}
             />
           </div>
         )}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onCancel} disabled={disabled}>
+          <Button type="button" variant="ghost" onClick={requestClose} disabled={disabled}>
             Cancelar
           </Button>
           <Button type="submit" disabled={disabled || !categoryId}>
@@ -674,6 +737,7 @@ function PresentChildForm({
           </Button>
         </div>
       </form>
-    </Modal>
+      )}
+    </GuardedModal>
   );
 }

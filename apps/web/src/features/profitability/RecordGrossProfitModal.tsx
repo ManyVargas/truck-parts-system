@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 
-import { Button, Field, Info, Input, Modal } from '../../shared/ui';
+import { Button, Field, GuardedModal, Info, Input, isFormDirty } from '../../shared/ui';
 
 export type RecordGrossProfitModalProps = {
   open: boolean;
@@ -22,10 +22,13 @@ export function RecordGrossProfitModal({
   onSubmit,
 }: RecordGrossProfitModalProps) {
   const [amount, setAmount] = useState('');
+  const [baseline, setBaseline] = useState('');
 
   useEffect(() => {
     if (open) {
-      setAmount(initialProfitDop != null ? String(initialProfitDop) : '');
+      const next = initialProfitDop != null ? String(initialProfitDop) : '';
+      setAmount(next);
+      setBaseline(next);
     }
   }, [open, initialProfitDop]);
 
@@ -35,7 +38,14 @@ export function RecordGrossProfitModal({
   }
 
   return (
-    <Modal open={open} title="Registrar ganancia bruta" onClose={onClose}>
+    <GuardedModal
+      open={open}
+      title="Registrar ganancia bruta"
+      onClose={onClose}
+      hasUnsavedChanges={isFormDirty(amount, baseline)}
+      isBusy={isSaving}
+    >
+      {({ requestClose }) => (
       <form onSubmit={handleSubmit} className="space-y-4">
         <Info tone="warning" title={`${invoiceNumber} no tiene ganancia calculada`}>
           El costo de adquisición es desconocido. El sistema no inventa un número: usted registra la
@@ -62,7 +72,7 @@ export function RecordGrossProfitModal({
           </Info>
         )}
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
+          <Button type="button" variant="secondary" onClick={requestClose} disabled={isSaving}>
             Cerrar
           </Button>
           <Button type="submit" disabled={isSaving}>
@@ -70,6 +80,7 @@ export function RecordGrossProfitModal({
           </Button>
         </div>
       </form>
-    </Modal>
+      )}
+    </GuardedModal>
   );
 }

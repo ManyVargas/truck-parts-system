@@ -163,8 +163,8 @@ export function resolveCapabilities(
     DEV?: boolean;
   } = import.meta.env,
 ): AppCapabilities {
-  // M10 exposes access/profile only. Users joins HTTP in M11; later features stay in the mock prototype.
-  if (env.VITE_USE_MOCK_API === 'false') return { ...DISABLED };
+  // Release 1 HTTP (default) exposes only Access/Users. Later screens stay unavailable.
+  if (env.VITE_USE_MOCK_API !== 'true') return { ...DISABLED, users: true };
   const presetName = parseCapabilityPreset(env.VITE_CAPABILITIES_PRESET);
   const preset = CAPABILITY_PRESETS[presetName];
   const forceDemo = env.VITE_ENABLE_DEMO_CONTROLS === 'true';

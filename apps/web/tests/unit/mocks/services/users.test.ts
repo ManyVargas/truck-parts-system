@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createInitialState } from '../../../../src/mocks/data/seed';
 import {
-  MIN_USER_PASSWORD_LENGTH,
+  INITIAL_USER_PASSWORD,
   nextUserId,
   prepareUserSave,
   toManagedUser,
@@ -12,7 +12,7 @@ describe('prepareUserSave', () => {
   const seedUsers = createInitialState().users;
   const adminId = 'U-ADMIN';
 
-  it('creates a seller with a generated id and required password', () => {
+  it('creates a seller with a generated id and server-assigned password', () => {
     expect(nextUserId(seedUsers, 'maria')).toBe('U-MARIA');
 
     const result = prepareUserSave(
@@ -20,7 +20,6 @@ describe('prepareUserSave', () => {
       {
         name: '  María López  ',
         username: 'Maria',
-        password: 'clave123',
         role: 'SELLER',
         active: true,
         phone: '809-555-0900',
@@ -34,7 +33,8 @@ describe('prepareUserSave', () => {
         id: 'U-MARIA',
         name: 'María López',
         username: 'maria',
-        password: 'clave123',
+        password: INITIAL_USER_PASSWORD,
+        mustChangePassword: true,
         role: 'SELLER',
         active: true,
         phone: '809-555-0900',
@@ -43,30 +43,22 @@ describe('prepareUserSave', () => {
     }
   });
 
-  it('rejects a missing password on create and a short password', () => {
-    expect(
-      prepareUserSave(
-        seedUsers,
-        { name: 'Ana', username: 'ana', role: 'SELLER', active: true },
-        adminId,
-      ).ok,
-    ).toBe(false);
-
-    const short = prepareUserSave(
+  it('creates without accepting a password from the administrator', () => {
+    const created = prepareUserSave(
       seedUsers,
       {
         name: 'Ana',
         username: 'ana',
-        password: '12345',
         role: 'SELLER',
         active: true,
       },
       adminId,
     );
 
-    expect(short.ok).toBe(false);
-    if (!short.ok) {
-      expect(short.error.message).toContain(String(MIN_USER_PASSWORD_LENGTH));
+    expect(created.ok).toBe(true);
+    if (created.ok) {
+      expect(created.value.password).toBe(INITIAL_USER_PASSWORD);
+      expect(created.value.mustChangePassword).toBe(true);
     }
   });
 
@@ -76,7 +68,6 @@ describe('prepareUserSave', () => {
       {
         name: 'Otro',
         username: 'LAURA',
-        password: 'demo1234',
         role: 'SELLER',
         active: true,
       },

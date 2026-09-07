@@ -6,7 +6,7 @@ import type {
 } from '../../api/contracts/work-orders';
 import { UX_TERMS } from '../../shared/copy/glossary';
 import { WORK_ORDER_TYPE_LABELS } from './labels';
-import { Button, Field, Info, Modal, Select, Textarea } from '../../shared/ui';
+import { Button, Field, GuardedModal, Info, Select, Textarea, isFormDirty } from '../../shared/ui';
 
 export type CreateWorkOrderModalProps = {
   open: boolean;
@@ -29,6 +29,8 @@ export function CreateWorkOrderModal({
   const [pieceId, setPieceId] = useState('');
   const [destinationParentId, setDestinationParentId] = useState('');
   const [notes, setNotes] = useState('');
+  const fields = { type, pieceId, destinationParentId, notes };
+  const [baseline, setBaseline] = useState(fields);
 
   const pieces = type === 'DISMANTLING' ? options?.dismantlingPieces : options?.installationPieces;
 
@@ -36,10 +38,17 @@ export function CreateWorkOrderModal({
     if (!open) {
       return;
     }
-    setType('DISMANTLING');
-    setPieceId('');
-    setDestinationParentId('');
-    setNotes('');
+    const next = {
+      type: 'DISMANTLING' as const,
+      pieceId: '',
+      destinationParentId: '',
+      notes: '',
+    };
+    setType(next.type);
+    setPieceId(next.pieceId);
+    setDestinationParentId(next.destinationParentId);
+    setNotes(next.notes);
+    setBaseline(next);
   }, [open]);
 
   function handleSubmit(event: FormEvent) {
@@ -53,7 +62,14 @@ export function CreateWorkOrderModal({
   }
 
   return (
-    <Modal open={open} title="Crear orden de trabajo" onClose={onClose}>
+    <GuardedModal
+      open={open}
+      title="Crear orden de trabajo"
+      onClose={onClose}
+      hasUnsavedChanges={isFormDirty(fields, baseline)}
+      isBusy={isSaving}
+    >
+      {({ requestClose }) => (
       <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
         {error && (
           <Info tone="error" title="No se pudo crear la orden de trabajo">
@@ -119,7 +135,7 @@ export function CreateWorkOrderModal({
           />
         </Field>
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={isSaving}>
+          <Button type="button" variant="ghost" onClick={requestClose} disabled={isSaving}>
             Cancelar
           </Button>
           <Button type="submit" disabled={isSaving || !options}>
@@ -127,6 +143,7 @@ export function CreateWorkOrderModal({
           </Button>
         </div>
       </form>
-    </Modal>
+      )}
+    </GuardedModal>
   );
 }

@@ -5,7 +5,7 @@ import type { PosDraftView } from '../../api/contracts/sales';
 import { enabledPosLineTypes } from '../../shared/config/capabilities';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
 import { UX_TERMS } from '../../shared/copy/glossary';
-import { Button, Field, Info, Input, Modal, Select } from '../../shared/ui';
+import { Button, Field, GuardedModal, Info, Input, Select, isFormDirty } from '../../shared/ui';
 import { posAddLineReservationHint } from './pos-copy';
 
 type AddLineModalProps = {
@@ -43,6 +43,25 @@ export function AddLineModal({
   const [quantity, setQuantity] = useState('1');
   const [unitPrice, setUnitPrice] = useState('0');
   const [cost, setCost] = useState('');
+  const fields = { type, itemId, qtyProductId, serviceId, description, quantity, unitPrice, cost };
+  const [baseline, setBaseline] = useState(fields);
+
+  useEffect(() => {
+    if (open) {
+      setBaseline({
+        type,
+        itemId,
+        qtyProductId,
+        serviceId,
+        description,
+        quantity,
+        unitPrice,
+        cost,
+      });
+    }
+    // Snapshot only when the dialog opens so later typing is treated as unsaved.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- capture values at open
+  }, [open]);
 
   useEffect(() => {
     if (!draft.items.some((item) => item.id === itemId)) {
@@ -78,7 +97,15 @@ export function AddLineModal({
   }
 
   return (
-    <Modal open={open} title="Agregar línea" onClose={onClose} size="lg">
+    <GuardedModal
+      open={open}
+      title="Agregar línea"
+      onClose={onClose}
+      size="lg"
+      hasUnsavedChanges={isFormDirty(fields, baseline)}
+      isBusy={isSaving}
+    >
+      {({ requestClose }) => (
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
         {error && (
           <Info tone="error" title="No se pudo agregar la línea">
@@ -216,7 +243,7 @@ export function AddLineModal({
         )}
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
+          <Button type="button" variant="secondary" onClick={requestClose} disabled={isSaving}>
             Cancelar
           </Button>
           <Button type="submit" disabled={isSaving || lineTypes.length === 0}>
@@ -224,6 +251,7 @@ export function AddLineModal({
           </Button>
         </div>
       </form>
-    </Modal>
+      )}
+    </GuardedModal>
   );
 }

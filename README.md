@@ -71,9 +71,10 @@ creating an account. Exit codes: `0` success, `1` validation/database/conflict f
 strings. If setup is incomplete, verify `DATABASE_URL` and run
 `npm run db:migrate:deploy` before retrying. Do not erase users to rerun bootstrap.
 
-This creates a PostgreSQL account only. The web still uses mock login until the
-authentication HTTP integration milestones. Automated bootstrap tests use only
-`DATABASE_URL_TEST` and do not create the development administrator.
+This creates the PostgreSQL account used by the web login when
+`VITE_USE_MOCK_API=false` (the default). Set `VITE_USE_MOCK_API=true` only to run
+the complete mock prototype. Automated bootstrap tests use only `DATABASE_URL_TEST`
+and do not create the development administrator.
 
 ### Available commands
 
@@ -175,6 +176,6 @@ setup instructions, local commands, and the smoke checks that M6–M7 must add.
 
 ## Administración de usuarios — M8
 
-El backend incluye gestión de cuentas y recuperación autorizada. Aplicar migraciones locales con `npm run db:migrate:deploy` antes de iniciar la API. Con `VITE_USE_MOCK_API=false`, M10 conecta login/logout, sesión, perfil y solicitud de recuperación. Usuarios queda temporalmente no disponible en HTTP hasta M11. El modo HTTP limita navegación a acceso/perfil; `VITE_USE_MOCK_API=true` conserva el prototipo completo. Las pruebas seleccionan su modo independientemente del `.env`. Detalles y verificación en [`milestone-10-verification.md`](docs/plans_api/milestone-10-verification.md).
+El backend incluye gestión de cuentas y recuperación autorizada. Aplicar migraciones locales con `npm run db:migrate:deploy` antes de iniciar la API. Con `VITE_USE_MOCK_API=false`, Release 1 conecta login/logout, sesión, perfil, administración de usuarios y solicitudes de recuperación. El modo HTTP mantiene fuera de navegación los módulos de Release 2+; `VITE_USE_MOCK_API=true` conserva el prototipo completo. Las pruebas seleccionan su modo independientemente del `.env`. El estado y la verificación están registrados en [`release-1.md`](docs/done_api/release-1.md).
 
-Contrato HTTP, ejemplos JSON y secuencias de alta, cambio obligatorio, recuperación y desactivación: [guía M8](docs/plans_api/milestone-8-verification.md). Las cuentas existentes conservan sus contraseñas; nuevas cuentas administrativas usan `solocamiones` y deben cambiarla. No hay recuperación por correo ni comando local de recuperación.
+Los contratos y secuencias de alta, cambio obligatorio, recuperación y desactivación están documentados en [`plan-001.md`](docs/plans_api/plan-001.md) y en el registro de Release 1. Las cuentas existentes conservan sus contraseñas; nuevas cuentas administrativas usan `solocamiones` y deben cambiarla. No hay recuperación por correo ni comando local de recuperación.

@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 
 import { useAuth } from '../../features/auth/useAuth';
 import { useAppCapabilities } from '../config/CapabilitiesProvider';
-import { defaultPathForRole } from './navigation';
+import { postLoginPath } from './navigation';
 
 export type GuestRouteProps = {
   children: ReactNode;
@@ -45,9 +45,12 @@ export function GuestRoute({ children }: GuestRouteProps) {
     if (user.mustChangePassword) {
       return <Navigate to={user.role === 'MECHANIC' ? '/mechanic/profile' : '/profile'} replace />;
     }
-    const returnPath =
-      resolveReturnPath(location.state) ?? defaultPathForRole(user.role, capabilities);
-    return <Navigate to={returnPath} replace />;
+    return (
+      <Navigate
+        to={postLoginPath(resolveReturnPath(location.state), user.role, capabilities)}
+        replace
+      />
+    );
   }
 
   return <>{children}</>;

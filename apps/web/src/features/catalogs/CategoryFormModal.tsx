@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import type { SaveCategoryInput } from '../../api/contracts/catalogs';
 import type { Category } from '../../api/contracts/entities';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
-import { Button, Field, Info, Input, Modal, Textarea } from '../../shared/ui';
+import { Button, Field, GuardedModal, Info, Input, Textarea, isFormDirty } from '../../shared/ui';
 import {
   CategoryAttributeDefinitionsEditor,
   definitionsFromDrafts,
@@ -46,6 +46,7 @@ export function CategoryFormModal({
 }: CategoryFormModalProps) {
   const { hierarchy } = useAppCapabilities();
   const [fields, setFields] = useState<FormFields>(EMPTY_FIELDS);
+  const [baseline, setBaseline] = useState<FormFields>(EMPTY_FIELDS);
   const isEdit = category != null;
 
   useEffect(() => {
@@ -53,18 +54,17 @@ export function CategoryFormModal({
       return;
     }
 
-    if (!category) {
-      setFields(EMPTY_FIELDS);
-      return;
-    }
-
-    setFields({
-      name: category.name,
-      codePrefix: category.codePrefix,
-      isAssembly: category.isAssembly,
-      expectedComponentsText: (category.expectedComponents ?? []).join('\n'),
-      attributeDrafts: draftsFromDefinitions(category.attributes),
-    });
+    const next: FormFields = category
+      ? {
+          name: category.name,
+          codePrefix: category.codePrefix,
+          isAssembly: category.isAssembly,
+          expectedComponentsText: (category.expectedComponents ?? []).join('\n'),
+          attributeDrafts: draftsFromDefinitions(category.attributes),
+        }
+      : EMPTY_FIELDS;
+    setFields(next);
+    setBaseline(next);
   }, [open, category]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -83,7 +83,14 @@ export function CategoryFormModal({
   }
 
   return (
-    <Modal open={open} title={isEdit ? 'Editar categoría' : 'Nueva categoría'} onClose={onClose}>
+    <GuardedModal
+      open={open}
+      title={isEdit ? 'Editar categoría' : 'Nueva categoría'}
+      onClose={onClose}
+      hasUnsavedChanges={isFormDirty(fields, baseline)}
+      isBusy={isSaving}
+    >
+      {({ requestClose }) => (
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <Info tone="error" title="No se pudo guardar">
@@ -160,7 +167,7 @@ export function CategoryFormModal({
         />
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
+          <Button type="button" variant="secondary" onClick={requestClose} disabled={isSaving}>
             Cancelar
           </Button>
           <Button type="submit" disabled={isSaving}>
@@ -168,6 +175,7 @@ export function CategoryFormModal({
           </Button>
         </div>
       </form>
-    </Modal>
+      )}
+    </GuardedModal>
   );
 }

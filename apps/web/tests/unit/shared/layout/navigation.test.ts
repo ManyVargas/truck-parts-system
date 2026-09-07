@@ -5,10 +5,12 @@ import {
   isKnownDesktopRoute,
   isKnownMechanicRoute,
   isNavItemActive,
+  isPathAllowedForRole,
   isRouteAllowedForRole,
   layoutAccessDecision,
   navGroupsForRole,
   navItemsForRole,
+  postLoginPath,
   shouldShowNavGroupHeadings,
 } from '../../../../src/shared/layout/navigation';
 import { CAPABILITY_PRESETS } from '../../../../src/shared/config/capabilities';
@@ -50,17 +52,16 @@ describe('role navigation', () => {
     expect(navGroupsForRole('MECHANIC', prototype)).toEqual([]);
 
     const releaseOneAdmin = navGroupsForRole('ADMINISTRATOR', CAPABILITY_PRESETS['release-1']);
-    expect(releaseOneAdmin.map((group) => group.id)).toEqual(['operation', 'administration']);
-    expect(releaseOneAdmin.flatMap((group) => group.items.map((item) => item.id))).toEqual([
-      'dashboard',
-      'users',
-    ]);
+    expect(releaseOneAdmin.map((group) => group.id)).toEqual(['administration']);
+    expect(releaseOneAdmin.flatMap((group) => group.items.map((item) => item.id))).toEqual(['users']);
   });
 
   it('maps every role to its correct home', () => {
     expect(defaultPathForRole('ADMINISTRATOR', prototype)).toBe('/dashboard');
     expect(defaultPathForRole('SELLER', prototype)).toBe('/dashboard');
     expect(defaultPathForRole('MECHANIC', prototype)).toBe('/mechanic');
+    expect(defaultPathForRole('ADMINISTRATOR', CAPABILITY_PRESETS['release-1'])).toBe('/users');
+    expect(defaultPathForRole('SELLER', CAPABILITY_PRESETS['release-1'])).toBe('/profile');
   });
 
   it('recognizes registered route patterns and rejects typos', () => {
@@ -97,6 +98,23 @@ describe('role navigation', () => {
     expect(isRouteAllowedForRole('/users', 'ADMINISTRATOR', CAPABILITY_PRESETS['release-1'])).toBe(
       true,
     );
+  });
+
+  it('does not treat a previous role URL as a valid post-login landing', () => {
+    expect(isPathAllowedForRole('/users', 'MECHANIC', prototype)).toBe(false);
+    expect(isPathAllowedForRole('/profile', 'MECHANIC', prototype)).toBe(false);
+    expect(isPathAllowedForRole('/mechanic/pending', 'ADMINISTRATOR', prototype)).toBe(false);
+    expect(isPathAllowedForRole('/users', 'SELLER', prototype)).toBe(false);
+    expect(isPathAllowedForRole('/inventory', 'SELLER', prototype)).toBe(true);
+    expect(isPathAllowedForRole('/mechanic/pending', 'MECHANIC', prototype)).toBe(true);
+  });
+
+  it('falls back to the role home when the saved login path is forbidden', () => {
+    expect(postLoginPath('/users', 'MECHANIC', prototype)).toBe('/mechanic');
+    expect(postLoginPath('/mechanic/pending', 'ADMINISTRATOR', prototype)).toBe('/dashboard');
+    expect(postLoginPath('/users', 'SELLER', prototype)).toBe('/dashboard');
+    expect(postLoginPath('/inventory', 'SELLER', prototype)).toBe('/inventory');
+    expect(postLoginPath(null, 'MECHANIC', prototype)).toBe('/mechanic');
   });
 });
 

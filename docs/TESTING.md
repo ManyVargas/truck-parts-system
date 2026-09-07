@@ -1,8 +1,25 @@
 # Verificación de pruebas
 
-## Resultado de la verificación
+## Estado del inventario
 
-Última ejecución: **5 de septiembre de 2026**, durante el cierre local de Milestone 9, incluidos gestión de usuarios, recuperación de contraseñas e historial transaccional de cuentas.
+La tabla y los conteos de **679 pruebas** de abajo son el **cierre local de Milestone 9** (5 de septiembre de 2026). No son el inventario completo de la rama actual.
+
+Tras M9, Release 1 añadió cobertura HTTP de Access/Users (M10–M11), trust proxy y flujos de UI contra la API. Ver [`done_api/release-1.md`](done_api/release-1.md) para el cierre funcional posterior.
+
+### Ampliaciones posteriores a M9 (no incluidas en los 679)
+
+| Área | Archivos | Qué cubren ahora |
+|---|---|---|
+| Web HTTP auth | `unit/api/http-auth.test.ts` (varios casos, no un único arranque) | Login/sesión/perfil/logout/recuperación, CSRF `X-Requested-With`, proyección Mechanic en `/session`, errores estructurados |
+| Web HTTP users | `unit/api/http-users.test.ts`, `component/users/HttpUsersFlow.test.tsx` | Administración y recuperación contra el cliente HTTP |
+| Web mock users | `unit/mocks/services/users.test.ts` | Alta **sin** contraseña del administrador; inicial `solocamiones`. Las cuentas seed conservan `demo1234` |
+| Web capabilities / mock flag | `unit/shared/config/capabilities.test.ts`, `unit/api/http-client.test.ts` | `VITE_USE_MOCK_API=true` activa el prototipo; unset/`false` es HTTP Release 1 |
+| Web UX | `component/shared/GuardedModal.test.tsx` | Modal protegido en flujos HTTP |
+| API trust proxy | `unit/http/trust-proxy.test.ts` | `TRUST_PROXY` explícito; `X-Forwarded-For` ignorado si está desactivado |
+
+## Resultado de la verificación (M9)
+
+Última ejecución inventariada aquí: **5 de septiembre de 2026**, durante el cierre local de Milestone 9, incluidos gestión de usuarios, recuperación de contraseñas e historial transaccional de cuentas.
 
 Se ejecutaron `npm run test:web` (invoca `npm run test -w @truck-parts/web`), `npm run test:unit -w @truck-parts/api` y `npm run test:integration -w @truck-parts/api`. Los conteos de cierre proceden de los resultados de Vitest e incluyen cada caso expandido de `it.each`; el desglose web conserva el inventario previo, sin cambios en sus pruebas. Todos los archivos de pruebas encontrados están inventariados abajo; las rutas son relativas a `apps/web/tests` o `apps/api/tests`, según la aplicación.
 

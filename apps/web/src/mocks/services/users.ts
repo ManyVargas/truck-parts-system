@@ -5,8 +5,7 @@ import { err, ok, type Result } from '../../shared/auth/types';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_PATTERN = /^[a-z0-9][a-z0-9_-]{1,31}$/;
 const ROLES: Role[] = ['ADMINISTRATOR', 'SELLER', 'MECHANIC'];
-
-export const MIN_USER_PASSWORD_LENGTH = 6;
+export const INITIAL_USER_PASSWORD = 'solocamiones';
 
 function optionalText(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
@@ -14,8 +13,16 @@ function optionalText(value: string | undefined): string | undefined {
 }
 
 export function toManagedUser(user: User): ManagedUser {
-  const { password: _password, ...publicUser } = user;
-  return publicUser;
+  return {
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    role: user.role,
+    active: user.active,
+    mustChangePassword: user.mustChangePassword ?? false,
+    phone: user.phone,
+    email: user.email,
+  };
 }
 
 export function sortManagedUsers(users: ManagedUser[]): ManagedUser[] {
@@ -28,7 +35,11 @@ export function sortManagedUsers(users: ManagedUser[]): ManagedUser[] {
 }
 
 export function nextUserId(users: User[], username: string): string {
-  const slug = username.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 16) || 'USER';
+  const slug =
+    username
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .toUpperCase()
+      .slice(0, 16) || 'USER';
   const base = `U-${slug}`;
   const used = users.map((user) => user.id);
   if (!used.includes(base)) {
@@ -71,7 +82,7 @@ function wouldLeaveNoActiveAdmin(
 
 /**
  * Validates administrator user-management commands (AUTH-003 / AUTH-004).
- * Passwords stay in AppState; callers receive ManagedUser without the secret.
+ * The mock mirrors the server-assigned initial credential; it never accepts one from the UI.
  */
 export function prepareUserSave(
   users: User[],
@@ -112,28 +123,6 @@ export function prepareUserSave(
     return err({ code: 'CONFLICT', message: 'El nombre de usuario ya existe' });
   }
 
-  const passwordInput = optionalText(input.password);
-  let password = existing?.password;
-  if (!existing) {
-    if (!passwordInput) {
-      return err({ code: 'VALIDATION', message: 'La contraseña es obligatoria al crear el usuario' });
-    }
-    password = passwordInput;
-  } else if (passwordInput) {
-    password = passwordInput;
-  }
-
-  if (passwordInput && passwordInput.length < MIN_USER_PASSWORD_LENGTH) {
-    return err({
-      code: 'VALIDATION',
-      message: `La contraseña debe tener al menos ${MIN_USER_PASSWORD_LENGTH} caracteres`,
-    });
-  }
-
-  if (!password) {
-    return err({ code: 'VALIDATION', message: 'La contraseña es obligatoria al crear el usuario' });
-  }
-
   if (existing && existing.id === actorId && input.active === false) {
     return err({ code: 'VALIDATION', message: 'No puede desactivar su propia cuenta' });
   }
@@ -149,7 +138,8 @@ export function prepareUserSave(
     id: existing?.id ?? nextUserId(users, username),
     name,
     username,
-    password,
+    password: existing?.password ?? INITIAL_USER_PASSWORD,
+    mustChangePassword: existing?.mustChangePassword ?? true,
     role: input.role,
     active: input.active,
     phone: optionalText(input.phone),

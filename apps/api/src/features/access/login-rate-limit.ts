@@ -11,8 +11,6 @@ export const loginRateLimiter = rateLimit({
   store: loginRateLimitStore,
   standardHeaders: true,
   legacyHeaders: false,
-  // Tests and local clients may send X-Forwarded-For; key by Express req.ip instead.
-  validate: { xForwardedForHeader: false },
   handler: (_req, _res, next) => {
     next(AppError.tooManyRequests());
   },

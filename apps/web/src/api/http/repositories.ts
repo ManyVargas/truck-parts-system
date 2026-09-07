@@ -22,6 +22,12 @@ import {
   updateOwnProfileWithHttp,
   requestRecoveryWithHttp,
 } from '../client/auth-api';
+import {
+  listRecoveryRequestsWithHttp,
+  listUsersWithHttp,
+  resolveRecoveryWithHttp,
+  saveUserWithHttp,
+} from '../client/users-api';
 import { httpNotImplemented } from '../client/http-not-implemented';
 
 /**
@@ -56,15 +62,19 @@ export class HttpAuthRepository implements AuthRepository {
 
 export class HttpUserRepository implements UserRepository {
   async list() {
-    return httpNotImplemented('HttpUserRepository', 'list');
+    return listUsersWithHttp();
   }
 
-  async getById() {
-    return httpNotImplemented('HttpUserRepository', 'getById');
+  async save(input: Parameters<UserRepository['save']>[0]) {
+    return saveUserWithHttp(input);
   }
 
-  async save() {
-    return httpNotImplemented('HttpUserRepository', 'save');
+  async listRecoveryRequests() {
+    return listRecoveryRequestsWithHttp();
+  }
+
+  async resolveRecovery(input: Parameters<UserRepository['resolveRecovery']>[0]) {
+    return resolveRecoveryWithHttp(input);
   }
 }
 

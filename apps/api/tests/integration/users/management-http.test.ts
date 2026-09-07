@@ -5,6 +5,7 @@ import request from 'supertest';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AccessService } from '../../../src/features/access/service.js';
+import { RECOVERY_RATE_LIMIT_MAX_ATTEMPTS } from '../../../src/features/access/constants.js';
 import { hashPassword, verifyPassword } from '../../../src/features/access/password.js';
 import { resetLoginRateLimit } from '../../../src/features/access/login-rate-limit.js';
 import { resetRecoveryRateLimit } from '../../../src/features/access/recovery-rate-limit.js';
@@ -299,8 +300,16 @@ describe('M8 account management HTTP and transactions', () => {
 
   it('public recovery is generic, deduplicated, rate limited and never changes credentials or sessions', async () => {
     const target = await fixture('SELLER');
-    const missing = await request(app).post(RECOVERY).send({ username: 'missing' });
-    const found = await request(app).post(RECOVERY).send({ username: target.user.username });
+    const firstClientIp = '203.0.113.20';
+    const secondClientIp = '203.0.113.21';
+    const missing = await request(app)
+      .post(RECOVERY)
+      .set('X-Forwarded-For', firstClientIp)
+      .send({ username: 'missing' });
+    const found = await request(app)
+      .post(RECOVERY)
+      .set('X-Forwarded-For', firstClientIp)
+      .send({ username: target.user.username });
     expect(found.status).toBe(202);
     expect(found.body).toEqual(missing.body);
     await Promise.all(
@@ -309,8 +318,32 @@ describe('M8 account management HTTP and transactions', () => {
     expect(await prisma.passwordRecoveryRequest.count()).toBe(1);
     expect(await users.findById(target.user.id)).toEqual(target.user);
     expect(await prisma.session.count()).toBe(1);
-    for (let i = 0; i < 8; i++) await request(app).post(RECOVERY).send({ username: 'missing' });
-    expect((await request(app).post(RECOVERY).send({ username: 'missing' })).status).toBe(429);
+    for (let attempt = 2; attempt < RECOVERY_RATE_LIMIT_MAX_ATTEMPTS; attempt += 1) {
+      expect(
+        (
+          await request(app)
+            .post(RECOVERY)
+            .set('X-Forwarded-For', firstClientIp)
+            .send({ username: 'missing' })
+        ).status,
+      ).toBe(202);
+    }
+    expect(
+      (
+        await request(app)
+          .post(RECOVERY)
+          .set('X-Forwarded-For', firstClientIp)
+          .send({ username: 'missing' })
+      ).status,
+    ).toBe(429);
+    expect(
+      (
+        await request(app)
+          .post(RECOVERY)
+          .set('X-Forwarded-For', secondClientIp)
+          .send({ username: 'missing' })
+      ).status,
+    ).toBe(202);
   });
 
   it('requires another administrator and identity confirmation; approval returns a temporary password only once', async () => {

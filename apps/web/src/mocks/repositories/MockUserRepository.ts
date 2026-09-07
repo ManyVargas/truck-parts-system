@@ -1,5 +1,5 @@
 import type { UserRepository } from '../../api/contracts/repositories';
-import type { SaveUserInput } from '../../api/contracts/users';
+import type { ResolveRecoveryInput, SaveUserInput } from '../../api/contracts/users';
 import { err, ok } from '../../shared/auth/types';
 import { requirePermission } from '../services/require-permission';
 import { prepareUserSave, sortManagedUsers, toManagedUser } from '../services/users';
@@ -12,23 +12,7 @@ export class MockUserRepository implements UserRepository {
       return permission;
     }
 
-    return ok(
-      cloneForRead(sortManagedUsers(getMockState().users.map(toManagedUser))),
-    );
-  }
-
-  async getById(id: string) {
-    const permission = requirePermission('users.manage');
-    if (!permission.ok) {
-      return permission;
-    }
-
-    const user = getMockState().users.find((entry) => entry.id === id);
-    if (!user) {
-      return err({ code: 'NOT_FOUND', message: 'Usuario no encontrado' });
-    }
-
-    return ok(cloneForRead(toManagedUser(user)));
+    return ok(cloneForRead(sortManagedUsers(getMockState().users.map(toManagedUser))));
   }
 
   async save(input: SaveUserInput) {
@@ -52,6 +36,21 @@ export class MockUserRepository implements UserRepository {
     }
 
     return ok(cloneForRead(toManagedUser(user)));
+  }
+
+  async listRecoveryRequests() {
+    const permission = requirePermission('users.manage');
+    if (!permission.ok) return permission;
+    return ok([]);
+  }
+
+  async resolveRecovery(_input: ResolveRecoveryInput) {
+    const permission = requirePermission('users.manage');
+    if (!permission.ok) return permission;
+    return err({
+      code: 'NOT_FOUND',
+      message: 'Las solicitudes de recuperación se administran con la API real.',
+    });
   }
 }
 

@@ -10,6 +10,8 @@ export const SESSION_TOKEN_BYTES = 32;
 
 export const LOGIN_RATE_LIMIT_MAX_ATTEMPTS = 10;
 export const LOGIN_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+export const RECOVERY_RATE_LIMIT_MAX_ATTEMPTS = 10;
+export const RECOVERY_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 
 // Required on cookie-authenticated mutations. SameSite=Lax is the primary CSRF control.
 export const CSRF_REQUEST_HEADER = 'x-requested-with';

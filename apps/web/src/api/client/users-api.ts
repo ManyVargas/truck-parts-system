@@ -1,14 +1,138 @@
-import type { ManagedUser, SaveUserInput } from '../contracts/users';
-import type { Result } from '../../shared/auth/types';
+import type {
+  ManagedUser,
+  PasswordRecoveryRequest,
+  ResolveRecoveryInput,
+  ResolveRecoveryResult,
+  SaveUserInput,
+} from '../contracts/users';
+import { err, ok, type Result } from '../../shared/auth/types';
+import { httpClient, toAppError } from './http-client';
 
-/**
- * Future HTTP users client — maps to API M11 user-management commands.
- * Features consume UserRepository; this module is the swap target for MockUserRepository.
- */
-export async function listUsersWithHttp(): Promise<Result<ManagedUser[]>> {
-  throw new Error('HttpUserRepository no implementado — use VITE_USE_MOCK_API=true (WM12)');
+const USERS_PATH = '/api/admin/users';
+const PAGE_SIZE = 100;
+const CSRF_HEADERS = { 'X-Requested-With': 'XMLHttpRequest' };
+
+type ApiUser = Omit<ManagedUser, 'phone' | 'email'> & {
+  phone: string | null;
+  email: string | null;
+};
+
+type Page<T> = { items: T[]; total: number; page: number; pageSize: number };
+
+type ApiRecoveryRequest = Omit<PasswordRecoveryRequest, 'user'> & {
+  user: PasswordRecoveryRequest['user'] & { passwordHash?: string };
+};
+
+async function request<T>(operation: () => Promise<T>): Promise<Result<T>> {
+  try {
+    return ok(await operation());
+  } catch (error) {
+    return err(toAppError(error));
+  }
 }
 
-export async function saveUserWithHttp(_input: SaveUserInput): Promise<Result<ManagedUser>> {
-  throw new Error('HttpUserRepository no implementado — use VITE_USE_MOCK_API=true (WM12)');
+function toManagedUser(user: ApiUser): ManagedUser {
+  return {
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    role: user.role,
+    active: user.active,
+    mustChangePassword: user.mustChangePassword,
+    phone: user.phone ?? undefined,
+    email: user.email ?? undefined,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
+
+function toRecoveryRequest(request: ApiRecoveryRequest): PasswordRecoveryRequest {
+  return {
+    id: request.id,
+    userId: request.userId,
+    status: 'PENDING',
+    createdAt: request.createdAt,
+    expiresAt: request.expiresAt,
+    user: {
+      id: request.user.id,
+      name: request.user.name,
+      username: request.user.username,
+      role: request.user.role,
+      active: request.user.active,
+    },
+  };
+}
+
+/** Preserve the existing complete-list/search UI while respecting the paginated API. */
+async function loadAllPages<T>(path: string): Promise<T[]> {
+  const items: T[] = [];
+  let page = 1;
+  let total = 0;
+
+  do {
+    const response = await httpClient<Page<T>>(`${path}?page=${page}&pageSize=${PAGE_SIZE}`);
+    items.push(...response.items);
+    total = response.total;
+    if (response.items.length === 0) break;
+    page += 1;
+  } while (items.length < total);
+
+  return items;
+}
+
+export function listUsersWithHttp(): Promise<Result<ManagedUser[]>> {
+  return request(async () => (await loadAllPages<ApiUser>(USERS_PATH)).map(toManagedUser));
+}
+
+function toAdministrativeProfile(input: SaveUserInput) {
+  return {
+    name: input.name,
+    username: input.username,
+    role: input.role,
+    phone: input.phone,
+    email: input.email,
+  };
+}
+
+export function saveUserWithHttp(input: SaveUserInput): Promise<Result<ManagedUser>> {
+  const profile = toAdministrativeProfile(input);
+  // POST schema is strict and always creates an active account; `active` is PATCH-only.
+  const body = input.id ? { ...profile, active: input.active } : profile;
+  return request(async () =>
+    toManagedUser(
+      await httpClient<ApiUser>(input.id ? `${USERS_PATH}/${input.id}` : USERS_PATH, {
+        method: input.id ? 'PATCH' : 'POST',
+        headers: CSRF_HEADERS,
+        body: JSON.stringify(body),
+      }),
+    ),
+  );
+}
+
+export function listRecoveryRequestsWithHttp(): Promise<Result<PasswordRecoveryRequest[]>> {
+  return request(async () =>
+    (await loadAllPages<ApiRecoveryRequest>(`${USERS_PATH}/recovery-requests`)).map(
+      toRecoveryRequest,
+    ),
+  );
+}
+
+export function resolveRecoveryWithHttp(
+  input: ResolveRecoveryInput,
+): Promise<Result<ResolveRecoveryResult>> {
+  return request(async () => {
+    const response = await httpClient<{ temporaryPassword?: string }>(
+      `${USERS_PATH}/recovery-requests/${input.requestId}/resolve`,
+      {
+        method: 'POST',
+        headers: CSRF_HEADERS,
+        body: JSON.stringify(
+          input.action === 'approve'
+            ? { action: 'approve', identityVerified: input.identityVerified }
+            : { action: 'reject' },
+        ),
+      },
+    );
+    return response.temporaryPassword ? { temporaryPassword: response.temporaryPassword } : {};
+  });
 }

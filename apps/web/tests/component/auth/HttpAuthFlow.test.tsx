@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -98,7 +98,7 @@ async function fillPassword(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('Confirmar nueva contraseña'), 'nueva-segura');
 }
 
-describe('M10 HTTP auth UI', () => {
+describe('Release 1 HTTP auth UI', () => {
   it.each<Role>(['ADMINISTRATOR', 'SELLER', 'MECHANIC'])(
     'requires password change and fresh login for %s',
     async (testRole) => {
@@ -128,10 +128,16 @@ describe('M10 HTTP auth UI', () => {
       await login(user);
       expect(await screen.findByRole('heading', { name: 'Mi perfil' })).toBeVisible();
       expect(screen.queryByText(/Debe cambiar su contraseña inicial/)).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: 'Usuarios' })).not.toBeInTheDocument();
+      if (testRole === 'ADMINISTRATOR') {
+        expect(screen.getByRole('link', { name: 'Usuarios' })).toBeVisible();
+      } else {
+        expect(screen.queryByRole('link', { name: 'Usuarios' })).not.toBeInTheDocument();
+      }
       expect(screen.queryByRole('link', { name: 'Ventas y Facturas' })).not.toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: /Cuenta de/ }));
       await user.click(screen.getByRole('menuitem', { name: 'Cerrar sesión' }));
+      const logoutDialog = await screen.findByRole('dialog', { name: 'Cerrar sesión' });
+      await user.click(within(logoutDialog).getByRole('button', { name: 'Cerrar sesión' }));
       expect(await screen.findByRole('button', { name: 'Iniciar sesión' })).toBeVisible();
     },
   );
@@ -182,6 +188,8 @@ describe('M10 HTTP auth UI', () => {
     mount('/profile');
     await user.click(await screen.findByRole('button', { name: /Cuenta de/ }));
     await user.click(screen.getByRole('menuitem', { name: 'Cerrar sesión' }));
+    const logoutDialog = await screen.findByRole('dialog', { name: 'Cerrar sesión' });
+    await user.click(within(logoutDialog).getByRole('button', { name: 'Cerrar sesión' }));
     expect(await screen.findByText(/No se pudo conectar con el servidor/)).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Mi perfil' })).toBeVisible();
   });

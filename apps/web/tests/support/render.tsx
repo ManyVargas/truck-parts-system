@@ -40,16 +40,22 @@ export function renderWithProviders(
   ui: ReactElement,
   options: {
     route?: string;
+    locationState?: unknown;
     auth?: AuthContextValue;
     capabilities?: AppCapabilities;
   } = {},
 ) {
   const auth = options.auth ?? createAuthValue();
+  const pathname = options.route ?? '/';
+  const initialEntry =
+    options.locationState !== undefined
+      ? { pathname, state: options.locationState }
+      : pathname;
 
   return {
     auth,
     ...render(
-      <MemoryRouter initialEntries={[options.route ?? '/']}>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <AuthContext.Provider value={auth}>
           {/* Component tests use the full prototype set so a local VITE_CAPABILITIES_PRESET does not hide later-release UI. */}
           <CapabilitiesProvider value={options.capabilities ?? CAPABILITY_PRESETS.prototype}>

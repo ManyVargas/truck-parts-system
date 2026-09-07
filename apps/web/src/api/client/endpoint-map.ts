@@ -1,7 +1,6 @@
 /**
  * Documented HTTP map for the mock → API swap.
- * Paths follow the future Express API; none are called until VITE_USE_MOCK_API=false
- * and the matching backend milestone exists.
+ * Paths document each repository's real API integration as its backend milestone lands.
  */
 export const REPOSITORY_ENDPOINT_MAP = {
   AuthRepository: {
@@ -13,9 +12,11 @@ export const REPOSITORY_ENDPOINT_MAP = {
     requestRecovery: 'POST /api/auth/recovery-requests',
   },
   UserRepository: {
-    list: 'GET /api/users',
-    getById: 'GET /api/users/:id',
-    save: 'PUT /api/users/:id',
+    list: 'GET /api/admin/users',
+    create: 'POST /api/admin/users',
+    update: 'PATCH /api/admin/users/:id',
+    listRecoveryRequests: 'GET /api/admin/users/recovery-requests',
+    resolveRecovery: 'POST /api/admin/users/recovery-requests/:id/resolve',
   },
   DashboardRepository: {
     getSnapshot: 'GET /api/dashboard',

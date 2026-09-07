@@ -92,4 +92,9 @@ export function toAppError(error: unknown): AppError {
   return { code, message: ERROR_MESSAGES[code] };
 }
 
-export const useMockApi = import.meta.env.VITE_USE_MOCK_API !== 'false';
+/** Mock prototype only when explicitly enabled. Unset/empty builds use the HTTP API. */
+export function resolveUseMockApi(value: string | undefined): boolean {
+  return value === 'true';
+}
+
+export const useMockApi = resolveUseMockApi(import.meta.env.VITE_USE_MOCK_API);

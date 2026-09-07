@@ -80,6 +80,8 @@ Diagnostics should surface affected business records and safe next-action contex
 - [x] Preserve relevant immutable references/before-after values (R1 profiles, roles and recovery references).
 - [ ] Add history projections per item/invoice/order as needed.
 
+Release 1 automated closure coverage revalidates user creation, deactivation and recovery events through the API/integration suite. M11 intentionally adds no history endpoint or screen.
+
 ### Protected administration
 - [ ] Cost correction.
 - [ ] Receipt-baseline correction.
@@ -88,11 +90,16 @@ Diagnostics should surface affected business records and safe next-action contex
 - [ ] All corrections require reason and additive history.
 
 ### Recovery
-- [x] Abandoned reservation release.
-- [x] Work-Order release/reassign/cancel.
+- [ ] Abandoned reservation release.
+- [ ] Work-Order release/reassign/cancel.
 - [ ] PDF regeneration.
 - [ ] Evidence recovery where safe.
-- [x] Pending USD profitability retry.
+- [ ] Pending USD profitability retry.
+
+The abandoned-reservation, Work-Order and profitability items previously marked as
+complete are available only in the mock prototype. Their HTTP repositories remain
+explicitly unimplemented; mock behavior does not complete ADMIN-002. The production
+API, authorization, audit history and tests remain Release 8 scope.
 
 ### Diagnostics
 - [ ] Negative/invalid quantity states.
@@ -101,7 +108,7 @@ Diagnostics should surface affected business records and safe next-action contex
 - [ ] Duplicate active physical operations.
 - [ ] Impossible Work-Order assignment/evidence state.
 - [ ] Impossible invoice/payment/refund balances.
-- [x] Pending FX profitability.
+- [ ] Pending FX profitability.
 - [ ] Metadata/object mismatches for PDF/evidence/photos where applicable.
 - [ ] Tests prove diagnostics do not mutate records.
 

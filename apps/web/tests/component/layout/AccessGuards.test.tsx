@@ -53,6 +53,80 @@ describe('access guards', () => {
     expect(await screen.findByText('Inicio vendedor')).toBeVisible();
   });
 
+  it('does not send a mechanic back to a previous administrator URL after login', async () => {
+    renderWithProviders(
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <div>Inicio de sesión</div>
+            </GuestRoute>
+          }
+        />
+        <Route path="/users" element={<div>Usuarios</div>} />
+        <Route path="/mechanic" element={<div>Inicio mecánico</div>} />
+      </Routes>,
+      {
+        route: '/login',
+        locationState: { from: { pathname: '/users' } },
+        auth: createAuthValue('MECHANIC'),
+      },
+    );
+
+    expect(await screen.findByText('Inicio mecánico')).toBeVisible();
+    expect(screen.queryByText('Usuarios')).not.toBeInTheDocument();
+  });
+
+  it('returns a seller to an allowed previous URL after login', async () => {
+    renderWithProviders(
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <div>Inicio de sesión</div>
+            </GuestRoute>
+          }
+        />
+        <Route path="/inventory" element={<div>Inventario</div>} />
+        <Route path="/dashboard" element={<div>Inicio vendedor</div>} />
+      </Routes>,
+      {
+        route: '/login',
+        locationState: { from: { pathname: '/inventory' } },
+        auth: createAuthValue('SELLER'),
+      },
+    );
+
+    expect(await screen.findByText('Inventario')).toBeVisible();
+  });
+
+  it('sends a seller to the role home when the previous URL is administrator-only', async () => {
+    renderWithProviders(
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <div>Inicio de sesión</div>
+            </GuestRoute>
+          }
+        />
+        <Route path="/users" element={<div>Usuarios</div>} />
+        <Route path="/dashboard" element={<div>Inicio vendedor</div>} />
+      </Routes>,
+      {
+        route: '/login',
+        locationState: { from: '/users' },
+        auth: createAuthValue('SELLER'),
+      },
+    );
+
+    expect(await screen.findByText('Inicio vendedor')).toBeVisible();
+    expect(screen.queryByText('Usuarios')).not.toBeInTheDocument();
+  });
+
   it('shows unauthorized for a mechanic entering a known desktop route', async () => {
     renderWithProviders(
       <Routes>

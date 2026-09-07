@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 
 import type { SaveServiceInput } from '../../api/contracts/catalogs';
 import type { Service } from '../../api/contracts/entities';
-import { Button, Field, Info, Input, Modal } from '../../shared/ui';
+import { Button, Field, GuardedModal, Info, Input, isFormDirty } from '../../shared/ui';
 
 export type ServiceFormModalProps = {
   open: boolean;
@@ -32,6 +32,7 @@ export function ServiceFormModal({
   onSubmit,
 }: ServiceFormModalProps) {
   const [fields, setFields] = useState<FormFields>(EMPTY_FIELDS);
+  const [baseline, setBaseline] = useState<FormFields>(EMPTY_FIELDS);
   const isEdit = service != null;
 
   useEffect(() => {
@@ -39,15 +40,14 @@ export function ServiceFormModal({
       return;
     }
 
-    if (!service) {
-      setFields(EMPTY_FIELDS);
-      return;
-    }
-
-    setFields({
-      name: service.name,
-      active: service.active,
-    });
+    const next = service
+      ? {
+          name: service.name,
+          active: service.active,
+        }
+      : EMPTY_FIELDS;
+    setFields(next);
+    setBaseline(next);
   }, [open, service]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -60,7 +60,14 @@ export function ServiceFormModal({
   }
 
   return (
-    <Modal open={open} title={isEdit ? 'Editar servicio' : 'Nuevo servicio'} onClose={onClose}>
+    <GuardedModal
+      open={open}
+      title={isEdit ? 'Editar servicio' : 'Nuevo servicio'}
+      onClose={onClose}
+      hasUnsavedChanges={isFormDirty(fields, baseline)}
+      isBusy={isSaving}
+    >
+      {({ requestClose }) => (
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <Info tone="error" title="No se pudo guardar">
@@ -90,7 +97,7 @@ export function ServiceFormModal({
         </label>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
+          <Button type="button" variant="secondary" onClick={requestClose} disabled={isSaving}>
             Cancelar
           </Button>
           <Button type="submit" disabled={isSaving}>
@@ -98,6 +105,7 @@ export function ServiceFormModal({
           </Button>
         </div>
       </form>
-    </Modal>
+      )}
+    </GuardedModal>
   );
 }

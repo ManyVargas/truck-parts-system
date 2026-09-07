@@ -1,7 +1,7 @@
 # Plan 001 — Release 1 Milestones: Foundation + Access and Users
 
 **Release:** 1 — Application Foundation and Access (Local Development)  
-**Estado:** Milestone 10 completado en local — Milestone 4 mantiene pendiente la verificación en GitHub
+**Estado:** Milestone 11 completado y verificado en local, incluido el exit gate manual de navegador confirmado por el owner el 2026-09-07. Milestone 4 mantiene pendiente la verificación en GitHub.
 **Último milestone:** Milestone 11 — Integrar users HTTP + exit gate Release 1
 
 ---
@@ -13,8 +13,8 @@
 - **Entorno:** desarrollo y pruebas **únicamente en local** durante Release 1. No hay staging ni producción.
 - **Primer despliegue productivo:** después de completar Release 2 — Billing Core ([`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) §First production deployment).
 - **Features en alcance:** [`../FEATURES/01_ACCESS_AND_USERS.md`](../FEATURES/01_ACCESS_AND_USERS.md) + slice R1 de [`../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md`](../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md).
-- **Frontend:** el prototipo mock de [`../plans_web/plan-001.md`](../plans_web/plan-001.md) está **cerrado** (WM12). Login, shell por rol, usuarios y perfil propio ya existen contra mocks (`VITE_USE_MOCK_API`). M10–M11 sustituyen el repositorio mock por HTTP y adaptan las pantallas existentes al cambio obligatorio de contraseña y a la creación sin contraseña elegida por Administrator.
-- **Estado API:** M1–M3, M5–M9 completados en local; M4 mantiene pendientes externos. Auth HTTP, `requireAuth`/`requireRole`, gestión y recuperación disponibles. History M9 persiste eventos atómicos de usuarios, perfil, contraseña y recuperación.
+- **Frontend:** el prototipo mock de [`../plans_web/plan-001.md`](../plans_web/plan-001.md) está **cerrado** (WM12). M10–M11 ya conectaron login, shell por rol, perfil, usuarios y recuperación de contraseña a HTTP cuando `VITE_USE_MOCK_API=false`; el prototipo completo se conserva con `true`.
+- **Estado API:** M1–M3 y M5–M11 completados y verificados en local; M4 mantiene pendientes externos. Auth HTTP, `requireAuth`/`requireRole`, gestión y recuperación de contraseña están disponibles. History M9 persiste eventos atómicos de usuarios, perfil, contraseña y recuperación.
 - **Ciclo por milestone:** plan → implementación → pruebas → revisión → commit. La integración web se hace **solo** cuando la función API cumple el criterio de la sección Integración API → Web.
 
 
@@ -43,7 +43,7 @@ Documentadas en [`../FEATURES/01_ACCESS_AND_USERS.md`](../FEATURES/01_ACCESS_AND
 8. Mechanic en R1: proyección mínima de sesión + tests negativos; proyección WO completa en release correspondiente.
 9. History R1: envelope reutilizable + solo eventos de ciclo de vida de usuarios.
 10. Feature 01: un feature de producto; módulos `access` y `users` compartiendo modelo/repositorio de usuario.
-11. Integración web Release 1: el prototipo ya cubre la UI de Feature 01. No se cablea una función a HTTP hasta que el backend tenga el stack completo de esa función (ruta → controller → service → repository → validation → types + tests) **y** M3 haya fijado el contrato de errores. Pantallas de Releases 2–8 (clientes, facturas, inventario, OT, etc.) **permanecen en mock** aunque la UI exista.
+11. Integración web Release 1: M10–M11 conectaron la UI de Feature 01 a HTTP después de completar su stack backend (ruta → controller → service → repository → validation → types + tests) y el contrato de errores de M3. Pantallas de Releases 2–8 (clientes, facturas, inventario, OT, etc.) **permanecen en mock** aunque la UI exista.
 
 ## Integración API → Web (cuándo cablear)
 
@@ -59,18 +59,20 @@ El prototipo web ya está listo para Access/Users. El cuello de botella es la AP
 
 Hasta entonces: `VITE_USE_MOCK_API` distinto de `false` (mocks). No mezclar login real con listados mock de usuarios, ni al revés.
 
-### Estado ahora (después de M9 en local)
+### Estado final local (después de M11)
 
-**Auth HTTP está listo a nivel API; el swap web espera M10.** Gestión HTTP y recuperación M8 disponibles; history M9 completado sin UI nueva.
+**Access/Users usa HTTP cuando `VITE_USE_MOCK_API=false`.** M10 completó auth,
+sesión y perfil; M11 completó administración y recuperación de contraseña. History
+M9 continúa como persistencia interna sin UI nueva.
 
 | Función API | ¿Integrable ahora? | Motivo |
 |---|---|---|
 | `GET /api/health/live` | Opcional (ops) | API completa. El prototipo **ya no** tiene pantalla de health; no es Feature 01. Se puede usar a mano o en CI. |
 | `GET /api/health/ready` | Opcional (ops) | Igual: readiness de PostgreSQL, no flujo de usuario. |
-| Login / logout / sesión / perfil propio | No (swap en M10) | Endpoints M6–M7 listos. UI mock hasta M10. |
-| Gestión Administrator de usuarios | Backend listo; swap M11 pendiente | M8 implementado; UI permanece mock. |
+| Login / logout / sesión / perfil propio | Sí, integrado | Endpoints M6–M7 conectados y verificados en M10. |
+| Gestión Administrator de usuarios y recuperación de contraseña | Sí, integrado | Backend M8 conectado y verificado en M11. |
 | History de usuarios | Sin integración UI R1 | Envelope y eventos implementados y verificados. Es persistencia interna + tests, sin endpoint público de historial. |
-| Clientes, facturas, inventario, OT, dashboard KPIs, recovery | No (fuera de R1) | UI mock existe; API y release correspondientes son R2+. |
+| Clientes, facturas, inventario, OT, dashboard KPIs y recovery operacional | No (fuera de R1) | UI mock existe; API y release correspondientes son R2+. |
 
 ### Matriz Release 1 — primer momento integrable
 
@@ -146,7 +148,7 @@ flowchart TD
 | M8 | User management backend (AUTH-003/004) | completado en local | **Listo para M11** (`/users`) |
 | M9 | History envelope R1 + eventos de usuarios | completado en local | Sin UI R1; tests/API en el exit gate |
 | M10 | Integrar auth HTTP (login/sesión/perfil/shell) | completado en local | Swap `AuthRepository` mock → HTTP |
-| M11 | Integrar users HTTP + exit gate Release 1 | pendiente | Swap `UserRepository` mock → HTTP |
+| M11 | Integrar users HTTP + exit gate Release 1 | completado y verificado en local | Swap `UserRepository` mock → HTTP completado |
 
 ---
 
@@ -408,7 +410,7 @@ queda para el release de OT. El prototipo web permanece en mock.
 - Tests negativos de rol vía Supertest.
 - Mechanic verificado solo con proyección mínima + denegaciones.
 
-**Integración web (después de M7):** **Sí — ejecutar M10.** Login, logout, sesión, perfil propio y shell por rol pueden dejar el mock. Mechanic no debe recibir datos comerciales en `/session` ni `/me`. `/users` espera M8.
+**Integración web (después de M7):** **Sí — ejecutar M10.** Login, logout, sesión, perfil propio y shell por rol pueden dejar el mock. Mechanic no recibe datos comerciales en `/session` (proyección mínima). `GET /me` es perfil propio para todos los roles, incluido contacto (`phone`/`email`/`active`), según Feature 01. `/users` espera M8.
 
 ---
 
@@ -468,7 +470,7 @@ queda para el release de OT. El prototipo web permanece en mock.
 - AUTH-004 + HIST-002 demostrables con integration test.
 - Sin recuperación operativa/diagnósticos de Release 8 ni eventos de otros dominios. Recuperación de contraseña M8 sí incluida.
 
-**Integración web (después de M9):** **Ninguna pantalla nueva.** Release 1 no tiene timeline de usuarios. M11 comprueba eventos con tests/API (crear/desactivar produce `USER_*`). Recovery UI del prototipo sigue mock (Release 8).
+**Integración web (después de M9):** **Ninguna pantalla nueva.** Release 1 no tiene timeline de usuarios. M11 comprueba eventos con tests/API (crear/desactivar produce `USER_*`). La recuperación operacional y los diagnósticos del prototipo siguen en mock (Release 8); esto no se refiere a la recuperación de contraseña de Feature 01, integrada en M11.
 
 ---
 
@@ -508,6 +510,8 @@ queda para el release de OT. El prototipo web permanece en mock.
 ---
 
 ## Milestone 11 — Integrar users HTTP + exit gate Release 1
+
+**Avance:** completado y verificado localmente (2026-09-07). Las pruebas automatizadas aprobaron y el owner confirmó que pasó íntegramente la verificación manual de navegador del exit gate.
 
 **Objetivo:** Sustituir el mock de `UserRepository` por la API de M8 y cerrar Release 1 en local.
 
@@ -550,13 +554,13 @@ Tras **cerrar Release 1**, la siguiente integración web de negocio es Release 2
 
 ## Próximo paso
 
-**Milestone 11:** integrar administración HTTP de usuarios y resolución de recuperación, y completar el exit gate de Release 1. M10 está cerrado localmente.
+**Milestone 11:** completado. La integración HTTP de administración de usuarios y recuperación está implementada, cubierta automáticamente y validada manualmente en navegador por el owner.
 
 **Pendientes de Milestone 4:** verificar el primer PR en GitHub y configurar el check
 obligatorio `R1 quality`. Se mantiene la decisión de
 hacer el PR al terminar Release 1.
 
-Auth/perfil ya usa HTTP con `VITE_USE_MOCK_API=false`. Usuarios queda no disponible en ese modo hasta M11; el prototipo completo se conserva con `true`.
+Auth, perfil, usuarios y recuperación de contraseña usan HTTP con `VITE_USE_MOCK_API=false`. Los módulos de Release 2+ permanecen deshabilitados; el prototipo completo se conserva con `true`.
 
 Antes de seguir, asegúrate de tener `.env` con un `DATABASE_URL` válido, la base `truck_parts_dev` creada, y haber corrido:
 

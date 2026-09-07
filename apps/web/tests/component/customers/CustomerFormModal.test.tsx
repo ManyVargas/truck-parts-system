@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -113,5 +113,29 @@ describe('CustomerFormModal', () => {
     expect(screen.getByRole('dialog', { name: 'Editar cliente' })).toBeVisible();
     expect(screen.getByLabelText('Nombre')).toHaveValue('Transportes del Caribe');
     expect(screen.getByText('El RNC ya existe')).toBeVisible();
+  });
+
+  it('asks before discarding typed customer data', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderWithProviders(
+      <CustomerFormModal
+        open
+        customer={null}
+        isSaving={false}
+        error={null}
+        onClose={onClose}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Nombre'), 'Flota que no debe perderse');
+    await user.keyboard('{Escape}');
+
+    expect(within(dialog).getByRole('heading', { name: '¿Descartar los cambios?' })).toBeVisible();
+    expect(onClose).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByRole('button', { name: 'Seguir editando' }));
+    expect(within(dialog).getByLabelText('Nombre')).toHaveValue('Flota que no debe perderse');
   });
 });

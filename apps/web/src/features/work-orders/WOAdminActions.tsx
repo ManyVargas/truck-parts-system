@@ -6,7 +6,7 @@ import type {
   WorkOrderDetailView,
   WorkOrderMechanicOption,
 } from '../../api/contracts/work-orders';
-import { Button, Field, Info, Modal, Select, Textarea } from '../../shared/ui';
+import { Button, Field, GuardedModal, Info, Select, Textarea, isFormDirty } from '../../shared/ui';
 
 export type WOAdminActionsProps = {
   detail: WorkOrderDetailView;
@@ -115,7 +115,17 @@ export function WOAdminActions({
         )}
       </div>
 
-      <Modal open={reassignOpen} title={`Reasignar ${detail.id}`} onClose={closeReassign}>
+      <GuardedModal
+        open={reassignOpen}
+        title={`Reasignar ${detail.id}`}
+        onClose={closeReassign}
+        hasUnsavedChanges={isFormDirty(
+          { mechanicId, reassignReason },
+          { mechanicId: '', reassignReason: '' },
+        )}
+        isBusy={isMutating}
+      >
+        {({ requestClose }) => (
         <form className="flex flex-col gap-3" onSubmit={handleReassign}>
           {error && (
             <Info tone="error" title="No se pudo reasignar">
@@ -147,7 +157,7 @@ export function WOAdminActions({
             />
           </Field>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={closeReassign} disabled={isMutating}>
+            <Button type="button" variant="ghost" onClick={requestClose} disabled={isMutating}>
               Cerrar
             </Button>
             <Button type="submit" disabled={isMutating}>
@@ -155,9 +165,20 @@ export function WOAdminActions({
             </Button>
           </div>
         </form>
-      </Modal>
+        )}
+      </GuardedModal>
 
-      <Modal open={cancelOpen} title={`Cancelar ${detail.id}`} onClose={closeCancel}>
+      <GuardedModal
+        open={cancelOpen}
+        title={`Cancelar ${detail.id}`}
+        onClose={closeCancel}
+        hasUnsavedChanges={isFormDirty(
+          { cancelReason, physicalVerified },
+          { cancelReason: '', physicalVerified: false },
+        )}
+        isBusy={isMutating}
+      >
+        {({ requestClose }) => (
         <form className="flex flex-col gap-3" onSubmit={handleCancel}>
           {error && (
             <Info tone="error" title="No se pudo cancelar">
@@ -189,7 +210,7 @@ export function WOAdminActions({
             </label>
           )}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={closeCancel} disabled={isMutating}>
+            <Button type="button" variant="ghost" onClick={requestClose} disabled={isMutating}>
               Cerrar
             </Button>
             <Button type="submit" variant="danger" disabled={isMutating}>
@@ -197,7 +218,8 @@ export function WOAdminActions({
             </Button>
           </div>
         </form>
-      </Modal>
+        )}
+      </GuardedModal>
     </>
   );
 }

@@ -3,7 +3,13 @@ import type { AuthSession, PublicUser } from './auth';
 import type { SaveCategoryInput, SaveServiceInput } from './catalogs';
 import type { CustomerListRow, SaveCustomerInput } from './customers';
 import type { UpdateOwnProfileInput, UpdateOwnProfileResult } from './profile';
-import type { ManagedUser, SaveUserInput } from './users';
+import type {
+  ManagedUser,
+  PasswordRecoveryRequest,
+  ResolveRecoveryInput,
+  ResolveRecoveryResult,
+  SaveUserInput,
+} from './users';
 import type { DashboardSnapshot } from './dashboard';
 import type {
   AddToDraftInput,
@@ -84,8 +90,9 @@ export type AuthRepository = {
 
 export type UserRepository = {
   list(): Promise<Result<ManagedUser[]>>;
-  getById(id: string): Promise<Result<ManagedUser>>;
   save(input: SaveUserInput): Promise<Result<ManagedUser>>;
+  listRecoveryRequests(): Promise<Result<PasswordRecoveryRequest[]>>;
+  resolveRecovery(input: ResolveRecoveryInput): Promise<Result<ResolveRecoveryResult>>;
 };
 
 export type InventoryRepository = {

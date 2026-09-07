@@ -113,6 +113,8 @@ Create the application foundation and Access/Users capability in a **local devel
 
 Release 1 does **not** include staging, production deployment, managed hosting, HTTPS in a deployed environment, or operational backup/restore drills. The application is developed and verified on the developer machine only.
 
+An optional local Docker Compose path (nginx on host port 5173, unpublished API, optional Cloudflare quick tunnel to nginx port 8080) is a developer convenience for same-origin demos. It is **not** production HTTPS, staging, or the first production deployment described in `INFRASTRUCTURE_PLAN.md`.
+
 ## Feature specs
 
 - `FEATURES/01_ACCESS_AND_USERS.md`
