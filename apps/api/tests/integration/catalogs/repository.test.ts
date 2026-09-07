@@ -7,6 +7,7 @@ const repository = new CatalogRepository();
 
 describe('CatalogRepository (PostgreSQL)', () => {
   afterEach(async () => {
+    await prisma.invoice.deleteMany();
     await prisma.mechanicalService.deleteMany();
   });
   afterAll(disconnectPrisma);

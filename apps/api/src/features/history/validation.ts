@@ -16,6 +16,14 @@ const profile = z
   .strict();
 const base = { subjectType: z.literal('USER'), subjectId: z.uuid(), actor };
 const customerBase = { subjectType: z.literal('CUSTOMER'), subjectId: z.uuid(), actor };
+const serviceBase = { subjectType: z.literal('MECHANICAL_SERVICE'), subjectId: z.uuid(), actor };
+const serviceSnapshot = z
+  .object({
+    name: z.string(),
+    description: z.string().nullable(),
+    active: z.boolean(),
+  })
+  .strict();
 const customerSnapshot = z
   .object({
     name: z.string(),
@@ -153,6 +161,20 @@ export const historyEventSchema = z
         ...customerBase,
         eventType: z.literal('CUSTOMER_UPDATED'),
         payload: z.object({ before: customerSnapshot, after: customerSnapshot }).strict(),
+      })
+      .strict(),
+    z
+      .object({
+        ...serviceBase,
+        eventType: z.literal('SERVICE_CREATED'),
+        payload: serviceSnapshot,
+      })
+      .strict(),
+    z
+      .object({
+        ...serviceBase,
+        eventType: z.literal('SERVICE_UPDATED'),
+        payload: z.object({ before: serviceSnapshot, after: serviceSnapshot }).strict(),
       })
       .strict(),
   ])

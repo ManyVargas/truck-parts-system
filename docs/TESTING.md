@@ -6,7 +6,7 @@ La tabla y los conteos de **679 pruebas** de abajo son el **cierre local de Mile
 
 Tras M9, Release 1 añadió cobertura HTTP de Access/Users (M10–M11), trust proxy y flujos de UI contra la API. Ver [`done_api/release-1.md`](done_api/release-1.md) para el cierre funcional posterior.
 
-Release 2 M1–M3 (7 de septiembre de 2026) añadió persistencia de clientes/catálogo de servicios y HTTP de clientes. Ver [`done_api/release_2.md`](done_api/release_2.md).
+Release 2 M1–M6 (7 de septiembre de 2026) añadió persistencia y HTTP de clientes/catálogo de servicios, el motor decimal de ITBIS y el agregado Invoice/`FAC-` sin HTTP de draft. Ver [`done_api/release_2.md`](done_api/release_2.md).
 
 ### Ampliaciones posteriores a M9 (no incluidas en los 679)
 
@@ -23,6 +23,9 @@ Release 2 M1–M3 (7 de septiembre de 2026) añadió persistencia de clientes/ca
 | API R2 M2 clientes HTTP | `integration/customers/http.test.ts` (6) | Seller/Admin 200; Mechanic 403; `Cliente contado` 409; envelope 400; CSRF; fallo fiscal o de history sin evento de éxito |
 | API R2 M3 catálogo (unit) | `unit/catalogs/validation.test.ts` (2) | Nombre/descripción; rechazo de `price` y campos ajenos |
 | API R2 M3 catálogo (int.) | `integration/catalogs/repository.test.ts` (2) | Activo/inactivo; `listActive` omite inactivos; update de nombre/descripción/flag |
+| API R2 M4 catálogo HTTP | `integration/catalogs/http.test.ts` (6); `unit/catalogs/history-validation.test.ts` (1) | Admin escribe; Seller lee activos; Mechanic 403; CSRF; 400; rollback de history |
+| API R2 M5 motor ITBIS | `unit/sales/money.test.ts` | Fiscal/no fiscal; gravado/exento; redondeo por línea vs total combinado; UNKNOWN ≠ 0 |
+| API R2 M6 Invoice persistencia | `integration/sales/repository.test.ts` (4) | Draft sin `FAC-`; DOP/USD; secuencia seed+lock; líneas GENERIC/SERVICE; check UNKNOWN=0 |
 
 ## Resultado de la verificación (M9)
 
@@ -152,7 +155,7 @@ Renderizan React en jsdom con Testing Library y validan comportamiento visible. 
 
 ### Pruebas unitarias
 
-Validan salud, errores, configuración de pruebas, credenciales, sesiones, autorización, proyecciones y validación de usuarios, clientes, catálogo de servicios e historial con dependencias aisladas. El cierre M9 inventarió **139 pruebas en 20 archivos**. Tras R1 (trust proxy) y Release 2 M1–M3 hay **149 pruebas en 24 archivos** (ejecución 2026-09-07: `npx vitest run tests/unit`).
+Validan salud, errores, configuración de pruebas, credenciales, sesiones, autorización, proyecciones y validación de usuarios, clientes, catálogo de servicios, motor de dinero e historial con dependencias aisladas. El cierre M9 inventarió **139 pruebas en 20 archivos**. Tras R1 (trust proxy) y Release 2 M1–M6 hay **165 pruebas en 26 archivos** (ejecución 2026-09-07: `npx vitest run tests/unit`).
 
 | Archivo                                        | Cantidad | Pruebas realizadas                                                                                                                                                     | Resultado esperado                                                                                                                                        |
 | ---------------------------------------------- | -------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -179,10 +182,12 @@ Validan salud, errores, configuración de pruebas, credenciales, sesiones, autor
 | `unit/customers/validation.test.ts`            |        4 | RNC 9 dígitos y cédula 11 con separadores; `Cliente contado` nunca satisface fiscal; normalización de nombre/RNC/contactos; rechazo de `isDefault`, RNC corto, contacto sin teléfono/correo y dos primarios. | Conserva dígitos fiscales; el genérico no es identidad fiscal; Zod `strict` bloquea persistencia-owned fields. |
 | `unit/customers/history-validation.test.ts`    |        1 | `CUSTOMER_CREATED` con actor USER; payload extra y actor SYSTEM.                                                                                                                          | Acepta el snapshot de cliente; rechaza `passwordHash` y atribución inválida. |
 | `unit/catalogs/validation.test.ts`             |        2 | Trim de nombre y descripción en blanco; rechazo de precio y campos desconocidos.                                                                                                           | Descripción vacía queda `null`; el catálogo no acepta precio. |
+| `unit/catalogs/history-validation.test.ts`     |        1 | `SERVICE_CREATED` con actor USER; payload extra y actor SYSTEM.                                                                                                                             | Acepta snapshot `{ name, description, active }`; rechaza campos ajenos. |
+| `unit/sales/money.test.ts`                     |       15 | Tasa 18 % Decimal; HALF_UP; GENERIC 118 y EXTERNAL 19.50; ITEM/QTY gravados; SERVICE/DELIVERY y no fiscal sin ITBIS; entrega 0; negativos; totales vs redondeo único; UNKNOWN ≠ 0.           | Extrae ITBIS incluido por línea; suma de líneas redondeadas; costo desconocido no es cero. |
 
 ### Pruebas de integración
 
-Ejercitan persistencia y transacciones contra PostgreSQL y rutas HTTP con Supertest. El cierre M9 inventarió **97 pruebas en 10 archivos**. Tras Release 2 M1–M3 hay **15 pruebas nuevas en 3 archivos** (`customers`/`catalogs`; ejecución 2026-09-07). Los archivos se ejecutan secuencialmente (`fileParallelism: false`) porque comparten la base de pruebas.
+Ejercitan persistencia y transacciones contra PostgreSQL y rutas HTTP con Supertest. El cierre M9 inventarió **97 pruebas en 10 archivos**. Tras Release 2 M1–M6 hay **25 pruebas nuevas en 5 archivos** (`customers`/`catalogs`/`sales`; M4 y M6 las ejecutaron en sus agentes). Los archivos se ejecutan secuencialmente (`fileParallelism: false`) porque comparten la base de pruebas.
 
 | Archivo                                         | Cantidad | Pruebas realizadas                                                                                                                                                                                                                                    | Resultado esperado                                                                                                                                                                                                                                                                     |
 | ----------------------------------------------- | -------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -199,6 +204,8 @@ Ejercitan persistencia y transacciones contra PostgreSQL y rutas HTTP con Supert
 | `integration/customers/repository.test.ts`      |        7 | Semilla `Cliente contado`; alta con contactos; nombres duplicados no fiscales vs RNC único; búsqueda nombre/RNC; rollback de contacto; reemplazo de contactos; update de id desconocido. | El genérico existe tras migrate, sin RNC ni contactos; P2002 solo en identificador fiscal; el directorio pone `isDefault` primero; una TX abortada no deja filas. |
 | `integration/customers/http.test.ts`            |        6 | Seller/Admin create-search-edit + history; Mechanic 403 y genérico bloqueado; envelope 400; duplicado fiscal sin evento; rollback si falla history; CSRF. | `/api/customers` exige sesión y rol; PATCH al genérico es 409 sin history; un fallo no deja cliente ni `CUSTOMER_CREATED`. |
 | `integration/catalogs/repository.test.ts`       |        2 | Alta activa/inactiva; listado de selección; update de nombre, descripción y `active`.                                                                                                     | `listActive` omite inactivos; `listAll` los incluye; no hay columna de precio. |
+| `integration/catalogs/http.test.ts`             |        6 | Admin CRUD/desactivar + history; Seller solo activos y 404 de inactivo; Mechanic/Seller escritura 403; envelope 400; CSRF; rollback si falla history. | `/api/catalogs/services` no expone precio; PATCH `active: false`; un fallo no deja servicio ni `SERVICE_CREATED`. |
+| `integration/sales/repository.test.ts`          |        4 | Draft sin `FAC-` DOP/USD; secuencia seed y lock sin consumir; líneas GENERIC+SERVICE; UNKNOWN=0 rechazado por check.                                                                      | `number` null en draft; `nextValue` 1; costo desconocido no persiste como cero. |
 
 ### Cobertura añadida en Milestone 9
 
@@ -216,12 +223,19 @@ Ejercitan persistencia y transacciones contra PostgreSQL y rutas HTTP con Supert
 - No hay swap web ni pruebas de componentes HTTP de clientes (M19). El catálogo no tiene rutas HTTP todavía (M4).
 - Migración `20260907130000_customers_and_service_catalog` (quinta migración). La semilla de `Cliente contado` vive en esa migración, no en `prisma db seed`.
 
+### Cobertura añadida en Release 2 M4–M6
+
+- **16 unitarias nuevas:** envelope `SERVICE_CREATED`; motor ITBIS/redondeo Decimal (fiscal, gravado, multi-línea, UNKNOWN).
+- **10 integraciones nuevas:** HTTP del catálogo (roles, CSRF, 400, 404 Seller/inactivo, atomicidad de history) y persistencia Invoice/`FAC-` (draft sin número, lock de secuencia, checks de costo).
+- No hay swap web de servicios (M20) ni HTTP de draft (M7).
+- Migración `20260907180000_invoice_aggregate` (sexta migración).
+
 ### Preparación de PostgreSQL para integración
 
 - Configurar `DATABASE_URL_TEST` en el entorno, `.env` o `.env.test` de la raíz, apuntando a una base exclusiva de pruebas. Debe tener un nombre diferente de `DATABASE_URL`; cambiar host, usuario o esquema no prueba aislamiento.
 - `tests/helpers/environment.ts` carga `.env` y luego `.env.test` sin sobrescribir valores ya definidos, elimina el fallback de desarrollo y asigna a Prisma la URL de pruebas validada.
 - `tests/integration/setup.ts` comprueba conectividad y ejecuta `prisma migrate reset --force --skip-generate` sobre esa base antes de correr la suite. Esto elimina sus datos y aplica las migraciones del proyecto.
-- En M9 se reaplicaron las **cuatro migraciones**, incluida `20260905010000_history`. Release 2 M1–M3 añade la quinta, `20260907130000_customers_and_service_catalog`. Las suites que generan historial limpian sus fixtures mediante `tests/helpers/history.ts`: verifica `NODE_ENV=test`, coincidencia de `DATABASE_URL` con `DATABASE_URL_TEST` y el nombre efectivo mediante `current_database()` antes de TRUNCATE sobre `HistoryEvent`. No desactiva el trigger de inmutabilidad y no forma parte de la aplicación. Las suites de clientes borran contactos y clientes no genéricos en `afterEach` y conservan la semilla `Cliente contado`.
+- En M9 se reaplicaron las **cuatro migraciones**, incluida `20260905010000_history`. Release 2 añade `20260907130000_customers_and_service_catalog` y `20260907180000_invoice_aggregate`. Las suites que generan historial limpian sus fixtures mediante `tests/helpers/history.ts`: verifica `NODE_ENV=test`, coincidencia de `DATABASE_URL` con `DATABASE_URL_TEST` y el nombre efectivo mediante `current_database()` antes de TRUNCATE sobre `HistoryEvent`. No desactiva el trigger de inmutabilidad y no forma parte de la aplicación. Las suites de clientes borran contactos y clientes no genéricos en `afterEach` y conservan la semilla `Cliente contado`. Las de catálogo/ventas borran facturas y servicios de prueba (la secuencia `FAC` se conserva).
 - Si falta la URL, no es válida/no está aislada o PostgreSQL no responde, la ejecución falla. Ya no se usa `describe.skipIf` para health. Aunque el router del contrato de errores no consulta PostgreSQL, el comando de integración completo exige la preparación global de BD.
 
 ## Comandos
@@ -249,15 +263,15 @@ npm run typecheck:test -w @truck-parts/web
 npm exec -w @truck-parts/api -- vitest run tests/unit/users/history-validation.test.ts
 npm run test:integration -w @truck-parts/api -- tests/integration/users/history.test.ts
 
-# Casos específicos de Release 2 M1–M3
-npm exec -w @truck-parts/api -- vitest run tests/unit/customers tests/unit/catalogs
-npm run test:integration -w @truck-parts/api -- tests/integration/customers tests/integration/catalogs
+# Casos específicos de Release 2 M1–M6
+npm exec -w @truck-parts/api -- vitest run tests/unit/customers tests/unit/catalogs tests/unit/sales
+npm run test:integration -w @truck-parts/api -- tests/integration/customers tests/integration/catalogs tests/integration/sales
 ```
 
 ## Alcance actual
 
 - No hay pruebas E2E de navegador; las pruebas React actuales son de componentes en jsdom.
 - La integración del frontend usa repositorios mock y memoria; no sustituye pruebas transaccionales contra PostgreSQL.
-- El backend cubre salud, acceso/sesiones, perfil propio, autorización, bootstrap, administración de usuarios, recuperación de contraseñas, historial append-only de cuentas, **clientes (persistencia + HTTP CUST-001/002)** y **catálogo de servicios mecánicos (solo persistencia)**. El contrato transversal de errores se prueba con un router de tests; las suites HTTP de acceso, usuarios y clientes también validan endpoints de producto. El historial de clientes se verifica en la misma transacción que el alta/edición. Estos resultados no implican integración real de inventario, POS, facturas, PDF, rentabilidad u OT en el backend, ni el swap web de `HttpCustomerRepository` (M19).
+- El backend cubre salud, acceso/sesiones, perfil propio, autorización, bootstrap, administración de usuarios, recuperación de contraseñas, historial append-only de cuentas, **clientes (persistencia + HTTP CUST-001/002)**, **catálogo de servicios mecánicos (persistencia + HTTP LINE-004/ADMIN-001)**, **motor ITBIS (SALE-003)** y **persistencia Invoice/`FAC-` sin HTTP de draft**. El contrato transversal de errores se prueba con un router de tests. El historial de clientes y de servicios se verifica en la misma transacción que el alta/edición. Estos resultados no implican POS HTTP, confirmación, PDF, rentabilidad ni el swap web (`HttpCustomerRepository` M19, `HttpServiceRepository` M20).
 - Ventas (listado, detalle, pagos, cancelación, PDF), POS (borrador, ITBIS fiscal, confirmación `FAC-`, pago inicial, undo de líneas), OT de escritorio (WM9), app Mecánico (WM10) y catálogos/usuarios admin (WM11) tienen suites unitarias, de repositorio y de componente. Un esperado nuevo en categoría de ensamblaje rellena NA provisional en unidades no vendidas y avisa al administrador. Los atributos de categoría se definen en catálogo y se capturan como campos generados en el alta y la edición. Rentabilidad incluye reintento FX y registro admin de ganancia bruta cuando el costo es desconocido. Las capabilities de UX-0 siguen los releases del Development Plan (`release-1` … `release-8` y `prototype`). Las pruebas de componente usan el preset `prototype` por defecto para no heredar `VITE_CAPABILITIES_PRESET` del `.env` local. UX-1 cubre Modal/Field/Tabs con teclado, Button `busy` y Skeleton anunciado. UX-2 agrupa el sidebar comercial por intención de trabajo y compacta/overlay según breakpoint. UX-3 aplica progressive disclosure al registro de inventario (INV-002). UX-4 jerarquiza estados de inventario y unifica tablas (click de fila al detalle más enlace para teclado; columnas operativas separadas). UX-5 endurece el POS. UX-6 endurece la app del mecánico (targets, evidencia con progreso/reintento, historial completado, copy de red). El listado de inventario y ventas lee filtros operativos desde la URL (p. ej. KPIs del escritorio). Siguen fuera: carga real de fotos.
 - Cada cambio de negocio debe agregar una prueba en el nivel más bajo que demuestre la regla y una integración cuando intervengan autorización o estado compartido.

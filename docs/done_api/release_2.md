@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M3 completados)
+**Estado:** en curso (M1–M6 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 2, a medida que se completan.  
 No sustituye a `plan_release_2.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -110,52 +110,99 @@ HTTP del catálogo (M4). Swap web (M20).
 
 ## Milestone 4 — Catálogo de servicios HTTP
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-07
 
 ### Objetivo cumplido
 
+CRUD Administrator y lectura Seller de servicios activos, con history en la misma transacción.
+
 ### Qué se entregó
+
+- Módulo `catalogs` HTTP: routes → controller → service → repository.
+- `GET/POST /api/catalogs/services`, `GET/PATCH /api/catalogs/services/:id`.
+- Admin escribe; Seller lista/lee activos; Mechanic 403; CSRF en escrituras.
+- History `SERVICE_CREATED` / `SERVICE_UPDATED` (`subjectType: MECHANICAL_SERVICE`).
 
 ### Decisiones técnicas
 
+- Seller GET de inactivo o inexistente → 404 (no filtra solo en UI).
+- Desactivar es `PATCH { active: false }`; no hay DELETE.
+- Precio sigue fuera del catálogo. Isolation Serializable + re-chequeo de rol.
+
 ### Validación
 
+- Integration: `apps/api/tests/integration/catalogs/http.test.ts`
+- Unit history: `apps/api/tests/unit/catalogs/history-validation.test.ts`
+
 ### Fuera de alcance (intencional)
+
+Línea SERVICE en draft (M9). Swap `HttpServiceRepository` (M20). Categorías de inventario (R4).
 
 ---
 
 ## Milestone 5 — Motor de cálculo ITBIS y redondeo
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-07
 
 ### Objetivo cumplido
 
+Funciones puras decimal-safe para ITBIS 18 % incluido y redondeo por línea.
+
 ### Qué se entregó
+
+- `apps/api/src/features/sales/money/`: `calculateLineMoney`, `sumInvoiceMoney`, `roundMoney`, helpers de costo UNKNOWN.
+- Unit tests SALE-003 (fiscal/no fiscal, gravado/exento, multi-línea).
 
 ### Decisiones técnicas
 
+- `Prisma.Decimal` y HALF_UP a 2 decimales; no `number` flotante.
+- ITBIS incluido solo si `fiscal === true` y la línea es gravable (GENERIC/EXTERNAL/ITEM/QTY).
+- Totales = suma de líneas ya redondeadas; no extraer el 18 % del bruto combinado.
+- UNKNOWN no se trata como 0. Entrega `0` es válida.
+
 ### Validación
 
+- Unit: `apps/api/tests/unit/sales/money.test.ts`
+
 ### Fuera de alcance (intencional)
+
+HTTP de draft (M7+). Persistencia de factura (M6). Profit (M13).
 
 ---
 
 ## Milestone 6 — Esquema Invoice, líneas y secuencia `FAC-`
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-07
 
 ### Objetivo cumplido
 
+Agregado Invoice / InvoiceLine y fila de secuencia `FAC-` en PostgreSQL, sin draft HTTP.
+
 ### Qué se entregó
+
+- Migración `20260907180000_invoice_aggregate`.
+- Enums `InvoiceStatus`, `InvoiceCurrency`, `InvoiceLineType`, `CostProvenance`.
+- `SalesRepository`: `createDraft`, `findById`, `addLine`, `findSequence`, `lockSequenceForUpdate`.
 
 ### Decisiones técnicas
 
+- Draft: `number` NULL. COMPLETED/CANCELLED exigen número (check SQL).
+- Una moneda por factura (`DOP` | `USD`). `fiscal` en cabecera.
+- Línea: descripción, cantidad, `unitPrice`, costo DOP + provenance, `serviceId` solo en SERVICE.
+- ITEM/QTY existen en el discriminador para rechazarlos después; sin FKs de inventario.
+- Secuencia singleton `FAC`, `nextValue` inicia en 1; lock `SELECT … FOR UPDATE` sin consumir.
+- Checks: UNKNOWN ≠ 0; ACTUAL/ESTIMATED con monto; precio ≥ 0.
+
 ### Validación
 
+- Integration: `apps/api/tests/integration/sales/repository.test.ts`
+
 ### Fuera de alcance (intencional)
+
+HTTP de draft (M7). Confirmación / asignación `FAC-` (M12). Snapshot de cliente, pagos, PDF, FX.
 
 ---
 

@@ -1,7 +1,7 @@
 # Plan Release 2 — Billing Core: Customers, Invoices, Cost/Profit, PDF
 
 **Release:** 2 — Billing Core  
-**Estado:** en curso (M1–M3 completados)  
+**Estado:** en curso (M1–M6 completados)  
 **Último milestone planificado:** Milestone 25 — Exit gate Release 2  
 **Registro de implementación:** [`../done_api/release_2.md`](../done_api/release_2.md)
 
@@ -14,7 +14,7 @@
 - **Entorno:** desarrollo y pruebas **únicamente en local** durante este plan. El primer despliegue productivo es un gate operativo **después** de completar Billing Core; no es un milestone de este archivo ([`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) §First production deployment).
 - **Features en alcance:** [`../FEATURES/08_CUSTOMERS.md`](../FEATURES/08_CUSTOMERS.md), slice R2 de [`../FEATURES/10_SALES_AND_INVOICES.md`](../FEATURES/10_SALES_AND_INVOICES.md), slice R2 de [`../FEATURES/11_COST_AND_PROFITABILITY.md`](../FEATURES/11_COST_AND_PROFITABILITY.md), slice de history de [`../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md`](../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md). Permisos: [`../FEATURES/01_ACCESS_AND_USERS.md`](../FEATURES/01_ACCESS_AND_USERS.md) y [`../ROLES_AND_PERMISSIONS.md`](../ROLES_AND_PERMISSIONS.md).
 - **Frontend:** el prototipo mock de [`../plans_web/plan-001.md`](../plans_web/plan-001.md) está cerrado (WM12). Access/Users ya usa HTTP cuando `VITE_USE_MOCK_API=false`. Clientes, POS, facturas, catálogo de servicios y rentabilidad existen como UI mock; los clientes HTTP están en stub.
-- **Estado API de partida:** Auth, `requireAuth`/`requireRole`, usuarios, envelope de history (`HistoryEvent`) y convención `routes → controller → service → repository → validation → types` están listos. M1–M3 añaden persistencia de clientes/servicios y HTTP de clientes. Aún no hay facturas, costos ni PDF.
+- **Estado API de partida:** Auth, `requireAuth`/`requireRole`, usuarios, envelope de history (`HistoryEvent`) y convención `routes → controller → service → repository → validation → types` están listos. M1–M4 cubren clientes y catálogo de servicios (persistencia + HTTP). M5 es el motor decimal de ITBIS. M6 persiste el agregado Invoice/`FAC-` sin HTTP de draft. Aún no hay confirmación, costos de profit ni PDF.
 - **Ciclo por milestone:** plan → implementación → pruebas → revisión → commit. La integración web se hace **solo** cuando la función API cumple el criterio de la sección Integración API → Web.
 
 ## Cómo se cortan los milestones
@@ -251,9 +251,9 @@ Paralelo al inicio: M1 ∥ M3 ∥ M5 ∥ M6. M19 puede seguir a M2 sin esperar e
 | M1 | Customers persistencia + `Cliente contado` | completado | Ninguna |
 | M2 | Customers HTTP (CUST-001/002) | completado | **Listo para M19** |
 | M3 | Catálogo de servicios persistencia | completado | Ninguna |
-| M4 | Catálogo de servicios HTTP | pendiente | **Listo para M20** |
-| M5 | Motor de cálculo ITBIS / redondeo | pendiente | Ninguna |
-| M6 | Esquema Invoice / línea / secuencia `FAC-` | pendiente | Ninguna |
+| M4 | Catálogo de servicios HTTP | completado | **Listo para M20** |
+| M5 | Motor de cálculo ITBIS / redondeo | completado | Ninguna |
+| M6 | Esquema Invoice / línea / secuencia `FAC-` | completado | Ninguna |
 | M7 | Draft HTTP cáscara | pendiente | Swap POS en **M21** (con líneas) |
 | M8 | Draft línea GENERIC + rechazo ITEM/QTY | pendiente | Swap POS en **M21** |
 | M9 | Draft línea SERVICE | pendiente | Swap POS en **M21** |
@@ -866,12 +866,10 @@ El prototipo web no es dependencia de M1–M18. M19–M24 son swaps. M25 no impl
 
 ## Próximo paso
 
-**Milestone 1:** persistencia de customers. Partir de la convención y auth de Release 1; no reabrir Access/Users.
+**Milestone 7:** Draft HTTP cáscara (meta, moneda, cliente; sin líneas ni `FAC-`). Reutilizar customers HTTP, `satisfiesFiscalIdentity` y el agregado de M6. El motor de M5 se cablea al agregar líneas en M8.
 
-Antes de implementar, confirma `.env` con `DATABASE_URL` válido y:
+`GET /api/health/ready` debe responder `200` con `"database": "up"`. Aplicar `20260907180000_invoice_aggregate` en local si aún no está:
 
 ```bash
 npm run db:migrate:deploy
 ```
-
-`GET /api/health/ready` debe responder `200` con `"database": "up"`. Auth HTTP de R1 debe seguir verde. CI `R1 quality` ya está cerrado en GitHub.

@@ -15,3 +15,5 @@ export const createCatalogServiceSchema = z.strictObject({
 export const updateCatalogServiceSchema = createCatalogServiceSchema
   .partial()
   .refine((value) => Object.keys(value).length > 0, 'At least one field is required');
+
+export const catalogServiceIdSchema = z.strictObject({ id: z.uuid() });

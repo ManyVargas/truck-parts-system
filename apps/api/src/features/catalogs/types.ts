@@ -16,3 +16,18 @@ export type UpdateCatalogServiceRecord = {
   description?: string | null;
   active?: boolean;
 };
+
+export type PublicCatalogService = {
+  id: string;
+  name: string;
+  description: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CatalogServiceSnapshot = {
+  name: string;
+  description: string | null;
+  active: boolean;
+};

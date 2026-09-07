@@ -4,6 +4,7 @@ import express, { type Router } from 'express';
 import helmet from 'helmet';
 
 import { accessRouter } from './features/access/routes.js';
+import { catalogsRouter } from './features/catalogs/routes.js';
 import { customersRouter } from './features/customers/routes.js';
 import { healthRouter } from './features/health/routes.js';
 import { usersRouter } from './features/users/routes.js';
@@ -53,6 +54,7 @@ export function createApp(options: CreateAppOptions = {}): express.Application {
   app.use('/api/auth', accessRouter);
   app.use('/api/admin/users', usersRouter);
   app.use('/api/customers', customersRouter);
+  app.use('/api/catalogs/services', catalogsRouter);
 
   for (const extraRouter of options.extraRouters ?? []) {
     app.use(extraRouter.path, extraRouter.router);
