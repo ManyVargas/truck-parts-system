@@ -87,3 +87,41 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
 }
+
+model Customer {
+  id        String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  rnc       String?           @unique
+  address   String?
+  notes     String?
+  isDefault Boolean           @default(false)
+  createdAt DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime          @updatedAt @db.Timestamptz(3)
+  contacts  CustomerContact[]
+
+  @@index([name])
+}
+
+model CustomerContact {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerId String   @db.Uuid
+  name       String?
+  phone      String?
+  email      String?
+  title      String?
+  isPrimary  Boolean  @default(false)
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+model MechanicalService {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([active, name])
+}

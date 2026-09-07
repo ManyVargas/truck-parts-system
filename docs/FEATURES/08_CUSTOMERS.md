@@ -55,9 +55,9 @@ At invoice confirmation, copy the applicable customer data into an immutable inv
 ## Implementation checklist
 
 ### Backend
-- [x] Define customer record and generic-customer strategy. *(prototipo mock: C0 bloqueado; persistencia en sesión)*
-- [x] Implement create/search/edit. *(WM4 — `MockCustomerRepository`)*
-- [x] Implement fiscal identity validation hook used by Sales. *(prototipo mock — WM8 `setDraftMeta` / `confirmInvoice`)*
+- [x] Define customer record and generic-customer strategy. *(API R2 M1: `Customer` + `Cliente contado`; prototipo mock: C0 bloqueado)*
+- [x] Implement create/search/edit. *(API R2 M2: `/api/customers`; WM4 mock)*
+- [x] Implement fiscal identity validation hook used by Sales. *(API R2 M2: `satisfiesFiscalIdentity`; confirmación fiscal en M7/M12)*
 - [x] Implement immutable invoice customer snapshot at confirmation. *(prototipo mock — WM8)*
 - [x] Prevent completed snapshots from following later customer edits. *(prototipo mock — WM8)*
 

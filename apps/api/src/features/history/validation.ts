@@ -15,6 +15,27 @@ const profile = z
   })
   .strict();
 const base = { subjectType: z.literal('USER'), subjectId: z.uuid(), actor };
+const customerBase = { subjectType: z.literal('CUSTOMER'), subjectId: z.uuid(), actor };
+const customerSnapshot = z
+  .object({
+    name: z.string(),
+    rnc: z.string().nullable(),
+    address: z.string().nullable(),
+    notes: z.string().nullable(),
+    isDefault: z.boolean(),
+    contacts: z.array(
+      z
+        .object({
+          name: z.string().nullable(),
+          phone: z.string().nullable(),
+          email: z.string().nullable(),
+          title: z.string().nullable(),
+          isPrimary: z.boolean(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
 const recovery = { requestId: z.uuid(), before: z.literal('PENDING') };
 
 export const historyEventSchema = z
@@ -118,6 +139,20 @@ export const historyEventSchema = z
             reason: z.enum(['USER_DEACTIVATED', 'PASSWORD_CHANGED']),
           })
           .strict(),
+      })
+      .strict(),
+    z
+      .object({
+        ...customerBase,
+        eventType: z.literal('CUSTOMER_CREATED'),
+        payload: customerSnapshot,
+      })
+      .strict(),
+    z
+      .object({
+        ...customerBase,
+        eventType: z.literal('CUSTOMER_UPDATED'),
+        payload: z.object({ before: customerSnapshot, after: customerSnapshot }).strict(),
       })
       .strict(),
   ])

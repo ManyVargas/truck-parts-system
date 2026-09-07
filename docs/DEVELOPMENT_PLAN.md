@@ -105,7 +105,7 @@ This is a short gate, not another broad requirements exercise.
 
 # Release 1 — Application Foundation and Access (Local Development)
 
-**Status: ACTIVE.**
+**Status: COMPLETED.**
 
 ## Business outcome
 
@@ -183,6 +183,8 @@ Release 1 work must not be blocked waiting for these decisions, but Release 2 mu
 ---
 
 # Release 2 — Billing Core
+
+**Status: ACTIVE.**
 
 ## Business outcome
 
