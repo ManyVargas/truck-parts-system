@@ -1,0 +1,192 @@
+import { randomUUID } from 'node:crypto';
+
+import type { Role } from '@prisma/client';
+import request from 'supertest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+
+import { hashPassword } from '../../../src/features/access/password.js';
+import { CustomerRepository } from '../../../src/features/customers/repository.js';
+import { HistoryRepository } from '../../../src/features/history/repository.js';
+import {
+  DRAFT_ONLY_DISCARD_MESSAGE,
+  DRAFT_ONLY_EDIT_MESSAGE,
+  FISCAL_IDENTITY_REQUIRED_MESSAGE,
+} from '../../../src/features/sales/constants.js';
+import { SalesService } from '../../../src/features/sales/service.js';
+import { UserRepository } from '../../../src/features/users/repository.js';
+import { disconnectPrisma, prisma } from '../../../src/infrastructure/database/index.js';
+import { createTestApp } from '../../helpers/app.js';
+import { clearTestHistory } from '../../helpers/history.js';
+
+const app = createTestApp();
+const users = new UserRepository();
+const customers = new CustomerRepository();
+const service = new SalesService();
+const PASSWORD = 'personal-password';
+const CSRF = { 'X-Requested-With': 'XMLHttpRequest' };
+const ROOT = '/api/sales';
+
+async function fixture(role: Role = 'ADMINISTRATOR') {
+  const user = await users.create({
+    name: 'Fixture',
+    username: randomUUID(),
+    role,
+    passwordHash: await hashPassword(PASSWORD),
+  });
+  const agent = request.agent(app);
+  expect(
+    (await agent.post('/api/auth/login').send({ username: user.username, password: PASSWORD }))
+      .status,
+  ).toBe(200);
+  return { user, agent };
+}
+
+async function cleanup() {
+  vi.restoreAllMocks();
+  await clearTestHistory();
+  await prisma.invoice.deleteMany();
+  await prisma.customerContact.deleteMany({ where: { customer: { isDefault: false } } });
+  await prisma.customer.deleteMany({ where: { isDefault: false } });
+  await prisma.session.deleteMany();
+  await prisma.user.deleteMany();
+}
+
+describe('M7 draft HTTP shell (SALE-001 draft)', () => {
+  afterEach(cleanup);
+  afterAll(disconnectPrisma);
+
+  it('creates a draft with Cliente contado, DOP and non-fiscal defaults', async () => {
+    const seller = await fixture('SELLER');
+    const generic = await customers.findDefault();
+    expect(generic).not.toBeNull();
+
+    const created = await seller.agent.post(ROOT).set(CSRF).send({});
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({
+      status: 'DRAFT',
+      number: null,
+      currency: 'DOP',
+      fiscal: false,
+      customer: { id: generic!.id, isDefault: true },
+      lines: [],
+      totals: { gross: '0.00', base: '0.00', itbis: '0.00' },
+    });
+    expect(
+      await prisma.historyEvent.findMany({ where: { subjectId: created.body.id } }),
+    ).toEqual([
+      expect.objectContaining({
+        eventType: 'INVOICE_DRAFT_CREATED',
+        actorUserId: seller.user.id,
+        subjectType: 'INVOICE',
+      }),
+    ]);
+  });
+
+  it('lets Seller change currency and assign a fiscal customer', async () => {
+    const seller = await fixture('SELLER');
+    const identified = await customers.create({
+      name: 'Taller Norte',
+      rnc: '131123456',
+    });
+    const created = await seller.agent.post(ROOT).set(CSRF).send({ currency: 'USD' });
+    expect(created.status).toBe(201);
+    expect(created.body.currency).toBe('USD');
+
+    const patched = await seller.agent
+      .patch(`${ROOT}/${created.body.id}`)
+      .set(CSRF)
+      .send({ customerId: identified.id, fiscal: true });
+    expect(patched.status).toBe(200);
+    expect(patched.body).toMatchObject({
+      currency: 'USD',
+      fiscal: true,
+      customer: { id: identified.id, rnc: '131123456', isDefault: false },
+    });
+    expect(await prisma.historyEvent.count({ where: { subjectId: created.body.id } })).toBe(2);
+  });
+
+  it('rejects fiscal drafts that use Cliente contado and discards only drafts', async () => {
+    const admin = await fixture();
+    const generic = await customers.findDefault();
+    const conflict = await admin.agent.post(ROOT).set(CSRF).send({ fiscal: true });
+    expect(conflict.status).toBe(409);
+    expect(conflict.body.error.message).toBe(FISCAL_IDENTITY_REQUIRED_MESSAGE);
+
+    const draft = await admin.agent.post(ROOT).set(CSRF).send({});
+    const fiscalPatch = await admin.agent
+      .patch(`${ROOT}/${draft.body.id}`)
+      .set(CSRF)
+      .send({ fiscal: true });
+    expect(fiscalPatch.status).toBe(409);
+
+    const discarded = await admin.agent.delete(`${ROOT}/${draft.body.id}`).set(CSRF);
+    expect(discarded.status).toBe(204);
+    expect((await admin.agent.get(`${ROOT}/${draft.body.id}`)).status).toBe(404);
+    expect(
+      await prisma.historyEvent.findFirst({
+        where: { subjectId: draft.body.id, eventType: 'INVOICE_DRAFT_DISCARDED' },
+      }),
+    ).not.toBeNull();
+    expect(await prisma.invoice.findUnique({ where: { id: draft.body.id } })).toBeNull();
+
+    const completed = await prisma.invoice.create({
+      data: {
+        status: 'COMPLETED',
+        currency: 'DOP',
+        fiscal: false,
+        customerId: generic!.id,
+        number: `FAC-${randomUUID().slice(0, 6)}`,
+      },
+    });
+    const blocked = await admin.agent.delete(`${ROOT}/${completed.id}`).set(CSRF);
+    expect(blocked.status).toBe(409);
+    expect(blocked.body.error.message).toBe(DRAFT_ONLY_DISCARD_MESSAGE);
+    const blockedEdit = await admin.agent.patch(`${ROOT}/${completed.id}`).set(CSRF).send({
+      currency: 'USD',
+    });
+    expect(blockedEdit.status).toBe(409);
+    expect(blockedEdit.body.error.message).toBe(DRAFT_ONLY_EDIT_MESSAGE);
+  });
+
+  it('lists invoices with status filter and pagination', async () => {
+    const admin = await fixture();
+    const first = await admin.agent.post(ROOT).set(CSRF).send({ currency: 'DOP' });
+    const second = await admin.agent.post(ROOT).set(CSRF).send({ currency: 'USD' });
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+
+    const page = await admin.agent.get(`${ROOT}?page=1&pageSize=1&status=DRAFT`);
+    expect(page.status).toBe(200);
+    expect(page.body.total).toBe(2);
+    expect(page.body.page).toBe(1);
+    expect(page.body.pageSize).toBe(1);
+    expect(page.body.items).toHaveLength(1);
+    expect(page.body.items[0]).toMatchObject({ status: 'DRAFT', number: null });
+    expect(page.body.items[0]).not.toHaveProperty('lines');
+  });
+
+  it('returns 403 for Mechanic and 400 for unknown fields', async () => {
+    const mechanic = await fixture('MECHANIC');
+    const admin = await fixture();
+    expect((await mechanic.agent.get(ROOT)).status).toBe(403);
+    expect((await mechanic.agent.post(ROOT).set(CSRF).send({})).status).toBe(403);
+    const unknown = await admin.agent.post(ROOT).set(CSRF).send({ currency: 'DOP', extra: true });
+    expect(unknown.status).toBe(400);
+    expect(unknown.body.error.code).toBe('VALIDATION');
+  });
+
+  it('does not keep a draft when history append fails', async () => {
+    const admin = await fixture();
+    vi.spyOn(HistoryRepository.prototype, 'append').mockImplementation(async () => {
+      throw new Error('history-unavailable');
+    });
+    await expect(service.createDraft(admin.user.id, {})).rejects.toThrow('history-unavailable');
+    expect(await prisma.invoice.count()).toBe(0);
+    expect(await prisma.historyEvent.count()).toBe(0);
+  });
+
+  it('rejects writes without the CSRF header', async () => {
+    const admin = await fixture();
+    expect((await admin.agent.post(ROOT).send({})).status).toBe(403);
+  });
+});

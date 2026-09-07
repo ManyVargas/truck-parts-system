@@ -17,6 +17,16 @@ const profile = z
 const base = { subjectType: z.literal('USER'), subjectId: z.uuid(), actor };
 const customerBase = { subjectType: z.literal('CUSTOMER'), subjectId: z.uuid(), actor };
 const serviceBase = { subjectType: z.literal('MECHANICAL_SERVICE'), subjectId: z.uuid(), actor };
+const invoiceBase = { subjectType: z.literal('INVOICE'), subjectId: z.uuid(), actor };
+const invoiceDraftSnapshot = z
+  .object({
+    status: z.literal('DRAFT'),
+    number: z.null(),
+    currency: z.enum(['DOP', 'USD']),
+    fiscal: z.boolean(),
+    customerId: z.uuid(),
+  })
+  .strict();
 const serviceSnapshot = z
   .object({
     name: z.string(),
@@ -175,6 +185,27 @@ export const historyEventSchema = z
         ...serviceBase,
         eventType: z.literal('SERVICE_UPDATED'),
         payload: z.object({ before: serviceSnapshot, after: serviceSnapshot }).strict(),
+      })
+      .strict(),
+    z
+      .object({
+        ...invoiceBase,
+        eventType: z.literal('INVOICE_DRAFT_CREATED'),
+        payload: invoiceDraftSnapshot,
+      })
+      .strict(),
+    z
+      .object({
+        ...invoiceBase,
+        eventType: z.literal('INVOICE_DRAFT_UPDATED'),
+        payload: z.object({ before: invoiceDraftSnapshot, after: invoiceDraftSnapshot }).strict(),
+      })
+      .strict(),
+    z
+      .object({
+        ...invoiceBase,
+        eventType: z.literal('INVOICE_DRAFT_DISCARDED'),
+        payload: invoiceDraftSnapshot,
       })
       .strict(),
   ])

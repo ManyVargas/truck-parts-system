@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M6 completados)
+**Estado:** en curso (M1–M7 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 2, a medida que se completan.  
 No sustituye a `plan_release_2.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -208,18 +208,38 @@ HTTP de draft (M7). Confirmación / asignación `FAC-` (M12). Snapshot de client
 
 ## Milestone 7 — Draft HTTP cáscara
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-07
 
 ### Objetivo cumplido
 
+Crear, leer, listar, ajustar meta y descartar drafts HTTP, sin líneas ni `FAC-`.
+
 ### Qué se entregó
+
+- Módulo `sales` HTTP: routes → controller → service → repository.
+- `GET/POST /api/sales`, `GET/PATCH/DELETE /api/sales/:id`.
+- POST con `currency` / `fiscal` / `customerId` opcionales; default `Cliente contado` + `DOP` + no fiscal.
+- Listado de todas las facturas, filtro `status`, paginación `page` / `pageSize`.
+- Descarte = borrado físico de `DRAFT`; COMPLETED/CANCELLED → 409.
+- Seller/Administrator ALLOW; Mechanic 403; CSRF en escrituras.
+- History `INVOICE_DRAFT_CREATED` / `INVOICE_DRAFT_UPDATED` / `INVOICE_DRAFT_DISCARDED`.
+- `satisfiesFiscalIdentity`: fiscal + `Cliente contado` (u otro sin RNC/Cédula) → 409.
 
 ### Decisiones técnicas
 
+- Totales de GET se derivan con el motor de M5 (draft vacío = `0.00`); no hay columnas de totales.
+- Isolation Serializable + re-chequeo de rol, igual que customers.
+- DELETE físico; history queda con `subjectId` del draft eliminado.
+
 ### Validación
 
+- Integration: `apps/api/tests/integration/sales/http.test.ts`
+- Unit: `apps/api/tests/unit/sales/validation.test.ts`, `apps/api/tests/unit/sales/history-validation.test.ts`
+
 ### Fuera de alcance (intencional)
+
+`addLine` / líneas (M8–M11). Confirmación / `FAC-` (M12). Swap POS (M21).
 
 ---
 

@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import { accessRouter } from './features/access/routes.js';
 import { catalogsRouter } from './features/catalogs/routes.js';
 import { customersRouter } from './features/customers/routes.js';
+import { salesRouter } from './features/sales/routes.js';
 import { healthRouter } from './features/health/routes.js';
 import { usersRouter } from './features/users/routes.js';
 import {
@@ -55,6 +56,7 @@ export function createApp(options: CreateAppOptions = {}): express.Application {
   app.use('/api/admin/users', usersRouter);
   app.use('/api/customers', customersRouter);
   app.use('/api/catalogs/services', catalogsRouter);
+  app.use('/api/sales', salesRouter);
 
   for (const extraRouter of options.extraRouters ?? []) {
     app.use(extraRouter.path, extraRouter.router);
