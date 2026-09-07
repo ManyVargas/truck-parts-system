@@ -53,8 +53,12 @@ export function AppShell() {
     return null;
   }
 
-  const showInlineSidebar = navMode === 'full' || (navMode === 'compact' && !compactCollapsed);
-  const showMenuButton = navMode === 'drawer' || (navMode === 'compact' && compactCollapsed);
+  const showInlineSidebar =
+    !user.mustChangePassword &&
+    (navMode === 'full' || (navMode === 'compact' && !compactCollapsed));
+  const showMenuButton =
+    !user.mustChangePassword &&
+    (navMode === 'drawer' || (navMode === 'compact' && compactCollapsed));
   const menuExpanded = navMode === 'drawer' ? drawerOpen : !compactCollapsed;
 
   function closeOverlayNav() {
@@ -125,7 +129,7 @@ export function AppShell() {
             {capabilities.prototypeControls ? `Prototipo ${APP_NAME}` : APP_NAME}
           </p>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <DemoControls />
+            {!user.mustChangePassword && <DemoControls />}
             <UserMenu user={user} onLogout={logout} />
           </div>
         </header>
@@ -137,7 +141,10 @@ export function AppShell() {
         </main>
       </div>
 
-      <NavDrawer open={navMode === 'drawer' && drawerOpen} onClose={closeOverlayNav}>
+      <NavDrawer
+        open={!user.mustChangePassword && navMode === 'drawer' && drawerOpen}
+        onClose={closeOverlayNav}
+      >
         <CommercialSidebar
           role={user.role}
           density="full"

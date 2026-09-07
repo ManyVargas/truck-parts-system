@@ -4,7 +4,7 @@ import type { PaymentMethod } from '../../api/contracts/entities';
 import type { ConfirmInvoicePayment, PosDraftView } from '../../api/contracts/sales';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
 import { UX_TERMS } from '../../shared/copy/glossary';
-import { Button, Field, Info, Input, Modal, Select, money } from '../../shared/ui';
+import { Button, Field, GuardedModal, Info, Input, Select, money, isFormDirty } from '../../shared/ui';
 import { PAYMENT_METHOD_LABELS } from './labels';
 
 const METHODS: PaymentMethod[] = ['CASH', 'CARD', 'TRANSFER', 'CHECK'];
@@ -34,14 +34,23 @@ export function ConfirmSaleModal({
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('CASH');
   const [reference, setReference] = useState('');
+  const fields = { includeInitialPayment, amount, method, reference };
+  const [baseline, setBaseline] = useState(fields);
   const submitLock = useRef(false);
 
   useEffect(() => {
     if (open) {
-      setIncludeInitialPayment(false);
-      setAmount('');
-      setMethod('CASH');
-      setReference('');
+      const next = {
+        includeInitialPayment: false,
+        amount: '',
+        method: 'CASH' as PaymentMethod,
+        reference: '',
+      };
+      setIncludeInitialPayment(next.includeInitialPayment);
+      setAmount(next.amount);
+      setMethod(next.method);
+      setReference(next.reference);
+      setBaseline(next);
       submitLock.current = false;
     }
   }, [open]);
@@ -72,7 +81,14 @@ export function ConfirmSaleModal({
   }
 
   return (
-    <Modal open={open} title="Confirmar venta" onClose={onClose}>
+    <GuardedModal
+      open={open}
+      title="Confirmar venta"
+      onClose={onClose}
+      hasUnsavedChanges={isFormDirty(fields, baseline)}
+      isBusy={isConfirming}
+    >
+      {({ requestClose }) => (
       <div className="flex flex-col gap-4 text-sm text-navy">
         {error && (
           <Info tone="error" title="No se pudo confirmar">
@@ -160,7 +176,7 @@ export function ConfirmSaleModal({
         )}
 
         <div className="flex flex-wrap justify-end gap-2">
-          <Button variant="secondary" onClick={onClose} disabled={isConfirming}>
+          <Button variant="secondary" onClick={requestClose} disabled={isConfirming}>
             Volver
           </Button>
           <Button
@@ -172,6 +188,7 @@ export function ConfirmSaleModal({
           </Button>
         </div>
       </div>
-    </Modal>
+      )}
+    </GuardedModal>
   );
 }

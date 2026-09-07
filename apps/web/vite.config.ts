@@ -13,6 +13,13 @@ export default defineConfig(({ mode }) => {
     envDir,
     plugins: [react(), tailwindcss()],
     test: {
+      // Prototype regressions must not depend on the developer's selected HTTP mode.
+      // HTTP integration tests explicitly override this baseline with vi.stubEnv.
+      env: {
+        VITE_USE_MOCK_API: 'true',
+        VITE_CAPABILITIES_PRESET: 'prototype',
+        VITE_ENABLE_DEMO_CONTROLS: 'true',
+      },
       environment: 'node',
       include: ['tests/**/*.test.{ts,tsx}'],
       pool: 'forks',

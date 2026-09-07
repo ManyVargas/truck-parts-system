@@ -20,6 +20,13 @@ function findUserByUsername(username: string) {
 
 /** Mock auth — swap for HttpAuthRepository when VITE_USE_MOCK_API=false (WM12 / API M10). */
 export class MockAuthRepository implements AuthRepository {
+  async requestRecovery(_username: string) {
+    return err({
+      code: 'INTERNAL',
+      message: 'La recuperación de acceso está disponible con la API real.',
+    });
+  }
+
   async login(username: string, password: string) {
     const user = findUserByUsername(username);
 
@@ -28,7 +35,10 @@ export class MockAuthRepository implements AuthRepository {
     }
 
     if (!user.active) {
-      return err({ code: 'FORBIDDEN', message: 'Esta cuenta está desactivada. Contacte al administrador.' });
+      return err({
+        code: 'FORBIDDEN',
+        message: 'Esta cuenta está desactivada. Contacte al administrador.',
+      });
     }
 
     if (user.password !== password) {

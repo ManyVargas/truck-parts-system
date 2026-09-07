@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import type { Customer } from '../../api/contracts/entities';
 import type { SaveCustomerContactInput, SaveCustomerInput } from '../../api/contracts/customers';
-import { Button, Field, Info, Input, Modal, Textarea } from '../../shared/ui';
+import { Button, Field, GuardedModal, Info, Input, Textarea, isFormDirty } from '../../shared/ui';
 
 export type CustomerFormModalProps = {
   open: boolean;
@@ -59,6 +59,7 @@ export function CustomerFormModal({
   onSubmit,
 }: CustomerFormModalProps) {
   const [fields, setFields] = useState<FormFields>(EMPTY_FIELDS);
+  const [baseline, setBaseline] = useState<FormFields>(EMPTY_FIELDS);
   const nextKeyRef = useRef(0);
   const isEdit = customer != null;
 
@@ -68,29 +69,28 @@ export function CustomerFormModal({
     }
 
     nextKeyRef.current = 0;
-    if (!customer) {
-      setFields(EMPTY_FIELDS);
-      return;
-    }
-
-    setFields({
-      name: customer.name,
-      rnc: customer.rnc ?? '',
-      address: customer.address ?? '',
-      notes: customer.notes ?? '',
-      contacts: customer.contacts.map((contact) => {
-        nextKeyRef.current += 1;
-        return {
-          key: contact.id || `contact-draft-${nextKeyRef.current}`,
-          id: contact.id,
-          name: contact.name ?? '',
-          phone: contact.phone ?? '',
-          email: contact.email ?? '',
-          title: contact.title ?? '',
-          isPrimary: contact.isPrimary === true,
-        };
-      }),
-    });
+    const next: FormFields = customer
+      ? {
+          name: customer.name,
+          rnc: customer.rnc ?? '',
+          address: customer.address ?? '',
+          notes: customer.notes ?? '',
+          contacts: customer.contacts.map((contact) => {
+            nextKeyRef.current += 1;
+            return {
+              key: contact.id || `contact-draft-${nextKeyRef.current}`,
+              id: contact.id,
+              name: contact.name ?? '',
+              phone: contact.phone ?? '',
+              email: contact.email ?? '',
+              title: contact.title ?? '',
+              isPrimary: contact.isPrimary === true,
+            };
+          }),
+        }
+      : EMPTY_FIELDS;
+    setFields(next);
+    setBaseline(next);
   }, [open, customer]);
 
   function addContact() {
@@ -146,7 +146,14 @@ export function CustomerFormModal({
   }
 
   return (
-    <Modal open={open} title={isEdit ? 'Editar cliente' : 'Nuevo cliente'} onClose={onClose}>
+    <GuardedModal
+      open={open}
+      title={isEdit ? 'Editar cliente' : 'Nuevo cliente'}
+      onClose={onClose}
+      hasUnsavedChanges={isFormDirty(fields, baseline)}
+      isBusy={isSaving}
+    >
+      {({ requestClose }) => (
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <Info tone="error" title="No se pudo guardar">
@@ -262,7 +269,7 @@ export function CustomerFormModal({
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
+          <Button type="button" variant="secondary" onClick={requestClose} disabled={isSaving}>
             Cancelar
           </Button>
           <Button type="submit" disabled={isSaving}>
@@ -270,6 +277,7 @@ export function CustomerFormModal({
           </Button>
         </div>
       </form>
-    </Modal>
+      )}
+    </GuardedModal>
   );
 }

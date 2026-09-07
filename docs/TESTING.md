@@ -1,21 +1,46 @@
 # Verificación de pruebas
 
-## Resultado de la verificación
+## Estado del inventario
 
-Última ejecución: **2 de septiembre de 2026**, mediante `npm run test:unit`, `npm run test:integration` y `npm run test:web:component`.
+La tabla y los conteos de **679 pruebas** de abajo son el **cierre local de Milestone 9** (5 de septiembre de 2026). No son el inventario completo de la rama actual.
 
-| Aplicación            | Tipo        | Archivos | Pruebas declaradas | Resultado obtenido |
-| --------------------- | ----------- | -------: | -----------------: | ------------------ |
-| Frontend              | Unitarias   |       30 |                256 | 256 aprobadas      |
-| Frontend              | Integración |       10 |                 68 | 68 aprobadas       |
-| Frontend              | Componentes |       27 |                119 | 119 aprobadas      |
-| **Subtotal frontend** |             |   **67** |            **443** | **443**            |
-| Backend               | Unitarias   |        2 |                 11 | 11 aprobadas       |
-| Backend               | Integración |        1 |                  2 | 2 aprobadas        |
-| **Subtotal backend**  |             |    **3** |             **13** | **13**             |
-| **Total**             |             |   **70** |            **456** | **456**            |
+Tras M9, Release 1 añadió cobertura HTTP de Access/Users (M10–M11), trust proxy y flujos de UI contra la API. Ver [`done_api/release-1.md`](done_api/release-1.md) para el cierre funcional posterior.
 
-> Las dos integraciones del backend usan `describe.skipIf(!integrationDatabaseReady)`. En esta ejecución PostgreSQL estuvo disponible y ambas fueron aprobadas; en un entorno sin base de pruebas se reportan como omitidas.
+### Ampliaciones posteriores a M9 (no incluidas en los 679)
+
+| Área | Archivos | Qué cubren ahora |
+|---|---|---|
+| Web HTTP auth | `unit/api/http-auth.test.ts` (varios casos, no un único arranque) | Login/sesión/perfil/logout/recuperación, CSRF `X-Requested-With`, proyección Mechanic en `/session`, errores estructurados |
+| Web HTTP users | `unit/api/http-users.test.ts`, `component/users/HttpUsersFlow.test.tsx` | Administración y recuperación contra el cliente HTTP |
+| Web mock users | `unit/mocks/services/users.test.ts` | Alta **sin** contraseña del administrador; inicial `solocamiones`. Las cuentas seed conservan `demo1234` |
+| Web capabilities / mock flag | `unit/shared/config/capabilities.test.ts`, `unit/api/http-client.test.ts` | `VITE_USE_MOCK_API=true` activa el prototipo; unset/`false` es HTTP Release 1 |
+| Web UX | `component/shared/GuardedModal.test.tsx` | Modal protegido en flujos HTTP |
+| API trust proxy | `unit/http/trust-proxy.test.ts` | `TRUST_PROXY` explícito; `X-Forwarded-For` ignorado si está desactivado |
+
+## Resultado de la verificación (M9)
+
+Última ejecución inventariada aquí: **5 de septiembre de 2026**, durante el cierre local de Milestone 9, incluidos gestión de usuarios, recuperación de contraseñas e historial transaccional de cuentas.
+
+Se ejecutaron `npm run test:web` (invoca `npm run test -w @truck-parts/web`), `npm run test:unit -w @truck-parts/api` y `npm run test:integration -w @truck-parts/api`. Los conteos de cierre proceden de los resultados de Vitest e incluyen cada caso expandido de `it.each`; el desglose web conserva el inventario previo, sin cambios en sus pruebas. Todos los archivos de pruebas encontrados están inventariados abajo; las rutas son relativas a `apps/web/tests` o `apps/api/tests`, según la aplicación.
+
+| Aplicación            | Tipo        | Archivos | Pruebas | Resultado obtenido |
+| --------------------- | ----------- | -------: | ------: | ------------------ |
+| Frontend              | Unitarias   |       30 |     256 | 256 aprobadas      |
+| Frontend              | Integración |       10 |      68 | 68 aprobadas       |
+| Frontend              | Componentes |       27 |     119 | 119 aprobadas      |
+| **Subtotal frontend** |             |   **67** | **443** | **443 aprobadas**  |
+| Backend               | Unitarias   |       20 |     139 | 139 aprobadas      |
+| Backend               | Integración |       10 |      97 | 97 aprobadas       |
+| **Subtotal backend**  |             |   **30** | **236** | **236 aprobadas**  |
+| **Total**             |             |   **97** | **679** | **679 aprobadas**  |
+
+Las ejecuciones finales no tuvieron pruebas fallidas, omitidas ni pendientes. La primera ejecución web tuvo un fallo en `component/sales/PosPage.test.tsx`, caso `discards a draft with lines via undo toast instead of a confirm dialog`: el elemento `Alternador 24V` seguía presente al comprobar su eliminación. El archivo pasó aislado (**12 pruebas**) y la repetición completa de web pasó (**443 pruebas**). Se registra como intermitencia observada; M9 no modificó ni corrigió código web.
+
+También aprobaron `npm run typecheck` (código de ambas aplicaciones y pruebas de API), `npm run lint` y `npm run build`. Persisten cuatro advertencias preexistentes de React Fast Refresh y el aviso de tamaño del bundle web. `npm run typecheck:test -w @truck-parts/web` había aprobado en la verificación anterior; no se volvió a ejecutar durante M9.
+
+Evidencia del cierre: [`plans_api/milestone-9-verification.md`](plans_api/milestone-9-verification.md).
+
+> La integración de API exige PostgreSQL accesible y `DATABASE_URL_TEST` aislada. Su preparación reinicia la base de pruebas y aplica las migraciones; si falta la configuración o la base no responde, la suite falla en lugar de omitir casos.
 
 ## Frontend
 
@@ -120,27 +145,69 @@ Renderizan React en jsdom con Testing Library y validan comportamiento visible. 
 
 ### Pruebas unitarias
 
-Validan el repositorio y el servicio de salud con dependencias simuladas. Hay **11 pruebas en 2 archivos**.
+Validan salud, errores, configuración de pruebas, credenciales, sesiones, autorización, proyecciones y validación de usuarios e historial con dependencias aisladas. Hay **139 pruebas en 20 archivos**.
 
-| Archivo                          | Cantidad | Pruebas realizadas                                                                                                                                   | Resultado esperado                                                                                                                                                                                                            |
-| -------------------------------- | -------: | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `unit/health/repository.test.ts` |        6 | Artefacto de migraciones ausente/vacío; migraciones pendientes; migraciones al día; metadatos ilegibles; `SELECT 1` exitoso; PostgreSQL inaccesible. | Devuelve respectivamente `unavailable` sin consultar la BD, `pending`, `up_to_date`, `unavailable`, `true` y `false`.                                                                                                         |
-| `unit/health/service.test.ts`    |        5 | Liveness; readiness con BD caída; metadatos no verificables; migraciones pendientes; servicio listo.                                                 | Liveness devuelve `{ status: 'ok' }` sin tocar BD; readiness devuelve error con `database: down`, error con `migrations: unavailable`, error con `migrations: pending` o éxito con `database: up` y `migrations: up_to_date`. |
+| Archivo                                        | Cantidad | Pruebas realizadas                                                                                                                                                     | Resultado esperado                                                                                                                                        |
+| ---------------------------------------------- | -------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `unit/health/repository.test.ts`               |        6 | Migraciones ausentes, pendientes, aplicadas o ilegibles; consulta de disponibilidad de PostgreSQL.                                                                     | Estados `unavailable`, `pending` y `up_to_date` correctos; disponibilidad booleana.                                                                       |
+| `unit/health/service.test.ts`                  |        5 | Liveness; BD caída; metadatos no verificables; migraciones pendientes; servicio listo.                                                                                 | Liveness no consulta BD; readiness refleja el estado de BD y migraciones.                                                                                 |
+| `unit/health/routes.test.ts`                   |        4 | Rutas HTTP con repositorio simulado: liveness y readiness con BD caída o migraciones pendientes/no disponibles.                                                        | Liveness devuelve 200 sin depender de BD; readiness devuelve 503 cuando no está listo.                                                                    |
+| `unit/infrastructure/map-error.test.ts`        |       15 | Zod, JSON malformado, errores 413/415 de body-parser, errores de aplicación incluido 429, errores internos.                                                            | Envelope y estado correctos; solo los errores 500 incluyen `errorId` y mensaje genérico.                                                                  |
+| `unit/infrastructure/prisma-config.test.ts`    |        1 | Carga de configuración y validación del esquema con el override de dependencias de Prisma.                                                                             | El CLI de Prisma carga la configuración y valida el esquema.                                                                                              |
+| `unit/infrastructure/test-environment.test.ts` |       13 | Selección de BD de pruebas; entorno de CI; URL ausente, inválida o no aislada; ocultación de credenciales.                                                             | Elimina el fallback de desarrollo y rechaza configuraciones inseguras sin exponer secretos.                                                               |
+| `unit/access/constants.test.ts`                |        1 | Opciones de cookie según entorno.                                                                                                                                      | `SameSite` explícito y `Secure` solo en producción HTTPS.                                                                                                 |
+| `unit/access/password.test.ts`                 |       13 | Longitud y tipo de contraseña, espacios y Unicode; costos Argon2 y sales independientes; hash almacenado malformado.                                                   | Conserva la contraseña exacta, rechaza entradas inválidas y trata hashes corruptos como error interno seguro.                                             |
+| `unit/access/session-token.test.ts`            |        2 | Generación de tokens y hash SHA-256.                                                                                                                                   | Tokens opacos únicos con longitud configurada y hash hexadecimal estable.                                                                                 |
+| `unit/access/session-cookie.test.ts`           |        2 | Lectura de `sid` entre otras cookies; escritura y borrado.                                                                                                             | Lee la cookie correcta y usa `HttpOnly` y `SameSite=lax`.                                                                                                 |
+| `unit/access/validation.test.ts`               |        7 | Login, normalización de username, perfil propio y cambio de contraseña.                                                                                                | Conserva contraseña exacta; rechaza campos administrativos y exige contraseña actual/nueva juntas con longitud válida.                                    |
+| `unit/access/projection.test.ts`               |        5 | Identidad de sesión y perfil propio; proyecciones por rol.                                                                                                             | Nunca expone `passwordHash`; Mechanic recibe identidad sin contacto en sesión; Seller/Administrator incluyen contacto propio; fechas ISO.                 |
+| `unit/access/require-auth.test.ts`             |        2 | Resolución de sesión y cookie ausente.                                                                                                                                 | Adjunta autenticación sin hash de contraseña o responde 401.                                                                                              |
+| `unit/access/require-csrf.test.ts`             |        1 | Presencia y ausencia del header CSRF configurado.                                                                                                                      | Acepta el valor requerido y rechaza su ausencia con 403.                                                                                                  |
+| `unit/access/require-role.test.ts`             |        4 | Sesión ausente, rol insuficiente y roles permitidos.                                                                                                                   | 401 sin sesión, 403 sin permisos y acceso para roles autorizados.                                                                                         |
+| `unit/access/service.test.ts`                  |       10 | Login y rotación; credenciales inválidas; logout; sesiones ausentes/caducadas; propietario ausente/inactivo; perfil y contraseña.                                      | Emite sesiones válidas, rechaza accesos inválidos, revoca cuando corresponde y valida la contraseña actual antes de reemplazarla.                         |
+| `unit/users/validation.test.ts`                |       20 | Normalización de identidad/contacto; tres roles; contacto opcional; entradas inválidas y campos reservados.                                                            | Valida alta con contraseña para bootstrap, conserva contraseña exacta y rechaza inyección de campos de persistencia.                                      |
+| `unit/users/bootstrap-cli.test.ts`             |        9 | Entrada oculta y confirmación; BD poblada; contraseñas distintas; cancelación/Ctrl+C; errores; entrada no interactiva.                                                 | No filtra credenciales, evita mutaciones inválidas, restaura la entrada visible y desconecta la BD.                                                       |
+| `unit/users/management.test.ts`                |       10 | Alta administrativa separada de bootstrap; inyección de credenciales; parches; paginación; verificación de identidad; políticas de administrador y cambio obligatorio. | Rechaza campos reservados/parches vacíos, normaliza contacto, limita páginas y exige actor autorizado y verificación explícita para aprobar recuperación. |
+| `unit/users/history-validation.test.ts` | 9 | Evento de contraseña con metadata permitida; rechazo de seis campos de credenciales en envelope/payload; actores, sujetos y categorías incompatibles; hash anidado en perfil antes/después. | Acepta solo el contrato tipado; rechaza propiedades inesperadas y secretos, incluso anidados, y exige atribución válida por evento. |
 
 ### Pruebas de integración
 
-Ejercitan rutas HTTP reales con Supertest y PostgreSQL de pruebas migrado. Hay **2 pruebas en 1 archivo**.
+Ejercitan persistencia y transacciones contra PostgreSQL y rutas HTTP con Supertest. Hay **97 pruebas en 10 archivos**. Los archivos se ejecutan secuencialmente (`fileParallelism: false`) porque comparten la base de pruebas.
 
-| Archivo                             | Cantidad | Pruebas realizadas                                                                        | Resultado esperado                                                                                                        |
-| ----------------------------------- | -------: | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `integration/health/routes.test.ts` |        2 | `GET /api/health/live`; `GET /api/health/ready` con BD accesible y migraciones aplicadas. | `/live` responde 200 con `{ status: 'ok' }`; `/ready` responde 200 con estado `ok`, base `up` y migraciones `up_to_date`. |
+| Archivo                                         | Cantidad | Pruebas realizadas                                                                                                                                                                                                                                    | Resultado esperado                                                                                                                                                                                                                                                                     |
+| ----------------------------------------------- | -------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `integration/health/routes.test.ts`             |        2 | `GET /api/health/live` y `GET /api/health/ready` con BD migrada.                                                                                                                                                                                      | 200; readiness informa base `up` y migraciones `up_to_date`.                                                                                                                                                                                                                           |
+| `integration/http/error-contract.test.ts`       |       14 | Body/query/params, campos desconocidos, path capturado, JSON grande, charset inválido, error interno, 429/409/404, request ID y Helmet en router de pruebas.                                                                                          | Contrato 400/404/409/413/415/429/500 consistente; `errorId` solo en 500; conserva path y headers esperados.                                                                                                                                                                            |
+| `integration/access/schema.test.ts`             |       14 | Roles, UUID y valores predeterminados; username normalizado y reservado tras desactivar; rol inválido; sesiones y claves foráneas.                                                                                                                    | Restricciones de BD preservan identidad, unicidad de username/token hash e integridad referencial.                                                                                                                                                                                     |
+| `integration/access/repository.test.ts`         |        7 | Persistencia y búsqueda de sesiones por hash; expiración; duplicados; revocación individual/global; commit y rollback.                                                                                                                                | Persiste únicamente el hash recibido; revoca el alcance correcto y respeta transacciones.                                                                                                                                                                                              |
+| `integration/access/auth-http.test.ts`          |        9 | Login válido e inválido; cookie `sid`; sesión/perfil; logout; edición de contacto/contraseña; CSRF; rate limit.                                                                                                                                       | Credenciales inválidas producen respuesta genérica; no expone hashes; protege mutaciones y limita intentos con 429.                                                                                                                                                                    |
+| `integration/access/authorization-http.test.ts` |        6 | Ruta de prueba administrativa con y sin sesión y distintos roles; sesión y perfil por rol.                                                                                                                                                            | 401/403 según corresponda; administrador autorizado; sesión Mechanic sin contacto, con acceso a su propio perfil.                                                                                                                                                                      |
+| `integration/users/repository.test.ts`          |        9 | Alta/lectura; identidad ausente; desactivar/reactivar; unicidad; perfil propio; campos omitidos; commit/rollback.                                                                                                                                     | Conserva identidad y credenciales, modifica solo campos solicitados y revierte operaciones abortadas.                                                                                                                                                                                  |
+| `integration/users/bootstrap.test.ts`           |        9 | Primer administrador; BD poblada con usuario activo/inactivo; entradas inválidas; dos altas concurrentes.                                                                                                                                             | Crea un único administrador activo con hash verificable y sin sesión; rechaza BD poblada e inputs inválidos sin mutación.                                                                                                                                                              |
+| `integration/users/management-http.test.ts`     |       17 | Alta y cambio obligatorio para los tres roles; cambio voluntario; autenticación/rol/CSRF; inyección y duplicados; listado/edición; protección del último administrador; recuperación pública, aprobación/rechazo, caducidad, concurrencia y rollback. | Credenciales temporales se entregan una sola vez; restricciones persisten hasta cambiar contraseña; revoca sesiones; recuperación genérica, deduplicada y limitada; exige otro administrador y verificación de identidad; caduca a 24 h; carreras y fallos no dejan cambios parciales. |
+| `integration/users/history.test.ts` | 10 | Ciclo de usuario y perfil; actores desactivados; protección UPDATE/DELETE y FK; comandos rechazados; cuatro casos de rollback por fallo del historial; solicitudes/aprobación/cambio de contraseña concurrentes; rechazo, vencimiento y cancelaciones; bootstrap concurrente. | Eventos atómicos, sin duplicados por reintento ni eventos por no-op; conserva antes/después y actor; revierte cuenta, sesiones, solicitudes y eventos ante fallo; excluye credenciales; diferencia USER, ANONYMOUS y SYSTEM. |
 
-En esta verificación estas dos pruebas **se ejecutaron y aprobaron**. Si PostgreSQL no responde, `describe.skipIf(!integrationDatabaseReady)` las omite. Para forzarlas: configurar la URL de `apps/api/tests/helpers/database.ts` y ejecutar `npm run test:integration -w @truck-parts/api`.
+### Cobertura añadida en Milestone 9
+
+- **9 unitarias nuevas:** validación estricta del envelope y payload, incluyendo `password`, `passwordHash`, `currentPassword`, `temporaryPassword`, `tokenHash` y `sessionToken`.
+- **10 integraciones nuevas:** todos los eventos de cuenta, perfil, contraseña y recuperación; historial previo intacto tras desactivar al actor; restricciones PostgreSQL de actor/FK e inmutabilidad; operaciones rechazadas sin evento de éxito; rollback de creación, desactivación, aprobación y cambio propio de contraseña incluso si el evento ya se había insertado; concurrencia de solicitud, aprobación, cambio de contraseña y bootstrap.
+- **Aserciones adicionales en los 17 casos HTTP de M8**, sin aumentar su conteo: creación administrativa para los tres roles produce `USER_CREATED`; desactivación produce su evento; rechazo por autorización no escribe historial; sustituir una solicitud vencida produce `USER_RECOVERY_EXPIRED` con actor SYSTEM.
+- El perfil conserva name, username, phone y email anteriores/nuevos. Contraseña obligatoria/voluntaria solo conserva metadata; la contraseña temporal de recuperación no aparece en los eventos. Cancelaciones distinguen cambio propio de contraseña y desactivación administrativa.
+- Las solicitudes públicas se atribuyen a ANONYMOUS; vencimientos y bootstrap a SYSTEM, con origen `BOOTSTRAP_CLI` para este último. La resolución administrativa y el cambio propio conservan la FK de su actor autenticado.
+- La suite demuestra protección frente a UPDATE/DELETE ordinarios; no afirma protección contra DDL o TRUNCATE ejecutados por un administrador de base de datos. No se incorporó una pantalla ni endpoint público de historial.
+
+### Preparación de PostgreSQL para integración
+
+- Configurar `DATABASE_URL_TEST` en el entorno, `.env` o `.env.test` de la raíz, apuntando a una base exclusiva de pruebas. Debe tener un nombre diferente de `DATABASE_URL`; cambiar host, usuario o esquema no prueba aislamiento.
+- `tests/helpers/environment.ts` carga `.env` y luego `.env.test` sin sobrescribir valores ya definidos, elimina el fallback de desarrollo y asigna a Prisma la URL de pruebas validada.
+- `tests/integration/setup.ts` comprueba conectividad y ejecuta `prisma migrate reset --force --skip-generate` sobre esa base antes de correr la suite. Esto elimina sus datos y aplica las migraciones del proyecto.
+- En M9 se reaplicaron las **cuatro migraciones**, incluida `20260905010000_history`. Las suites que generan historial limpian sus fixtures mediante `tests/helpers/history.ts`: verifica `NODE_ENV=test`, coincidencia de `DATABASE_URL` con `DATABASE_URL_TEST` y el nombre efectivo mediante `current_database()` antes de TRUNCATE sobre `HistoryEvent`. No desactiva el trigger de inmutabilidad y no forma parte de la aplicación.
+- Si falta la URL, no es válida/no está aislada o PostgreSQL no responde, la ejecución falla. Ya no se usa `describe.skipIf` para health. Aunque el router del contrato de errores no consulta PostgreSQL, el comando de integración completo exige la preparación global de BD.
 
 ## Comandos
 
 ```bash
-# Suite completa
+# Suite completa (API: unitarias + integración; web: unitarias + integración + componentes)
 npm test
 
 # Unitarias de backend y frontend
@@ -152,14 +219,21 @@ npm run test:integration
 # Componentes React
 npm run test:web:component
 
+# Tipos de ambas aplicaciones y de las pruebas API
+npm run typecheck
+
 # Tipos de la suite web
 npm run typecheck:test -w @truck-parts/web
+
+# Casos específicos de M9 (la integración prepara y reinicia DATABASE_URL_TEST)
+npm exec -w @truck-parts/api -- vitest run tests/unit/users/history-validation.test.ts
+npm run test:integration -w @truck-parts/api -- tests/integration/users/history.test.ts
 ```
 
 ## Alcance actual
 
 - No hay pruebas E2E de navegador; las pruebas React actuales son de componentes en jsdom.
 - La integración del frontend usa repositorios mock y memoria; no sustituye pruebas transaccionales contra PostgreSQL.
-- Las rutas reales del backend solo tienen cobertura de salud (`live` y `ready`).
+- El backend cubre salud, acceso/sesiones, perfil propio, autorización, bootstrap, administración de usuarios, recuperación de contraseñas e historial append-only de cuentas, con persistencia, concurrencia y rollback en PostgreSQL. El contrato transversal de errores se prueba con un router de tests; las suites HTTP de acceso y usuarios también validan endpoints de producto. El historial se verifica mediante servicios, PostgreSQL y aserciones sobre operaciones HTTP existentes. Estos resultados no implican integración real de inventario, ventas, POS u OT en el backend.
 - Ventas (listado, detalle, pagos, cancelación, PDF), POS (borrador, ITBIS fiscal, confirmación `FAC-`, pago inicial, undo de líneas), OT de escritorio (WM9), app Mecánico (WM10) y catálogos/usuarios admin (WM11) tienen suites unitarias, de repositorio y de componente. Un esperado nuevo en categoría de ensamblaje rellena NA provisional en unidades no vendidas y avisa al administrador. Los atributos de categoría se definen en catálogo y se capturan como campos generados en el alta y la edición. Rentabilidad incluye reintento FX y registro admin de ganancia bruta cuando el costo es desconocido. Las capabilities de UX-0 siguen los releases del Development Plan (`release-1` … `release-8` y `prototype`). Las pruebas de componente usan el preset `prototype` por defecto para no heredar `VITE_CAPABILITIES_PRESET` del `.env` local. UX-1 cubre Modal/Field/Tabs con teclado, Button `busy` y Skeleton anunciado. UX-2 agrupa el sidebar comercial por intención de trabajo y compacta/overlay según breakpoint. UX-3 aplica progressive disclosure al registro de inventario (INV-002). UX-4 jerarquiza estados de inventario y unifica tablas (click de fila al detalle más enlace para teclado; columnas operativas separadas). UX-5 endurece el POS. UX-6 endurece la app del mecánico (targets, evidencia con progreso/reintento, historial completado, copy de red). El listado de inventario y ventas lee filtros operativos desde la URL (p. ej. KPIs del escritorio). Siguen fuera: carga real de fotos.
 - Cada cambio de negocio debe agregar una prueba en el nivel más bajo que demuestre la regla y una integración cuando intervengan autorización o estado compartido.

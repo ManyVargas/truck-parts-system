@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,5 +7,83 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Milestone 2 baseline: no domain models yet.
-// User/Session models arrive in Milestone 5.
+enum Role {
+  ADMINISTRATOR
+  SELLER
+  MECHANIC
+}
+
+model User {
+  id                 String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String
+  // The migration also enforces lowercase, nonempty usernames without outer whitespace.
+  username           String                    @unique
+  phone              String?
+  email              String?
+  role               Role
+  active             Boolean                   @default(true)
+  passwordHash       String
+  mustChangePassword Boolean                   @default(false)
+  createdAt          DateTime                  @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime                  @updatedAt @db.Timestamptz(3)
+  sessions           Session[]
+  recoveryRequests   PasswordRecoveryRequest[] @relation("RecoverySubject")
+  resolvedRecoveries PasswordRecoveryRequest[] @relation("RecoveryResolver")
+  historyEvents      HistoryEvent[]
+}
+
+enum HistoryActorType {
+  USER
+  ANONYMOUS
+  SYSTEM
+}
+
+model HistoryEvent {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  occurredAt  DateTime         @default(now()) @db.Timestamptz(3)
+  actorType   HistoryActorType
+  actorUserId String?          @db.Uuid
+  eventType   String
+  subjectType String
+  subjectId   String           @db.Uuid
+  payload     Json             @db.JsonB
+  actor       User?            @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([subjectType, subjectId, occurredAt, id])
+  @@index([actorUserId, occurredAt])
+}
+
+enum RecoveryStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+model PasswordRecoveryRequest {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String         @db.Uuid
+  status           RecoveryStatus @default(PENDING)
+  createdAt        DateTime       @default(now()) @db.Timestamptz(3)
+  expiresAt        DateTime       @db.Timestamptz(3)
+  resolvedAt       DateTime?      @db.Timestamptz(3)
+  resolvedById     String?        @db.Uuid
+  identityVerified Boolean        @default(false)
+  user             User           @relation("RecoverySubject", fields: [userId], references: [id], onDelete: Restrict)
+  resolvedBy       User?          @relation("RecoveryResolver", fields: [resolvedById], references: [id], onDelete: Restrict)
+
+  @@index([status, expiresAt])
+  @@index([userId])
+}
+
+model Session {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tokenHash String   @unique
+  userId    String   @db.Uuid
+  expiresAt DateTime @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([expiresAt])
+}

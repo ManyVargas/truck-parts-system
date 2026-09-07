@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import type { QtyProductDetailView } from '../../api/contracts/inventory';
 import { locationDisplay } from '../../shared/copy/glossary';
 import { InventoryStatusCluster } from '../../shared/domain';
-import { Button, Card, EventTimeline, Field, Info, Input, Modal, Mono, SectionTitle, Textarea, money } from '../../shared/ui';
+import { Button, Card, EventTimeline, Field, GuardedModal, Info, Input, Mono, SectionTitle, Textarea, money, isFormDirty } from '../../shared/ui';
 import { PhotoGrid } from './PhotoGrid';
 
 export function QtyProductDetail({
@@ -32,6 +32,9 @@ export function QtyProductDetail({
   const [editOpen, setEditOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
+  const [editDirty, setEditDirty] = useState(false);
+  const [receiveDirty, setReceiveDirty] = useState(false);
+  const [adjustDirty, setAdjustDirty] = useState(false);
   const actionErrorVisible = error && !editOpen && !receiveOpen && !adjustOpen;
 
   return (
@@ -154,14 +157,18 @@ export function QtyProductDetail({
         />
       </Card>
 
-      <Modal
+      <GuardedModal
         open={editOpen}
         title="Editar datos del producto"
         onClose={() => {
           setError(null);
           setEditOpen(false);
+          setEditDirty(false);
         }}
+        hasUnsavedChanges={editDirty}
+        isBusy={isMutating}
       >
+        {({ requestClose }) => (
         <div className="space-y-3">
           {error && (
             <Info tone="error" title="No se pudieron guardar los datos">
@@ -173,10 +180,8 @@ export function QtyProductDetail({
             brand={detail.brand}
             location={detail.location}
             disabled={isMutating}
-            onCancel={() => {
-              setError(null);
-              setEditOpen(false);
-            }}
+            onDirtyChange={setEditDirty}
+            onCancel={requestClose}
             onSubmit={async (input) => {
               const message = await onEdit(input);
               if (message) {
@@ -185,19 +190,25 @@ export function QtyProductDetail({
               }
               setError(null);
               setEditOpen(false);
+              setEditDirty(false);
             }}
           />
         </div>
-      </Modal>
+        )}
+      </GuardedModal>
 
-      <Modal
+      <GuardedModal
         open={receiveOpen}
         title="Registrar entrada de stock"
         onClose={() => {
           setError(null);
           setReceiveOpen(false);
+          setReceiveDirty(false);
         }}
+        hasUnsavedChanges={receiveDirty}
+        isBusy={isMutating}
       >
+        {({ requestClose }) => (
         <div className="space-y-3">
           {error && (
             <Info tone="error" title="No se pudo registrar la entrada">
@@ -206,10 +217,8 @@ export function QtyProductDetail({
           )}
           <ReceiveQtyForm
             disabled={isMutating}
-            onCancel={() => {
-              setError(null);
-              setReceiveOpen(false);
-            }}
+            onDirtyChange={setReceiveDirty}
+            onCancel={requestClose}
             onSubmit={async (input) => {
               const message = await onReceive(input);
               if (message) {
@@ -218,19 +227,25 @@ export function QtyProductDetail({
               }
               setError(null);
               setReceiveOpen(false);
+              setReceiveDirty(false);
             }}
           />
         </div>
-      </Modal>
+        )}
+      </GuardedModal>
 
-      <Modal
+      <GuardedModal
         open={adjustOpen}
         title="Ajustar existencia"
         onClose={() => {
           setError(null);
           setAdjustOpen(false);
+          setAdjustDirty(false);
         }}
+        hasUnsavedChanges={adjustDirty}
+        isBusy={isMutating}
       >
+        {({ requestClose }) => (
         <div className="space-y-3">
           {error && (
             <Info tone="error" title="No se pudo ajustar la existencia">
@@ -241,10 +256,8 @@ export function QtyProductDetail({
             onHand={detail.onHand}
             reserved={detail.reserved}
             disabled={isMutating}
-            onCancel={() => {
-              setError(null);
-              setAdjustOpen(false);
-            }}
+            onDirtyChange={setAdjustDirty}
+            onCancel={requestClose}
             onSubmit={async (input) => {
               const message = await onAdjust(input);
               if (message) {
@@ -253,10 +266,12 @@ export function QtyProductDetail({
               }
               setError(null);
               setAdjustOpen(false);
+              setAdjustDirty(false);
             }}
           />
         </div>
-      </Modal>
+        )}
+      </GuardedModal>
     </div>
   );
 }
@@ -266,6 +281,7 @@ function QtyDetailsForm({
   brand,
   location,
   disabled,
+  onDirtyChange,
   onCancel,
   onSubmit,
 }: {
@@ -273,6 +289,7 @@ function QtyDetailsForm({
   brand?: string;
   location?: string;
   disabled: boolean;
+  onDirtyChange: (dirty: boolean) => void;
   onCancel: () => void;
   onSubmit: (input: { name: string; brand?: string; location?: string }) => Promise<void>;
 }) {
@@ -285,6 +302,15 @@ function QtyDetailsForm({
     setNextBrand(brand ?? '');
     setNextLocation(location ?? '');
   }, [name, brand, location]);
+
+  useEffect(() => {
+    onDirtyChange(
+      isFormDirty(
+        { name: nextName, brand: nextBrand, location: nextLocation },
+        { name, brand: brand ?? '', location: location ?? '' },
+      ),
+    );
+  }, [nextName, nextBrand, nextLocation, name, brand, location, onDirtyChange]);
 
   return (
     <form
@@ -338,15 +364,21 @@ function QtyDetailsForm({
 
 function ReceiveQtyForm({
   disabled,
+  onDirtyChange,
   onCancel,
   onSubmit,
 }: {
   disabled: boolean;
+  onDirtyChange: (dirty: boolean) => void;
   onCancel: () => void;
   onSubmit: (input: { quantity: number; unitCostDop: number }) => Promise<void>;
 }) {
   const [quantity, setQuantity] = useState('');
   const [unitCostDop, setUnitCostDop] = useState('');
+
+  useEffect(() => {
+    onDirtyChange(quantity !== '' || unitCostDop !== '');
+  }, [quantity, unitCostDop, onDirtyChange]);
 
   return (
     <form
@@ -397,17 +429,23 @@ function AdjustQtyForm({
   onHand,
   reserved,
   disabled,
+  onDirtyChange,
   onCancel,
   onSubmit,
 }: {
   onHand: number;
   reserved: number;
   disabled: boolean;
+  onDirtyChange: (dirty: boolean) => void;
   onCancel: () => void;
   onSubmit: (input: { difference: number; reason: string }) => Promise<void>;
 }) {
   const [difference, setDifference] = useState('');
   const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    onDirtyChange(difference !== '' || reason !== '');
+  }, [difference, reason, onDirtyChange]);
 
   return (
     <form

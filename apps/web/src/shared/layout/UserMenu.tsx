@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import type { AuthUser } from '../../features/auth/AuthContext';
 import { roleLabel } from '../auth/policies';
-import { Button } from '../ui';
+import { Button, ConfirmActionModal } from '../ui';
 
 export type UserMenuProps = {
   user: AuthUser;
@@ -13,6 +13,7 @@ export type UserMenuProps = {
 export function UserMenu({ user, onLogout }: UserMenuProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -49,12 +50,17 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
     navigate(path);
   }
 
+  function requestLogout() {
+    setOpen(false);
+    setConfirmLogout(true);
+  }
+
   async function handleLogout() {
     setIsLoggingOut(true);
     await onLogout();
     setIsLoggingOut(false);
-    setOpen(false);
-    navigate('/login', { replace: true });
+    setConfirmLogout(false);
+    // AuthProvider clears the identity only after the server confirms logout.
   }
 
   return (
@@ -101,14 +107,31 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
               size="sm"
               className="w-full justify-start"
               role="menuitem"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
+              onClick={requestLogout}
             >
-              {isLoggingOut ? 'Cerrando sesión…' : 'Cerrar sesión'}
+              Cerrar sesión
             </Button>
           </div>
         </div>
       )}
+
+      <ConfirmActionModal
+        open={confirmLogout}
+        title="Cerrar sesión"
+        confirmLabel="Cerrar sesión"
+        confirmVariant="danger"
+        busy={isLoggingOut}
+        onCancel={() => {
+          if (!isLoggingOut) setConfirmLogout(false);
+        }}
+        onConfirm={() => {
+          void handleLogout();
+        }}
+      >
+        <p className="text-sm text-navy-700">
+          ¿Desea cerrar la sesión de <strong>{user.name}</strong>?
+        </p>
+      </ConfirmActionModal>
     </div>
   );
 }

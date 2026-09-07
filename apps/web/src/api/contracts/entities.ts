@@ -6,6 +6,8 @@ export type User = {
   username: string;
   /** Plain text only in local mock — never in production API. */
   password: string;
+  /** Mock compatibility for the real API's mandatory first-login flow. */
+  mustChangePassword?: boolean;
   role: Role;
   active: boolean;
   phone?: string;
@@ -128,13 +130,7 @@ export type InvoiceStatus = 'DRAFT' | 'COMPLETED' | 'CANCELLED';
 export type PaymentState = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
 export type Currency = 'DOP' | 'USD';
 
-export type LineType =
-  | 'ITEM'
-  | 'QTY'
-  | 'GENERIC'
-  | 'EXTERNAL'
-  | 'SERVICE'
-  | 'DELIVERY';
+export type LineType = 'ITEM' | 'QTY' | 'GENERIC' | 'EXTERNAL' | 'SERVICE' | 'DELIVERY';
 
 /** Frozen copy of one node in an assembly sold as a unit (SALE-008). */
 export type DeliveredAssemblyNode = {

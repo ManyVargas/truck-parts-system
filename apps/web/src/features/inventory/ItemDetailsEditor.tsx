@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import type { ItemCondition } from '../../api/contracts/entities';
 import type { ItemDetailView, UpdateItemDetailsInput } from '../../api/contracts/inventory';
 import { locationDisplay } from '../../shared/copy/glossary';
-import { Button, Field, Info, Input, Modal, Select, Textarea } from '../../shared/ui';
+import { Button, Field, GuardedModal, Info, Input, Select, Textarea, isFormDirty } from '../../shared/ui';
 import { CategoryAttributeFields } from './CategoryAttributeFields';
 import { ITEM_CONDITIONS } from './item-conditions';
 import { PhotoEditor } from './PhotoEditor';
@@ -29,6 +29,8 @@ export function ItemDetailsEditor({
   const [notes, setNotes] = useState(detail.notes ?? '');
   const [attributes, setAttributes] = useState(detail.attributes ?? {});
   const [photos, setPhotos] = useState(detail.photos);
+  const fields = { name, brand, model, serial, partNumber, condition, location, notes, attributes, photos };
+  const [baseline, setBaseline] = useState(fields);
   const locationEditable = detail.physicalRelationship === 'INDEPENDENT';
   const category = detail.catalogCategories.find((entry) => entry.id === detail.categoryId);
   const attributeDefinitions = category?.attributes ?? [];
@@ -38,16 +40,29 @@ export function ItemDetailsEditor({
       return;
     }
     setError(null);
-    setName(detail.name);
-    setBrand(detail.brand ?? '');
-    setModel(detail.model ?? '');
-    setSerial(detail.serial ?? '');
-    setPartNumber(detail.partNumber ?? '');
-    setCondition(detail.condition);
-    setLocation(detail.ownLocation ?? '');
-    setNotes(detail.notes ?? '');
-    setAttributes(detail.attributes ?? {});
-    setPhotos(detail.photos);
+    const next = {
+      name: detail.name,
+      brand: detail.brand ?? '',
+      model: detail.model ?? '',
+      serial: detail.serial ?? '',
+      partNumber: detail.partNumber ?? '',
+      condition: detail.condition,
+      location: detail.ownLocation ?? '',
+      notes: detail.notes ?? '',
+      attributes: detail.attributes ?? {},
+      photos: detail.photos,
+    };
+    setName(next.name);
+    setBrand(next.brand);
+    setModel(next.model);
+    setSerial(next.serial);
+    setPartNumber(next.partNumber);
+    setCondition(next.condition);
+    setLocation(next.location);
+    setNotes(next.notes);
+    setAttributes(next.attributes);
+    setPhotos(next.photos);
+    setBaseline(next);
   }, [open, detail]);
 
   return (
@@ -63,14 +78,17 @@ export function ItemDetailsEditor({
       >
         Editar datos
       </Button>
-      <Modal
+      <GuardedModal
         open={open}
         title={`Editar ${detail.id}`}
         onClose={() => {
           setError(null);
           setOpen(false);
         }}
+        hasUnsavedChanges={isFormDirty(fields, baseline)}
+        isBusy={isMutating}
       >
+        {({ requestClose }) => (
         <form
           className="flex flex-col gap-3"
           onSubmit={(event) => {
@@ -195,15 +213,7 @@ export function ItemDetailsEditor({
           </Field>
           <PhotoEditor photos={photos} onChange={setPhotos} inputId="edit-item-photos" />
           <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setError(null);
-                setOpen(false);
-              }}
-              disabled={isMutating}
-            >
+            <Button type="button" variant="ghost" onClick={requestClose} disabled={isMutating}>
               Cancelar
             </Button>
             <Button type="submit" disabled={isMutating}>
@@ -211,7 +221,8 @@ export function ItemDetailsEditor({
             </Button>
           </div>
         </form>
-      </Modal>
+        )}
+      </GuardedModal>
     </>
   );
 }

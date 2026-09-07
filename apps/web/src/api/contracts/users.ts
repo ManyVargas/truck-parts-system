@@ -1,16 +1,42 @@
-import type { Role, User } from './entities';
+import type { Role } from './entities';
 
-/** Administrator-facing user row — password never leaves the mock/auth boundary. */
-export type ManagedUser = Omit<User, 'password'>;
+/** Explicit Administrator-facing projection. Credentials never cross this boundary. */
+export type ManagedUser = {
+  id: string;
+  name: string;
+  username: string;
+  role: Role;
+  active: boolean;
+  mustChangePassword: boolean;
+  phone?: string;
+  email?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
 export type SaveUserInput = {
   id?: string;
   name: string;
   username: string;
-  /** Required when creating; omitted on edit keeps the current password. */
-  password?: string;
   role: Role;
   active: boolean;
   phone?: string;
   email?: string;
+};
+
+export type PasswordRecoveryRequest = {
+  id: string;
+  userId: string;
+  status: 'PENDING';
+  createdAt: string;
+  expiresAt: string;
+  user: Pick<ManagedUser, 'id' | 'name' | 'username' | 'role' | 'active'>;
+};
+
+export type ResolveRecoveryInput =
+  | { requestId: string; action: 'approve'; identityVerified: true }
+  | { requestId: string; action: 'reject' };
+
+export type ResolveRecoveryResult = {
+  temporaryPassword?: string;
 };

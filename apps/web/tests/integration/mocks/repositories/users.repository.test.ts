@@ -15,13 +15,12 @@ describe('MockUserRepository', () => {
     resetMockState();
   });
 
-  it('creates a user who can log in with the assigned password', async () => {
+  it('creates a user who can log in with the server-assigned initial password', async () => {
     signInAs('ADMINISTRATOR');
 
     const saved = await mockUserRepository.save({
       name: 'María López',
       username: 'maria',
-      password: 'clave123',
       role: 'SELLER',
       active: true,
     });
@@ -32,7 +31,7 @@ describe('MockUserRepository', () => {
       expect(saved.value.username).toBe('maria');
     }
 
-    const login = await mockAuthRepository.login('maria', 'clave123');
+    const login = await mockAuthRepository.login('maria', 'solocamiones');
     expect(login.ok).toBe(true);
   });
 
@@ -42,7 +41,6 @@ describe('MockUserRepository', () => {
     await mockUserRepository.save({
       name: 'María López',
       username: 'maria',
-      password: 'clave123',
       role: 'SELLER',
       active: true,
     });
@@ -87,7 +85,6 @@ describe('MockUserRepository', () => {
     const mechanic = await mockUserRepository.save({
       name: 'Intruso',
       username: 'intruso',
-      password: 'demo1234',
       role: 'MECHANIC',
       active: true,
     });

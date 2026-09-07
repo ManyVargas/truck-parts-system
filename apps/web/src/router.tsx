@@ -1,4 +1,4 @@
-import { Navigate, createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter } from 'react-router-dom';
 
 import { LoginPage } from './features/auth/LoginPage';
 import { CustomersPage } from './features/customers/CustomersPage';
@@ -23,6 +23,7 @@ import { WorkOrderDetailPage } from './features/work-orders/WorkOrderDetailPage'
 import { WorkOrdersPage } from './features/work-orders/WorkOrdersPage';
 import { AppShell } from './shared/layout/AppShell';
 import { CatchAllRoute } from './shared/layout/CatchAllRoute';
+import { DesktopHomeRedirect } from './shared/layout/DesktopHomeRedirect';
 import { GuestRoute } from './shared/layout/GuestRoute';
 import { MechanicRouteGuard } from './shared/layout/MechanicRouteGuard';
 import { ProtectedRoute } from './shared/layout/ProtectedRoute';
@@ -124,13 +125,10 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <Navigate to="/dashboard" replace /> },
+      { index: true, element: <DesktopHomeRedirect /> },
       {
         element: <RouteAccessGuard />,
-        children: [
-          ...desktopChildRoutes,
-          { path: '*', element: <NotFoundPage /> },
-        ],
+        children: [...desktopChildRoutes, { path: '*', element: <NotFoundPage /> }],
       },
     ],
   },

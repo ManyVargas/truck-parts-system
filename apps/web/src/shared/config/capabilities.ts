@@ -156,10 +156,15 @@ export function parseCapabilityPreset(value: string | undefined): CapabilityPres
  * even when the prototype preset keeps later-release product screens visible.
  */
 export function resolveCapabilities(
-  env: Pick<ImportMetaEnv, 'VITE_CAPABILITIES_PRESET' | 'VITE_ENABLE_DEMO_CONTROLS'> & {
+  env: Pick<
+    ImportMetaEnv,
+    'VITE_CAPABILITIES_PRESET' | 'VITE_ENABLE_DEMO_CONTROLS' | 'VITE_USE_MOCK_API'
+  > & {
     DEV?: boolean;
   } = import.meta.env,
 ): AppCapabilities {
+  // Release 1 HTTP (default) exposes only Access/Users. Later screens stay unavailable.
+  if (env.VITE_USE_MOCK_API !== 'true') return { ...DISABLED, users: true };
   const presetName = parseCapabilityPreset(env.VITE_CAPABILITIES_PRESET);
   const preset = CAPABILITY_PRESETS[presetName];
   const forceDemo = env.VITE_ENABLE_DEMO_CONTROLS === 'true';

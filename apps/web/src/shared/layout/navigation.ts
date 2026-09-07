@@ -38,6 +38,7 @@ export const DESKTOP_NAV_ITEMS: NavItem[] = [
     path: '/dashboard',
     roles: ['ADMINISTRATOR', 'SELLER'],
     group: 'operation',
+    capability: 'sales',
   },
   {
     id: 'inventory',
@@ -271,7 +272,42 @@ export function defaultPathForRole(
     case 'MECHANIC':
       return capabilities.workOrders ? '/mechanic' : '/mechanic/profile';
     case 'ADMINISTRATOR':
+      return capabilities.sales ? '/dashboard' : capabilities.users ? '/users' : '/profile';
     case 'SELLER':
-      return '/dashboard';
+      return capabilities.sales ? '/dashboard' : '/profile';
   }
+}
+
+/**
+ * Whether this identity may land on the URL after login.
+ * Logout preserves the previous path as login `state.from`; that path belongs to
+ * the previous user and must not send a different role to UnauthorizedPage.
+ */
+export function isPathAllowedForRole(
+  pathname: string,
+  role: Role,
+  capabilities: AppCapabilities = getAppCapabilities(),
+): boolean {
+  if (isKnownMechanicRoute(pathname)) {
+    return role === 'MECHANIC' && isMechanicPathAllowed(pathname, capabilities);
+  }
+
+  if (isKnownDesktopRoute(pathname)) {
+    return role !== 'MECHANIC' && isRouteAllowedForRole(pathname, role, capabilities);
+  }
+
+  return false;
+}
+
+/** Deep-link after login only when the new role can open that screen. */
+export function postLoginPath(
+  requestedPath: string | null,
+  role: Role,
+  capabilities: AppCapabilities = getAppCapabilities(),
+): string {
+  if (requestedPath && isPathAllowedForRole(requestedPath, role, capabilities)) {
+    return requestedPath;
+  }
+
+  return defaultPathForRole(role, capabilities);
 }

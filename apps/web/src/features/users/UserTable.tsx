@@ -25,6 +25,7 @@ export function UserTable({ rows, onEdit, onToggleActive, togglingId }: UserTabl
           <th className="px-4 py-3 font-medium">Usuario</th>
           <th className="px-4 py-3 font-medium">Rol</th>
           <th className="px-4 py-3 font-medium">Estado</th>
+          <th className="px-4 py-3 font-medium">Contacto</th>
           <th className="px-4 py-3 font-medium">
             <span className="sr-only">Acciones</span>
           </th>
@@ -41,6 +42,19 @@ export function UserTable({ rows, onEdit, onToggleActive, togglingId }: UserTabl
             <td className="px-4 py-3">{roleLabel(row.role)}</td>
             <td className="px-4 py-3">
               <AccountStateChip active={row.active} />
+              {row.mustChangePassword && row.active && (
+                <span className="mt-1 block text-xs text-amber-700">Debe cambiar contraseña</span>
+              )}
+            </td>
+            <td className="px-4 py-3 text-sm text-navy-400">
+              {row.phone || row.email ? (
+                <>
+                  {row.phone && <span className="block">{row.phone}</span>}
+                  {row.email && <span className="block">{row.email}</span>}
+                </>
+              ) : (
+                '—'
+              )}
             </td>
             <td className="px-4 py-3">
               <div className="flex justify-end gap-2">

@@ -1,8 +1,15 @@
 import type { Result } from '../../shared/auth/types';
+import type { AuthSession, PublicUser } from './auth';
 import type { SaveCategoryInput, SaveServiceInput } from './catalogs';
 import type { CustomerListRow, SaveCustomerInput } from './customers';
 import type { UpdateOwnProfileInput, UpdateOwnProfileResult } from './profile';
-import type { ManagedUser, SaveUserInput } from './users';
+import type {
+  ManagedUser,
+  PasswordRecoveryRequest,
+  ResolveRecoveryInput,
+  ResolveRecoveryResult,
+  SaveUserInput,
+} from './users';
 import type { DashboardSnapshot } from './dashboard';
 import type {
   AddToDraftInput,
@@ -30,7 +37,11 @@ import type {
   RetryUsdProfitabilityInput,
   SetFxAvailableInput,
 } from './profitability';
-import type { ReleaseReservationInput, RecoverySnapshot, ReleaseReservationResult } from './recovery';
+import type {
+  ReleaseReservationInput,
+  RecoverySnapshot,
+  ReleaseReservationResult,
+} from './recovery';
 import type {
   AddDraftLineInput,
   AddPaymentInput,
@@ -65,23 +76,23 @@ import type {
   MechanicWorkOrderView,
   QtyProduct,
   Service,
-  Session,
-  User,
   WorkOrder,
 } from './entities';
 
 export type AuthRepository = {
-  login(username: string, password: string): Promise<Result<Session>>;
+  login(username: string, password: string): Promise<Result<AuthSession>>;
   logout(): Promise<Result<void>>;
-  getSession(): Promise<Result<Session | null>>;
-  getCurrentUser(): Promise<Result<User | null>>;
+  getSession(): Promise<Result<AuthSession | null>>;
+  getCurrentUser(): Promise<Result<PublicUser | null>>;
   updateOwnProfile(input: UpdateOwnProfileInput): Promise<Result<UpdateOwnProfileResult>>;
+  requestRecovery(username: string): Promise<Result<void>>;
 };
 
 export type UserRepository = {
   list(): Promise<Result<ManagedUser[]>>;
-  getById(id: string): Promise<Result<ManagedUser>>;
   save(input: SaveUserInput): Promise<Result<ManagedUser>>;
+  listRecoveryRequests(): Promise<Result<PasswordRecoveryRequest[]>>;
+  resolveRecovery(input: ResolveRecoveryInput): Promise<Result<ResolveRecoveryResult>>;
 };
 
 export type InventoryRepository = {
@@ -166,7 +177,9 @@ export type ProfitabilityRepository = {
   getSnapshot(): Promise<Result<ProfitabilitySnapshot>>;
   setFxAvailable(input: SetFxAvailableInput): Promise<Result<ProfitabilitySnapshot>>;
   retryUsd(input: RetryUsdProfitabilityInput): Promise<Result<ProfitabilitySnapshot>>;
-  recordManualGrossProfit(input: RecordManualGrossProfitInput): Promise<Result<ProfitabilitySnapshot>>;
+  recordManualGrossProfit(
+    input: RecordManualGrossProfitInput,
+  ): Promise<Result<ProfitabilitySnapshot>>;
 };
 
 export type RecoveryRepository = {

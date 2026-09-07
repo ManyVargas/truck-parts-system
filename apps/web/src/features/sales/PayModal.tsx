@@ -1,7 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 
 import type { PaymentMethod } from '../../api/contracts/entities';
-import { Button, Field, Info, Input, Modal, Select, money } from '../../shared/ui';
+import { Button, Field, GuardedModal, Info, Input, Select, money, isFormDirty } from '../../shared/ui';
 import { PAYMENT_METHOD_LABELS } from './labels';
 
 const METHODS: PaymentMethod[] = ['CASH', 'CARD', 'TRANSFER', 'CHECK'];
@@ -37,13 +37,17 @@ export function PayModal({
   const [method, setMethod] = useState<PaymentMethod>('CASH');
   const [reference, setReference] = useState('');
   const [idempotencyKey, setIdempotencyKey] = useState('');
+  const fields = { amount, method, reference };
+  const [baseline, setBaseline] = useState(fields);
 
   useEffect(() => {
     if (open) {
-      setAmount('');
-      setMethod('CASH');
-      setReference('');
+      const next = { amount: '', method: 'CASH' as PaymentMethod, reference: '' };
+      setAmount(next.amount);
+      setMethod(next.method);
+      setReference(next.reference);
       setIdempotencyKey(`${invoiceId}-${Date.now()}`);
+      setBaseline(next);
     }
   }, [open, invoiceId]);
 
@@ -58,7 +62,14 @@ export function PayModal({
   }
 
   return (
-    <Modal open={open} title="Registrar pago" onClose={onClose}>
+    <GuardedModal
+      open={open}
+      title="Registrar pago"
+      onClose={onClose}
+      hasUnsavedChanges={isFormDirty(fields, baseline)}
+      isBusy={isSaving}
+    >
+      {({ requestClose }) => (
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-sm text-navy-400">
           Saldo pendiente: <span className="font-mono text-navy">{money(balance, currency)}</span>
@@ -95,7 +106,7 @@ export function PayModal({
         )}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
+          <Button type="button" variant="secondary" onClick={requestClose} disabled={isSaving}>
             Cerrar
           </Button>
           <Button type="submit" disabled={isSaving}>
@@ -103,6 +114,7 @@ export function PayModal({
           </Button>
         </div>
       </form>
-    </Modal>
+      )}
+    </GuardedModal>
   );
 }

@@ -4,6 +4,8 @@ import { readLastDemoScenarioHint } from '../../shared/config/demo-scenario-hint
 import { Logo, Mono } from '../../shared/ui';
 import { DemoCredentialsPanel } from './DemoCredentialsPanel';
 import { LoginForm } from './LoginForm';
+import { RecoveryRequestForm } from './RecoveryRequestForm';
+import { useMockApi } from '../../api/client/http-client';
 
 export function LoginPage() {
   const { prototypeControls } = useAppCapabilities();
@@ -16,9 +18,7 @@ export function LoginPage() {
           <Logo size="lg" className="mx-auto" />
           <div>
             <h1 className="text-2xl font-bold text-white">{APP_NAME}</h1>
-            <p className="mt-2 text-sm text-white/70">
-              Inicie sesión con usuario y contraseña.
-            </p>
+            <p className="mt-2 text-sm text-white/70">Inicie sesión con usuario y contraseña.</p>
           </div>
         </header>
 
@@ -35,6 +35,7 @@ export function LoginPage() {
 
         <div className="rounded-xl border border-shell-border bg-white p-6 shadow-lg">
           <LoginForm />
+          {!useMockApi && <RecoveryRequestForm />}
         </div>
 
         {prototypeControls && <DemoCredentialsPanel />}

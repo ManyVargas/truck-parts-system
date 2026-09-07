@@ -14,14 +14,45 @@ import {
 } from '../../../../src/shared/layout/navigation';
 
 describe('capability presets follow the Development Plan', () => {
+  it('exposes only Release 1 users in HTTP mode even with prototype flags', () => {
+    const capabilities = resolveCapabilities({
+      VITE_USE_MOCK_API: 'false',
+      VITE_CAPABILITIES_PRESET: 'prototype',
+      VITE_ENABLE_DEMO_CONTROLS: 'true',
+      DEV: true,
+    });
+    expect(capabilities.users).toBe(true);
+    expect(
+      Object.entries(capabilities)
+        .filter(([key]) => key !== 'users')
+        .every(([, enabled]) => !enabled),
+    ).toBe(true);
+    expect(isRouteAllowedForRole('/users', 'ADMINISTRATOR', capabilities)).toBe(true);
+    expect(isMechanicPathAllowed('/mechanic/pending', capabilities)).toBe(false);
+    expect(isMechanicPathAllowed('/mechanic/profile', capabilities)).toBe(true);
+  });
+
+  it('treats an unset mock flag as HTTP Release 1, not the in-memory prototype', () => {
+    const capabilities = resolveCapabilities({
+      VITE_CAPABILITIES_PRESET: 'prototype',
+      VITE_ENABLE_DEMO_CONTROLS: 'true',
+      DEV: true,
+    });
+    expect(capabilities.users).toBe(true);
+    expect(capabilities.sales).toBe(false);
+    expect(capabilities.prototypeControls).toBe(false);
+  });
+
   it('Release 1 is only access and user administration', () => {
     const capabilities = CAPABILITY_PRESETS['release-1'];
 
     expect(navItemsForRole('ADMINISTRATOR', capabilities).map((item) => item.id)).toEqual([
-      'dashboard',
       'users',
     ]);
-    expect(navItemsForRole('SELLER', capabilities).map((item) => item.id)).toEqual(['dashboard']);
+    expect(navItemsForRole('SELLER', capabilities)).toEqual([]);
+    expect(isRouteAllowedForRole('/dashboard', 'SELLER', capabilities)).toBe(false);
+    expect(defaultPathForRole('ADMINISTRATOR', capabilities)).toBe('/users');
+    expect(defaultPathForRole('SELLER', capabilities)).toBe('/profile');
     expect(isRouteAllowedForRole('/sales', 'SELLER', capabilities)).toBe(false);
     expect(enabledPosLineTypes(capabilities)).toEqual([]);
     expect(capabilities.prototypeControls).toBe(false);
@@ -86,9 +117,9 @@ describe('capability presets follow the Development Plan', () => {
     expect(CAPABILITY_PRESETS['release-6'].workOrders).toBe(false);
     expect(CAPABILITY_PRESETS['release-7'].workOrders).toBe(true);
     expect(CAPABILITY_PRESETS['release-7'].recovery).toBe(false);
-    expect(isRouteAllowedForRole('/recovery', 'ADMINISTRATOR', CAPABILITY_PRESETS['release-8'])).toBe(
-      true,
-    );
+    expect(
+      isRouteAllowedForRole('/recovery', 'ADMINISTRATOR', CAPABILITY_PRESETS['release-8']),
+    ).toBe(true);
   });
 
   it('keeps the prototype preset complete, including mechanic work orders', () => {
@@ -110,10 +141,15 @@ describe('capability presets follow the Development Plan', () => {
   it('turns demo controls off in a production prototype build unless explicitly forced', () => {
     expect(parseCapabilityPreset('unknown')).toBe('prototype');
     expect(
-      resolveCapabilities({ VITE_CAPABILITIES_PRESET: 'prototype', DEV: false }).prototypeControls,
+      resolveCapabilities({
+        VITE_USE_MOCK_API: 'true',
+        VITE_CAPABILITIES_PRESET: 'prototype',
+        DEV: false,
+      }).prototypeControls,
     ).toBe(false);
     expect(
       resolveCapabilities({
+        VITE_USE_MOCK_API: 'true',
         VITE_CAPABILITIES_PRESET: 'release-1',
         VITE_ENABLE_DEMO_CONTROLS: 'true',
         DEV: true,

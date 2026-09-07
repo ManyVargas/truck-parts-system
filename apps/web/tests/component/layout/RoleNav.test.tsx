@@ -72,8 +72,8 @@ describe('RoleNav', () => {
       capabilities: CAPABILITY_PRESETS['release-1'],
     });
 
-    expect(screen.getByRole('heading', { name: 'Operación' })).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Administración' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Operación' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Administración' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Finanzas y control' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Inventario' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Usuarios' })).toHaveAttribute('aria-current', 'page');

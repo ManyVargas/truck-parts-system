@@ -60,7 +60,11 @@ export function ProfileForm({ user, isSaving, error, onSubmit }: ProfileFormProp
           </Info>
         )}
 
-        <Field label="Usuario" htmlFor="profile-username" hint="El identificador de acceso no se puede cambiar aquí">
+        <Field
+          label="Usuario"
+          htmlFor="profile-username"
+          hint="El identificador de acceso no se puede cambiar aquí"
+        >
           <Input id="profile-username" value={user.username} disabled readOnly />
         </Field>
 
@@ -83,7 +87,9 @@ export function ProfileForm({ user, isSaving, error, onSubmit }: ProfileFormProp
             <Input
               id="profile-phone"
               value={fields.phone}
-              onChange={(event) => setFields((current) => ({ ...current, phone: event.target.value }))}
+              onChange={(event) =>
+                setFields((current) => ({ ...current, phone: event.target.value }))
+              }
               autoComplete="tel"
             />
           </Field>
@@ -92,7 +98,9 @@ export function ProfileForm({ user, isSaving, error, onSubmit }: ProfileFormProp
               id="profile-email"
               type="email"
               value={fields.email}
-              onChange={(event) => setFields((current) => ({ ...current, email: event.target.value }))}
+              onChange={(event) =>
+                setFields((current) => ({ ...current, email: event.target.value }))
+              }
               autoComplete="email"
             />
           </Field>
@@ -101,7 +109,9 @@ export function ProfileForm({ user, isSaving, error, onSubmit }: ProfileFormProp
         <div className="border-t border-navy-100 pt-4">
           <p className="mb-3 text-sm font-medium text-navy">Cambiar contraseña</p>
           <p className="mb-4 text-xs text-navy-400">
-            Deje estos campos vacíos si no desea cambiar la contraseña. Mínimo 6 caracteres.
+            {user.mustChangePassword
+              ? 'Debe cambiar su contraseña inicial o temporal para continuar. Mínimo 6 caracteres y diferente de la actual.'
+              : 'Deje estos campos vacíos si no desea cambiar la contraseña. Mínimo 6 caracteres.'}
           </p>
           <div className="space-y-4">
             <Field label="Contraseña actual" htmlFor="profile-current-password">

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 
 import type { Currency } from '../../api/contracts/entities';
-import { Button, currencyLabel, Field, Info, Modal, Select, Textarea } from '../../shared/ui';
+import { Button, currencyLabel, Field, GuardedModal, Info, Select, Textarea, isFormDirty } from '../../shared/ui';
 
 export type CurrencyCorrectionModalProps = {
   open: boolean;
@@ -23,11 +23,15 @@ export function CurrencyCorrectionModal({
   const nextCurrency: Currency = current === 'DOP' ? 'USD' : 'DOP';
   const [currency, setCurrency] = useState<Currency>(nextCurrency);
   const [reason, setReason] = useState('');
+  const fields = { currency, reason };
+  const [baseline, setBaseline] = useState(fields);
 
   useEffect(() => {
     if (open) {
-      setCurrency(current === 'DOP' ? 'USD' : 'DOP');
-      setReason('');
+      const next = { currency: current === 'DOP' ? ('USD' as Currency) : ('DOP' as Currency), reason: '' };
+      setCurrency(next.currency);
+      setReason(next.reason);
+      setBaseline(next);
     }
   }, [open, current]);
 
@@ -37,7 +41,14 @@ export function CurrencyCorrectionModal({
   }
 
   return (
-    <Modal open={open} title="Corregir moneda" onClose={onClose}>
+    <GuardedModal
+      open={open}
+      title="Corregir moneda"
+      onClose={onClose}
+      hasUnsavedChanges={isFormDirty(fields, baseline)}
+      isBusy={isSaving}
+    >
+      {({ requestClose }) => (
       <form onSubmit={handleSubmit} className="space-y-4">
         <Info tone="warning" title="Los importes no se convierten">
           Solo cambia la etiqueta de moneda. Precios, totales y saldo conservan el mismo número.
@@ -68,7 +79,7 @@ export function CurrencyCorrectionModal({
           </Info>
         )}
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
+          <Button type="button" variant="secondary" onClick={requestClose} disabled={isSaving}>
             Cerrar
           </Button>
           <Button type="submit" disabled={isSaving}>
@@ -76,6 +87,7 @@ export function CurrencyCorrectionModal({
           </Button>
         </div>
       </form>
-    </Modal>
+      )}
+    </GuardedModal>
   );
 }

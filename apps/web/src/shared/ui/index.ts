@@ -9,6 +9,8 @@ export { Field, Input, Select, Textarea } from './Field';
 export { SearchInput } from './SearchInput';
 export { Info } from './Info';
 export { Modal } from './Modal';
+export { ConfirmActionModal } from './ConfirmActionModal';
+export { GuardedModal, isFormDirty } from './GuardedModal';
 export { currencyLabel, money } from './money';
 export { Mono } from './Mono';
 export { toPageLoadMessage } from './page-load-message';

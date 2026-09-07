@@ -4,11 +4,9 @@ import { fileURLToPath } from 'node:url';
 
 import { PrismaClient } from '@prisma/client';
 
-const apiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+import { requireTestDatabaseUrl } from './environment.js';
 
-export function getTestDatabaseUrl(): string | undefined {
-  return process.env.DATABASE_URL_TEST;
-}
+const apiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 export async function isDatabaseReachable(databaseUrl: string): Promise<boolean> {
   const probeClient = new PrismaClient({
@@ -25,10 +23,16 @@ export async function isDatabaseReachable(databaseUrl: string): Promise<boolean>
   }
 }
 
-export function deployMigrations(databaseUrl: string): void {
-  execSync('npx prisma migrate deploy', {
+export function resetTestDatabase(
+  databaseUrl: string,
+  environment: NodeJS.ProcessEnv = process.env,
+): void {
+  if (databaseUrl !== requireTestDatabaseUrl(environment)) {
+    throw new Error('Test database reset must target DATABASE_URL_TEST.');
+  }
+  execSync('npx prisma migrate reset --force --skip-generate', {
     cwd: apiRoot,
-    env: { ...process.env, DATABASE_URL: databaseUrl },
+    env: { ...environment, DATABASE_URL: databaseUrl },
     stdio: 'pipe',
   });
 }

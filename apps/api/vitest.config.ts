@@ -4,8 +4,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     setupFiles: ['./tests/setup.ts'],
-    include: ['tests/**/*.test.ts'],
-    // Integration tests share one PostgreSQL database; run files sequentially.
+    include: ['tests/unit/**/*.test.ts'],
+    // The integration config inherits sequential files for the shared test database.
     fileParallelism: false,
     testTimeout: 15_000,
   },

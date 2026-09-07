@@ -5,6 +5,7 @@ import { PageHeader } from '../../shared/layout/PageHeader';
 import { Info, useToast } from '../../shared/ui';
 import { ProfileForm } from './ProfileForm';
 import { useProfile } from './useProfile';
+import { useMockApi } from '../../api/client/http-client';
 
 export function ProfilePage() {
   const { user, isSaving, save } = useProfile();
@@ -24,7 +25,12 @@ export function ProfilePage() {
       return;
     }
 
-    pushToast('Perfil actualizado', 'success');
+    pushToast(
+      !useMockApi && input.newPassword !== undefined
+        ? 'Contraseña actualizada. Inicie sesión con su nueva contraseña.'
+        : 'Perfil actualizado',
+      'success',
+    );
   }
 
   return (
@@ -33,10 +39,18 @@ export function ProfilePage() {
         title="Mi perfil"
         description="Actualice su nombre y datos de contacto. El usuario, el rol y el estado de la cuenta los gestiona un administrador."
       />
-      <Info tone="info" title="Datos de acceso">
-        El nombre de usuario no se puede cambiar desde aquí. Solo un administrador puede asignar rol
-        o desactivar la cuenta.
-      </Info>
+      <div className="space-y-4">
+        {user.mustChangePassword && (
+          <Info tone="warning" title="Debe cambiar su contraseña">
+            Esta cuenta usa una contraseña inicial o temporal. Cámbiela en esta página para poder
+            usar el resto del sistema. Mínimo 6 caracteres y distinta de la actual.
+          </Info>
+        )}
+        <Info tone="info" title="Datos de acceso">
+          El nombre de usuario no se puede cambiar desde aquí. Solo un administrador puede asignar
+          rol o desactivar la cuenta.
+        </Info>
+      </div>
       <div className="mt-6">
         <ProfileForm user={user} isSaving={isSaving} error={error} onSubmit={handleSubmit} />
       </div>

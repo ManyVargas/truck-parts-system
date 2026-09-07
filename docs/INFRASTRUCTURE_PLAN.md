@@ -89,6 +89,16 @@ Local development should resemble production where correctness depends on behavi
 - run database migrations explicitly and review generated migration changes;
 - test concurrency and transaction behavior against PostgreSQL.
 
+### Optional local Compose stack (Release 1 developer convenience)
+
+`docker-compose.yml` can run PostgreSQL, the API, nginx, and an optional Cloudflare quick tunnel. This does **not** satisfy first-production-deployment HTTPS, backups, or staging.
+
+- The **API port is unpublished**. Only the `web` nginx container should call `api:3000`. Never publish `3000` to the host or LAN.
+- nginx listens on **80** (mapped to host `5173`) for local browsers. `X-Forwarded-For` is the connecting address (`$remote_addr`).
+- nginx also listens on **8080**, reachable only on the Docker network. `cloudflared` targets `http://web:8080/`. On that port nginx prefers `CF-Connecting-IP`, then proxies a single replaced `X-Forwarded-For` to the API.
+- Set `TRUST_PROXY=1` on the API **only** in this unpublished-behind-nginx layout so login/recovery rate limits key off that sanitized client address. A host-bound API (`npm run dev`, `TRUST_PROXY` unset/`0`) must ignore `X-Forwarded-For`; otherwise any peer that can reach port 3000 can spoof the rate-limit identity.
+- The tunnel terminates TLS at Cloudflare; the container hop to nginx remains HTTP. Cookies `Secure` still follow `NODE_ENV=production` (see `ARCHITECTURE_PLAN.md`). Do not treat a quick tunnel as the production cookie/HTTPS baseline.
+
 Local photo storage is for convenience only. Integration tests before production must exercise the chosen S3-compatible provider behavior, including upload limits, signed access, and failure cleanup.
 
 Mobile integration tests must also cover an interrupted upload, retry with the same upload identity, duplicate finalization, loss of connectivity after bytes arrive but before metadata confirmation, and recovery without falsely satisfying Work Order evidence requirements.

@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import type { InProgressCancelDecision, LinkedWorkOrderView } from '../../api/contracts/sales';
 import type { PaymentMethod } from '../../api/contracts/entities';
 import { UX_TERMS } from '../../shared/copy/glossary';
-import { Button, Field, Info, Input, Modal, Select, Textarea, money } from '../../shared/ui';
+import { Button, Field, GuardedModal, Info, Input, Select, Textarea, money, isFormDirty } from '../../shared/ui';
 import { PAYMENT_METHOD_LABELS } from './labels';
 
 export type CancelInvoiceModalProps = {
@@ -38,14 +38,23 @@ export function CancelInvoiceModal({
   const [refundAmount, setRefundAmount] = useState('');
   const [refundMethod, setRefundMethod] = useState<PaymentMethod>('CASH');
   const [inProgressDecision, setInProgressDecision] = useState<InProgressCancelDecision>('STOP');
+  const fields = { reason, refundAmount, refundMethod, inProgressDecision };
+  const [baseline, setBaseline] = useState(fields);
   const hasInProgress = workOrders.some((order) => order.status === 'IN_PROGRESS');
 
   useEffect(() => {
     if (open) {
-      setReason('');
-      setRefundAmount(paid > 0 ? String(paid) : '');
-      setRefundMethod('CASH');
-      setInProgressDecision('STOP');
+      const next = {
+        reason: '',
+        refundAmount: paid > 0 ? String(paid) : '',
+        refundMethod: 'CASH' as PaymentMethod,
+        inProgressDecision: 'STOP' as InProgressCancelDecision,
+      };
+      setReason(next.reason);
+      setRefundAmount(next.refundAmount);
+      setRefundMethod(next.refundMethod);
+      setInProgressDecision(next.inProgressDecision);
+      setBaseline(next);
     }
   }, [open, paid]);
 
@@ -60,7 +69,14 @@ export function CancelInvoiceModal({
   }
 
   return (
-    <Modal open={open} title="Cancelar factura" onClose={onClose}>
+    <GuardedModal
+      open={open}
+      title="Cancelar factura"
+      onClose={onClose}
+      hasUnsavedChanges={isFormDirty(fields, baseline)}
+      isBusy={isSaving}
+    >
+      {({ requestClose }) => (
       <form onSubmit={handleSubmit} className="space-y-4">
         <Info tone="warning" title="La cancelación no borra el documento">
           Se conserva el historial y se restauran existencias elegibles según el estado de las órdenes de {UX_TERMS.dismantling.toLowerCase()}.
@@ -142,7 +158,7 @@ export function CancelInvoiceModal({
         )}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
+          <Button type="button" variant="secondary" onClick={requestClose} disabled={isSaving}>
             Cerrar
           </Button>
           <Button type="submit" variant="danger" disabled={isSaving}>
@@ -150,6 +166,7 @@ export function CancelInvoiceModal({
           </Button>
         </div>
       </form>
-    </Modal>
+      )}
+    </GuardedModal>
   );
 }
