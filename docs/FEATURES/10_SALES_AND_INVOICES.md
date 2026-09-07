@@ -77,13 +77,13 @@ Invoice PDF rendering is secondary to sale validity. Preserve all invoice facts 
 - [x] DOP/USD single-currency rule. *(prototipo mock — WM8)*
 - [x] Shared transactional `FAC-` sequence. *(prototipo mock — `facSeq`; un hilo)*
 - [x] Customer snapshot integration. *(prototipo mock — WM8)*
-- [x] Generic merchandise line. *(prototipo mock — WM8)*
+- [x] Generic merchandise line. *(prototipo mock — WM8; API draft HTTP — R2 M8)*
 - [x] Mechanical service catalog selection + negotiated price. *(prototipo mock — WM8)*
 - [x] Delivery paid/free/omitted line. *(prototipo mock — WM8)*
 - [x] External resale line if its cost dependency is enabled. *(prototipo mock — WM8)*
 - [x] Tax-inclusive 18% calculation and per-line rounding.
 - [x] Printable/regenerable internal PDF with blank NCF field.
-- [ ] Explicitly reject unavailable inventory-backed line actions until their feature release. *(superseded in the mock: WM8 already sells inventory-backed lines)*
+- [x] Explicitly reject unavailable inventory-backed line actions until their feature release. *(API R2 M8: ITEM/QTY 409; el mock POS aún vende inventario hasta M21)*
 
 ### Release 5 — Inventory-backed sales
 - [x] Individual inventory line. *(prototipo mock — WM8)*

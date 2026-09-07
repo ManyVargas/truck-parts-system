@@ -34,4 +34,29 @@ describe('invoice draft history validation', () => {
       }).success,
     ).toBe(false);
   });
+
+  it('accepts INVOICE_LINE_ADDED and rejects extra payload fields', () => {
+    const event = {
+      actor: { actorType: 'USER' as const, actorUserId: id },
+      subjectType: 'INVOICE' as const,
+      subjectId: id,
+      eventType: 'INVOICE_LINE_ADDED' as const,
+      payload: {
+        id,
+        type: 'GENERIC' as const,
+        description: 'Filtro',
+        quantity: '1.00',
+        unitPrice: '118.00',
+        acquisitionCostDop: null,
+        costProvenance: 'UNKNOWN' as const,
+      },
+    };
+    expect(historyEventSchema.parse(event)).toEqual(event);
+    expect(
+      historyEventSchema.safeParse({
+        ...event,
+        payload: { ...event.payload, passwordHash: 'secret' },
+      }).success,
+    ).toBe(false);
+  });
 });

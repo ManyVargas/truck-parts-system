@@ -9,6 +9,7 @@ import type {
   InvoiceSequenceRecord,
   ListInvoicesQuery,
   UpdateDraftInvoiceRecord,
+  UpdateInvoiceLinePriceRecord,
 } from './types.js';
 
 export const INVOICE_SEQUENCE_NAME = 'FAC';
@@ -99,6 +100,33 @@ export class SalesRepository {
             costProvenance: input.costProvenance ?? null,
             serviceId: input.serviceId ?? null,
           },
+        },
+      },
+      include: invoiceDetailInclude,
+    });
+  }
+
+  updateLinePrice(input: UpdateInvoiceLinePriceRecord): Promise<InvoiceRecord> {
+    return this.database.invoice.update({
+      where: { id: input.invoiceId },
+      data: {
+        lines: {
+          update: {
+            where: { id: input.lineId },
+            data: { unitPrice: input.unitPrice },
+          },
+        },
+      },
+      include: invoiceDetailInclude,
+    });
+  }
+
+  removeLine(invoiceId: string, lineId: string): Promise<InvoiceRecord> {
+    return this.database.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        lines: {
+          delete: { id: lineId },
         },
       },
       include: invoiceDetailInclude,

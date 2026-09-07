@@ -1,4 +1,4 @@
-import type { InvoiceStatus } from '@prisma/client';
+import type { InvoiceLine, InvoiceStatus } from '@prisma/client';
 
 import { AppError } from '../../infrastructure/errors/app-error.js';
 import { satisfiesFiscalIdentity } from '../customers/fiscal.js';
@@ -7,15 +7,27 @@ import {
   DRAFT_ONLY_DISCARD_MESSAGE,
   DRAFT_ONLY_EDIT_MESSAGE,
   FISCAL_IDENTITY_REQUIRED_MESSAGE,
+  LINE_NOT_FOUND_MESSAGE,
   MISSING_GENERIC_CUSTOMER_MESSAGE,
 } from './constants.js';
-import { assertInvoiceManager } from './policies.js';
-import { toDraftHistorySnapshot, toPublicInvoice, toPublicInvoiceListItem } from './projection.js';
+import { DEFAULT_LINE_QUANTITY } from './money/constants.js';
+import { calculateLineMoney, normalizeAcquisitionCost, parsePositiveDecimal } from './money/index.js';
+import { assertDraftLineTypeEnabled, assertInvoiceManager } from './policies.js';
+import {
+  toDraftHistorySnapshot,
+  toLineHistorySnapshot,
+  toPublicInvoice,
+  toPublicInvoiceListItem,
+} from './projection.js';
 import { salesTransaction, type SalesTransaction } from './transaction.js';
 import {
+  addInvoiceLineSchema,
   createDraftSchema,
+  genericDraftLineSchema,
   invoiceIdSchema,
+  invoiceLineIdSchema,
   listInvoicesSchema,
+  setLinePriceSchema,
   updateDraftMetaSchema,
 } from './validation.js';
 
@@ -30,6 +42,13 @@ function assertFiscalCustomer(
   if (fiscal && !satisfiesFiscalIdentity(customer)) {
     throw AppError.conflict(FISCAL_IDENTITY_REQUIRED_MESSAGE);
   }
+}
+
+function addedLine(before: InvoiceLine[], after: InvoiceLine[]): InvoiceLine {
+  const previousIds = new Set(before.map((line) => line.id));
+  const created = after.find((line) => !previousIds.has(line.id));
+  if (!created) throw AppError.internal('Created invoice line is missing');
+  return created;
 }
 
 export class SalesService {
@@ -137,6 +156,118 @@ export class SalesService {
         payload: toDraftHistorySnapshot(existing),
       });
       await sales.deleteById(id);
+    });
+  }
+
+  async addLine(actorId: string, invoiceId: string, input: unknown) {
+    invoiceIdSchema.parse({ id: invoiceId });
+    const candidate = addInvoiceLineSchema.parse(input);
+
+    return this.transaction(async ({ sales, users, history }) => {
+      assertInvoiceManager(await users.findById(actorId));
+      const existing = await sales.findById(invoiceId);
+      if (!existing) throw AppError.notFound('Invoice not found');
+      assertDraftStatus(existing.status, DRAFT_ONLY_EDIT_MESSAGE);
+      assertDraftLineTypeEnabled(candidate.type);
+      const profile = genericDraftLineSchema.parse(candidate);
+
+      const quantity =
+        profile.quantity === undefined
+          ? DEFAULT_LINE_QUANTITY
+          : parsePositiveDecimal(profile.quantity, 'quantity');
+      calculateLineMoney({
+        type: profile.type,
+        unitPrice: profile.unitPrice,
+        quantity,
+        fiscal: existing.fiscal,
+      });
+      const cost = normalizeAcquisitionCost({
+        provenance: profile.costProvenance,
+        amount: profile.acquisitionCostDop,
+      });
+
+      const updated = await sales.addLine({
+        invoiceId,
+        type: profile.type,
+        description: profile.description,
+        quantity,
+        unitPrice: profile.unitPrice,
+        acquisitionCostDop: cost.amount,
+        costProvenance: cost.provenance,
+      });
+      const created = addedLine(existing.lines, updated.lines);
+      await history.append({
+        actor: { actorType: 'USER', actorUserId: actorId },
+        subjectType: 'INVOICE',
+        subjectId: invoiceId,
+        eventType: 'INVOICE_LINE_ADDED',
+        payload: toLineHistorySnapshot(created),
+      });
+      return toPublicInvoice(updated);
+    });
+  }
+
+  async setLinePrice(actorId: string, invoiceId: string, lineId: string, input: unknown) {
+    invoiceLineIdSchema.parse({ id: invoiceId, lineId });
+    const patch = setLinePriceSchema.parse(input);
+
+    return this.transaction(async ({ sales, users, history }) => {
+      assertInvoiceManager(await users.findById(actorId));
+      const existing = await sales.findById(invoiceId);
+      if (!existing) throw AppError.notFound('Invoice not found');
+      assertDraftStatus(existing.status, DRAFT_ONLY_EDIT_MESSAGE);
+      const line = existing.lines.find((entry) => entry.id === lineId);
+      if (!line) throw AppError.notFound(LINE_NOT_FOUND_MESSAGE);
+      assertDraftLineTypeEnabled(line.type);
+
+      calculateLineMoney({
+        type: line.type,
+        unitPrice: patch.unitPrice,
+        quantity: line.quantity,
+        fiscal: existing.fiscal,
+      });
+
+      const updated = await sales.updateLinePrice({
+        invoiceId,
+        lineId,
+        unitPrice: patch.unitPrice,
+      });
+      const next = updated.lines.find((entry) => entry.id === lineId);
+      if (!next) throw AppError.internal(LINE_NOT_FOUND_MESSAGE);
+      await history.append({
+        actor: { actorType: 'USER', actorUserId: actorId },
+        subjectType: 'INVOICE',
+        subjectId: invoiceId,
+        eventType: 'INVOICE_LINE_UPDATED',
+        payload: {
+          before: toLineHistorySnapshot(line),
+          after: toLineHistorySnapshot(next),
+        },
+      });
+      return toPublicInvoice(updated);
+    });
+  }
+
+  async removeLine(actorId: string, invoiceId: string, lineId: string) {
+    invoiceLineIdSchema.parse({ id: invoiceId, lineId });
+
+    return this.transaction(async ({ sales, users, history }) => {
+      assertInvoiceManager(await users.findById(actorId));
+      const existing = await sales.findById(invoiceId);
+      if (!existing) throw AppError.notFound('Invoice not found');
+      assertDraftStatus(existing.status, DRAFT_ONLY_EDIT_MESSAGE);
+      const line = existing.lines.find((entry) => entry.id === lineId);
+      if (!line) throw AppError.notFound(LINE_NOT_FOUND_MESSAGE);
+
+      await history.append({
+        actor: { actorType: 'USER', actorUserId: actorId },
+        subjectType: 'INVOICE',
+        subjectId: invoiceId,
+        eventType: 'INVOICE_LINE_REMOVED',
+        payload: toLineHistorySnapshot(line),
+      });
+      const updated = await sales.removeLine(invoiceId, lineId);
+      return toPublicInvoice(updated);
     });
   }
 }

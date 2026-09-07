@@ -75,16 +75,16 @@ describe('SalesRepository (PostgreSQL)', () => {
       invoiceId: draft.id,
       type: InvoiceLineType.GENERIC,
       description: 'Filtro genérico',
-      quantity: 2,
-      unitPrice: 150.5,
+      quantity: '2',
+      unitPrice: '150.5',
       costProvenance: CostProvenance.ACTUAL,
-      acquisitionCostDop: 80,
+      acquisitionCostDop: '80',
     });
     const withService = await sales.addLine({
       invoiceId: draft.id,
       type: InvoiceLineType.SERVICE,
       description: 'Instalación mecánica',
-      unitPrice: 0,
+      unitPrice: '0',
       serviceId: service.id,
     });
 
@@ -122,9 +122,9 @@ describe('SalesRepository (PostgreSQL)', () => {
         invoiceId: draft.id,
         type: InvoiceLineType.GENERIC,
         description: 'Costo desconocido',
-        unitPrice: 10,
+        unitPrice: '10',
         costProvenance: CostProvenance.UNKNOWN,
-        acquisitionCostDop: 0,
+        acquisitionCostDop: '0',
       }),
     ).rejects.toThrow(/InvoiceLine_cost_check/);
   });

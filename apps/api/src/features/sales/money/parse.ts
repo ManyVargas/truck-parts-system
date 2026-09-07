@@ -51,3 +51,12 @@ export function parseNonNegativeDecimal(value: unknown, field: string): Prisma.D
 
   return parsed;
 }
+
+export function parsePositiveDecimal(value: unknown, field: string): Prisma.Decimal {
+  const parsed = parseNonNegativeDecimal(value, field);
+  if (parsed.isZero()) {
+    throw AppError.validation(`${field} must be greater than 0`, { field, value: parsed.toString() });
+  }
+
+  return parsed;
+}

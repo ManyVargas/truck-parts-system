@@ -2,9 +2,9 @@
 
 ## Estado del inventario
 
-Inventario actual: **7 de septiembre de 2026**, tras Release 2 Milestone 7 (cáscara HTTP de draft). Los conteos salen de Vitest e incluyen cada caso expandido de `it.each`. Las rutas son relativas a `apps/web/tests` o `apps/api/tests`.
+Inventario actual: **7 de septiembre de 2026**, tras Release 2 Milestone 8 (línea GENERIC HTTP). Los conteos de unitarias salen de Vitest e incluyen cada caso expandido de `it.each`. Las rutas son relativas a `apps/web/tests` o `apps/api/tests`.
 
-Se ejecutaron `npm run test -w @truck-parts/web`, `npm run test:unit -w @truck-parts/api` y `npm run test:integration -w @truck-parts/api` (esta última reinicia `DATABASE_URL_TEST` = `truck_parts_test` y reaplica migraciones).
+Se ejecutaron las unitarias de sales de M8 (`vitest run tests/unit/sales`). La integración HTTP de sales **no se reejecutó en este cierre**: Prisma bloqueó `migrate reset` sobre `truck_parts_test` (localhost:5433) al invocarse desde Cursor. No se usó un consentimiento de `migrate reset`. No se tocó `truck_parts_dev` ni producción.
 
 | Aplicación            | Tipo        | Archivos | Pruebas | Resultado obtenido |
 | --------------------- | ----------- | -------: | ------: | ------------------ |
@@ -12,12 +12,12 @@ Se ejecutaron `npm run test -w @truck-parts/web`, `npm run test:unit -w @truck-p
 | Frontend              | Integración |       10 |      68 | 68 aprobadas       |
 | Frontend              | Componentes |       31 |     143 | 143 aprobadas      |
 | **Subtotal frontend** |             |   **73** | **499** | **499 aprobadas**  |
-| Backend               | Unitarias   |       28 |     168 | 168 aprobadas      |
-| Backend               | Integración |       16 |     129 | 129 aprobadas      |
-| **Subtotal backend**  |             |   **44** | **297** | **297 aprobadas**  |
-| **Total**             |             |  **117** | **796** | **796 aprobadas**  |
+| Backend               | Unitarias   |       28 |     172 | 22 sales M8 verificadas; total API unitarias esperado 172 (168 M7 + 4 M8) |
+| Backend               | Integración |       16 |     133 | 4 casos M8 añadidos; suite HTTP sales no reejecutada (Prisma `migrate reset`) |
+| **Subtotal backend**  |             |   **44** | **305** | unitarias M8 verificadas; integración sales pendiente de `migrate reset` en test |
+| **Total**             |             |  **117** | **804** | frontend M7 + backend con +8 casos M8 |
 
-Ninguna prueba falló, se omitió ni quedó pendiente. Cierre funcional de API R2: [`done_api/release_2.md`](done_api/release_2.md). Cierre de Access/Users HTTP: [`done_api/release-1.md`](done_api/release-1.md).
+Ninguna prueba unitaria de sales falló. La integración de API de M8 está escrita y pendiente de ejecución local contra `truck_parts_test`. Cierre funcional de API R2: [`done_api/release_2.md`](done_api/release_2.md). Cierre de Access/Users HTTP: [`done_api/release-1.md`](done_api/release-1.md).
 
 El inventario de **679 pruebas / 97 archivos** (5 de septiembre de 2026) es el cierre de Milestone 9; ya no describe la rama. Evidencia de ese cierre: [`plans_api/milestone-9-verification.md`](plans_api/milestone-9-verification.md).
 
@@ -161,13 +161,13 @@ Validan salud, errores, configuración de pruebas, credenciales, sesiones, autor
 | `unit/customers/history-validation.test.ts`    |        1 | `CUSTOMER_CREATED` con actor USER; payload extra y actor SYSTEM.                                                                                                                          | Acepta el snapshot de cliente; rechaza `passwordHash` y atribución inválida. |
 | `unit/catalogs/validation.test.ts`             |        2 | Trim de nombre y descripción en blanco; rechazo de precio y campos desconocidos.                                                                                                           | Descripción vacía queda `null`; el catálogo no acepta precio. |
 | `unit/catalogs/history-validation.test.ts`     |        1 | `SERVICE_CREATED` con actor USER; payload extra y actor SYSTEM.                                                                                                                             | Acepta snapshot `{ name, description, active }`; rechaza campos ajenos. |
-| `unit/sales/money.test.ts`                     |       15 | Tasa 18 % Decimal; HALF_UP; GENERIC 118 y EXTERNAL 19.50; ITEM/QTY gravados; SERVICE/DELIVERY y no fiscal sin ITBIS; entrega 0; negativos; totales vs redondeo único; UNKNOWN ≠ 0.           | Extrae ITBIS incluido por línea; suma de líneas redondeadas; costo desconocido no es cero. |
-| `unit/sales/validation.test.ts`                |        2 | POST de draft vacío u overrides opcionales; PATCH meta vacío y campos desconocidos.                                                                                     | `currency`/`fiscal`/`customerId` son opcionales; un patch sin campos se rechaza. |
-| `unit/sales/history-validation.test.ts`        |        1 | `INVOICE_DRAFT_CREATED` con actor USER; payload extra y actor SYSTEM.                                                                                                   | Acepta snapshot de cáscara; rechaza secretos y atribución inválida. |
+| `unit/sales/money.test.ts`                     |       16 | Tasa 18 % Decimal; HALF_UP; GENERIC 118 y EXTERNAL 19.50; ITEM/QTY gravados; SERVICE/DELIVERY y no fiscal sin ITBIS; entrega 0; negativos; totales vs redondeo único; UNKNOWN ≠ 0; cantidad 0 rechazada. | Extrae ITBIS incluido por línea; suma de líneas redondeadas; costo desconocido no es cero; quantity > 0. |
+| `unit/sales/validation.test.ts`                |        4 | POST de draft vacío u overrides opcionales; PATCH meta vacío; GENERIC string money; UNKNOWN sin monto; `number`/campos extra.                                                         | `currency`/`fiscal`/`customerId` opcionales; dinero de línea es string; UNKNOWN no lleva amount. |
+| `unit/sales/history-validation.test.ts`        |        2 | `INVOICE_DRAFT_CREATED` y `INVOICE_LINE_ADDED` con actor USER; payload extra y actor SYSTEM.                                                                                           | Acepta snapshot de cáscara y de línea; rechaza secretos y atribución inválida. |
 
 ### Pruebas de integración
 
-Ejercitan persistencia y transacciones contra PostgreSQL y rutas HTTP con Supertest. Hay **129 pruebas en 16 archivos**. Los archivos se ejecutan secuencialmente (`fileParallelism: false`) porque comparten la base de pruebas.
+Ejercitan persistencia y transacciones contra PostgreSQL y rutas HTTP con Supertest. Hay **133 pruebas en 16 archivos** (129 M7 + 4 M8). Los archivos se ejecutan secuencialmente (`fileParallelism: false`) porque comparten la base de pruebas.
 
 | Archivo                                         | Cantidad | Pruebas realizadas                                                                                                                                                                                                                                    | Resultado esperado                                                                                                                                                                                                                                                                     |
 | ----------------------------------------------- | -------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -186,7 +186,7 @@ Ejercitan persistencia y transacciones contra PostgreSQL y rutas HTTP con Supert
 | `integration/catalogs/repository.test.ts`       |        2 | Alta activa/inactiva; listado de selección; update de nombre, descripción y `active`.                                                                                                     | `listActive` omite inactivos; `listAll` los incluye; no hay columna de precio. |
 | `integration/catalogs/http.test.ts`             |        6 | Admin CRUD/desactivar + history; Seller solo activos y 404 de inactivo; Mechanic/Seller escritura 403; envelope 400; CSRF; rollback si falla history. | `/api/catalogs/services` no expone precio; PATCH `active: false`; un fallo no deja servicio ni `SERVICE_CREATED`. |
 | `integration/sales/repository.test.ts`          |        4 | Draft sin `FAC-` DOP/USD; secuencia seed y lock sin consumir; líneas GENERIC+SERVICE; UNKNOWN=0 rechazado por check.                                                                      | `number` null en draft; `nextValue` 1; costo desconocido no persiste como cero. |
-| `integration/sales/http.test.ts`                |        7 | Crear con default contado+DOP+no fiscal; moneda/cliente fiscal; fiscal+contado 409; DELETE de draft; listado paginado por status; Mechanic 403 y 400; rollback si falla history; CSRF. | `/api/sales` no asigna `FAC-`; COMPLETED no se edita ni borra; un fallo no deja draft ni `INVOICE_DRAFT_CREATED`. |
+| `integration/sales/http.test.ts`                |       11 | Crear con default contado+DOP+no fiscal; moneda/cliente fiscal; fiscal+contado 409; DELETE de draft; listado paginado; Mechanic 403; rollback history; CSRF; GENERIC add/price/remove + ITBIS; UNKNOWN ≠ 0; ITEM/QTY 409; negativos/`N/A`; línea sin evento si history falla. | `/api/sales` no asigna `FAC-`; GENERIC recalcula totales; ITEM/QTY no persisten líneas; COMPLETED no se edita. |
 
 ### Cobertura añadida en Milestone 9
 
@@ -210,6 +210,12 @@ Ejercitan persistencia y transacciones contra PostgreSQL y rutas HTTP con Supert
 - **10 integraciones nuevas:** HTTP del catálogo (roles, CSRF, 400, 404 Seller/inactivo, atomicidad de history) y persistencia Invoice/`FAC-` (draft sin número, lock de secuencia, checks de costo).
 - No hay swap web de servicios (M20). El HTTP de draft (M7) está cubierto aparte.
 - Migración `20260907180000_invoice_aggregate` (sexta migración).
+
+### Cobertura añadida en Release 2 M8
+
+- **4 unitarias nuevas:** Zod de línea GENERIC (string money, UNKNOWN sin monto); envelope `INVOICE_LINE_ADDED`; `parsePositiveDecimal` para quantity.
+- **4 integraciones nuevas:** add/setPrice/remove GENERIC con ITBIS; UNKNOWN ≠ 0 + rechazo ITEM/QTY/SERVICE; negativos/`N/A`/Mechanic/CSRF/COMPLETED; rollback si falla history al agregar línea.
+- No hay swap POS (M21) ni SERVICE/DELIVERY/EXTERNAL (M9–M11).
 
 ### Cobertura añadida en Release 2 M7
 
@@ -250,7 +256,7 @@ npm run typecheck:test -w @truck-parts/web
 npm exec -w @truck-parts/api -- vitest run tests/unit/users/history-validation.test.ts
 npm run test:integration -w @truck-parts/api -- tests/integration/users/history.test.ts
 
-# Casos específicos de Release 2 M1–M7
+# Casos específicos de Release 2 M1–M8
 npm exec -w @truck-parts/api -- vitest run tests/unit/customers tests/unit/catalogs tests/unit/sales
 npm run test:integration -w @truck-parts/api -- tests/integration/customers tests/integration/catalogs tests/integration/sales
 ```
@@ -259,6 +265,6 @@ npm run test:integration -w @truck-parts/api -- tests/integration/customers test
 
 - No hay pruebas E2E de navegador; las pruebas React actuales son de componentes en jsdom.
 - La integración del frontend usa repositorios mock y memoria; no sustituye pruebas transaccionales contra PostgreSQL.
-- El backend cubre salud, acceso/sesiones, perfil propio, autorización, bootstrap, administración de usuarios, recuperación de contraseñas, historial append-only de cuentas, **clientes (persistencia + HTTP CUST-001/002)**, **catálogo de servicios mecánicos (persistencia + HTTP LINE-004/ADMIN-001)**, **motor ITBIS (SALE-003)**, **persistencia Invoice/`FAC-`** y **cáscara HTTP de draft (M7: crear/leer/listar/meta/descartar, sin líneas)**. El contrato transversal de errores se prueba con un router de tests. El historial de clientes, servicios y drafts se verifica en la misma transacción que la escritura. Estos resultados no implican líneas HTTP, confirmación, PDF, rentabilidad ni el swap web (`HttpCustomerRepository` M19, `HttpServiceRepository` M20, POS M21).
+- El backend cubre salud, acceso/sesiones, perfil propio, autorización, bootstrap, administración de usuarios, recuperación de contraseñas, historial append-only de cuentas, **clientes (persistencia + HTTP CUST-001/002)**, **catálogo de servicios mecánicos (persistencia + HTTP LINE-004/ADMIN-001)**, **motor ITBIS (SALE-003)**, **persistencia Invoice/`FAC-`**, **cáscara HTTP de draft (M7)** y **línea GENERIC HTTP (M8: add/remove/setPrice, rechazo ITEM/QTY)**. El contrato transversal de errores se prueba con un router de tests. El historial de clientes, servicios, drafts y líneas GENERIC se verifica en la misma transacción que la escritura. Estos resultados no implican SERVICE/DELIVERY/EXTERNAL HTTP, confirmación, PDF, rentabilidad ni el swap web (`HttpCustomerRepository` M19, `HttpServiceRepository` M20, POS M21).
 - Ventas (listado, detalle, pagos, cancelación, PDF), POS (borrador, ITBIS fiscal, confirmación `FAC-`, pago inicial, undo de líneas), OT de escritorio (WM9), app Mecánico (WM10) y catálogos/usuarios admin (WM11) tienen suites unitarias, de repositorio y de componente. Un esperado nuevo en categoría de ensamblaje rellena NA provisional en unidades no vendidas y avisa al administrador. Los atributos de categoría se definen en catálogo y se capturan como campos generados en el alta y la edición. Rentabilidad incluye reintento FX y registro admin de ganancia bruta cuando el costo es desconocido. Las capabilities de UX-0 siguen los releases del Development Plan (`release-1` … `release-8` y `prototype`). Las pruebas de componente usan el preset `prototype` por defecto para no heredar `VITE_CAPABILITIES_PRESET` del `.env` local. UX-1 cubre Modal/Field/Tabs con teclado, Button `busy` y Skeleton anunciado. UX-2 agrupa el sidebar comercial por intención de trabajo y compacta/overlay según breakpoint. UX-3 aplica progressive disclosure al registro de inventario (INV-002). UX-4 jerarquiza estados de inventario y unifica tablas (click de fila al detalle más enlace para teclado; columnas operativas separadas). UX-5 endurece el POS. UX-6 endurece la app del mecánico (targets, evidencia con progreso/reintento, historial completado, copy de red). El listado de inventario y ventas lee filtros operativos desde la URL (p. ej. KPIs del escritorio). Siguen fuera: carga real de fotos.
 - Cada cambio de negocio debe agregar una prueba en el nivel más bajo que demuestre la regla y una integración cuando intervengan autorización o estado compartido.

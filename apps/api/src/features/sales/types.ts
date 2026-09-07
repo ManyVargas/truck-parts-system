@@ -36,11 +36,17 @@ export type CreateInvoiceLineRecord = {
   invoiceId: string;
   type: InvoiceLineType;
   description: string;
-  quantity?: Prisma.Decimal | number | string;
-  unitPrice: Prisma.Decimal | number | string;
-  acquisitionCostDop?: Prisma.Decimal | number | string | null;
+  quantity?: Prisma.Decimal | string;
+  unitPrice: Prisma.Decimal | string;
+  acquisitionCostDop?: Prisma.Decimal | string | null;
   costProvenance?: CostProvenance | null;
   serviceId?: string | null;
+};
+
+export type UpdateInvoiceLinePriceRecord = {
+  invoiceId: string;
+  lineId: string;
+  unitPrice: Prisma.Decimal | string;
 };
 
 export type InvoiceSequenceRecord = InvoiceSequence;
@@ -97,4 +103,14 @@ export type InvoiceDraftHistorySnapshot = {
   currency: InvoiceCurrency;
   fiscal: boolean;
   customerId: string;
+};
+
+export type InvoiceLineHistorySnapshot = {
+  id: string;
+  type: InvoiceLineType;
+  description: string;
+  quantity: string;
+  unitPrice: string;
+  acquisitionCostDop: string | null;
+  costProvenance: CostProvenance | null;
 };

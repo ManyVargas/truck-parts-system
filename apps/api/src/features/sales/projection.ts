@@ -4,6 +4,7 @@ import { MONEY_DECIMAL_PLACES } from './money/constants.js';
 import { calculateLineMoney, isTaxableLineType, sumInvoiceMoney } from './money/index.js';
 import type {
   InvoiceDraftHistorySnapshot,
+  InvoiceLineHistorySnapshot,
   InvoiceListRecord,
   InvoiceRecord,
   PublicInvoice,
@@ -101,5 +102,17 @@ export function toDraftHistorySnapshot(invoice: {
     currency: invoice.currency,
     fiscal: invoice.fiscal,
     customerId: invoice.customerId,
+  };
+}
+
+export function toLineHistorySnapshot(line: InvoiceLine): InvoiceLineHistorySnapshot {
+  return {
+    id: line.id,
+    type: line.type,
+    description: line.description,
+    quantity: moneyString(line.quantity),
+    unitPrice: moneyString(line.unitPrice),
+    acquisitionCostDop: line.acquisitionCostDop == null ? null : moneyString(line.acquisitionCostDop),
+    costProvenance: line.costProvenance,
   };
 }

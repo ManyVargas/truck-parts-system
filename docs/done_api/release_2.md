@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M7 completados)
+**Estado:** en curso (M1–M8 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 2, a medida que se completan.  
 No sustituye a `plan_release_2.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -245,18 +245,36 @@ Crear, leer, listar, ajustar meta y descartar drafts HTTP, sin líneas ni `FAC-`
 
 ## Milestone 8 — Draft línea GENERIC + rechazo ITEM/QTY
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-07
 
 ### Objetivo cumplido
 
+`addLine` / `removeLine` / `setLinePrice` HTTP para mercancía genérica gravada, con recálculo ITBIS y rechazo explícito de ITEM/QTY.
+
 ### Qué se entregó
+
+- `POST /api/sales/:id/lines`, `PATCH /api/sales/:id/lines/:lineId`, `DELETE /api/sales/:id/lines/:lineId`.
+- Línea GENERIC: descripción, cantidad opcional, precio final en string decimal, costo DOP ACTUAL/ESTIMATED/UNKNOWN.
+- Recálculo con el motor de M5 en cada mutación; GET/POST/PATCH/DELETE devuelven el draft con totales.
+- History `INVOICE_LINE_ADDED` / `INVOICE_LINE_UPDATED` / `INVOICE_LINE_REMOVED` en la misma transacción.
+- ITEM/QTY → 409 de negocio; SERVICE/DELIVERY/EXTERNAL → 409 (M9–M11).
 
 ### Decisiones técnicas
 
+- Dinero HTTP como `string`; se rechaza `number` flotante y placeholders (`N/A`).
+- UNKNOWN no acepta monto; el check SQL sigue impidiendo UNKNOWN=0.
+- Isolation Serializable + re-chequeo de rol, igual que la cáscara M7.
+- Totales siguen derivados; no hay columnas de totales.
+
 ### Validación
 
+- Integration: `apps/api/tests/integration/sales/http.test.ts` (bloque M8)
+- Unit: `apps/api/tests/unit/sales/validation.test.ts`, `history-validation.test.ts`, `money.test.ts` (`parsePositiveDecimal`)
+
 ### Fuera de alcance (intencional)
+
+SERVICE/DELIVERY/EXTERNAL (M9–M11). Confirmación / `FAC-` (M12). Swap POS (M21).
 
 ---
 

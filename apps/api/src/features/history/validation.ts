@@ -27,6 +27,17 @@ const invoiceDraftSnapshot = z
     customerId: z.uuid(),
   })
   .strict();
+const invoiceLineSnapshot = z
+  .object({
+    id: z.uuid(),
+    type: z.enum(['GENERIC', 'SERVICE', 'DELIVERY', 'EXTERNAL', 'ITEM', 'QTY']),
+    description: z.string(),
+    quantity: z.string(),
+    unitPrice: z.string(),
+    acquisitionCostDop: z.string().nullable(),
+    costProvenance: z.enum(['ACTUAL', 'ESTIMATED', 'UNKNOWN']).nullable(),
+  })
+  .strict();
 const serviceSnapshot = z
   .object({
     name: z.string(),
@@ -206,6 +217,27 @@ export const historyEventSchema = z
         ...invoiceBase,
         eventType: z.literal('INVOICE_DRAFT_DISCARDED'),
         payload: invoiceDraftSnapshot,
+      })
+      .strict(),
+    z
+      .object({
+        ...invoiceBase,
+        eventType: z.literal('INVOICE_LINE_ADDED'),
+        payload: invoiceLineSnapshot,
+      })
+      .strict(),
+    z
+      .object({
+        ...invoiceBase,
+        eventType: z.literal('INVOICE_LINE_UPDATED'),
+        payload: z.object({ before: invoiceLineSnapshot, after: invoiceLineSnapshot }).strict(),
+      })
+      .strict(),
+    z
+      .object({
+        ...invoiceBase,
+        eventType: z.literal('INVOICE_LINE_REMOVED'),
+        payload: invoiceLineSnapshot,
       })
       .strict(),
   ])

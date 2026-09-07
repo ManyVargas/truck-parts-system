@@ -8,6 +8,7 @@ import {
   isTaxableLineType,
   knownCostAmount,
   normalizeAcquisitionCost,
+  parsePositiveDecimal,
   roundMoney,
   sumInvoiceMoney,
 } from '../../../src/features/sales/money/index.js';
@@ -193,5 +194,12 @@ describe('normalizeAcquisitionCost', () => {
 
     expect(actualZero.amount?.equals(money('0'))).toBe(true);
     expect(estimated.amount?.equals(money('250.50'))).toBe(true);
+  });
+});
+
+describe('parsePositiveDecimal', () => {
+  it('rejects zero quantity while allowing a positive amount', () => {
+    expect(parsePositiveDecimal('2', 'quantity').equals(money('2'))).toBe(true);
+    expect(() => parsePositiveDecimal('0', 'quantity')).toThrow(AppError);
   });
 });
