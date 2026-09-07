@@ -5,6 +5,7 @@ import { PageHeader } from '../../shared/layout/PageHeader';
 import { Info, useToast } from '../../shared/ui';
 import { ProfileForm } from './ProfileForm';
 import { useProfile } from './useProfile';
+import { useMockApi } from '../../api/client/http-client';
 
 export function ProfilePage() {
   const { user, isSaving, save } = useProfile();
@@ -24,7 +25,12 @@ export function ProfilePage() {
       return;
     }
 
-    pushToast('Perfil actualizado', 'success');
+    pushToast(
+      !useMockApi && input.newPassword !== undefined
+        ? 'Contraseña actualizada. Inicie sesión con su nueva contraseña.'
+        : 'Perfil actualizado',
+      'success',
+    );
   }
 
   return (

@@ -24,7 +24,7 @@ export function MechanicLayout() {
           <p className="truncate text-base font-semibold">{user.name}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <DemoControls />
+          {!user.mustChangePassword && <DemoControls />}
           <UserMenu user={user} onLogout={logout} />
         </div>
       </header>
@@ -33,7 +33,7 @@ export function MechanicLayout() {
         <Outlet />
       </main>
 
-      <MechanicBottomNav />
+      {!user.mustChangePassword && <MechanicBottomNav />}
     </div>
   );
 }

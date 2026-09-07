@@ -32,6 +32,7 @@ export function createAuthValue(role: Role = 'ADMINISTRATOR'): AuthContextValue 
     login: vi.fn(),
     logout: vi.fn(),
     refresh: vi.fn(),
+    clearSession: vi.fn(),
   };
 }
 

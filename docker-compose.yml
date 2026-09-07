@@ -51,6 +51,7 @@ services:
       args:
         VITE_ENABLE_DEMO_CONTROLS: ${VITE_ENABLE_DEMO_CONTROLS}
         VITE_CAPABILITIES_PRESET: ${VITE_CAPABILITIES_PRESET}
+        VITE_USE_MOCK_API: ${VITE_USE_MOCK_API}
     container_name: truck_parts_web
     restart: unless-stopped
     ports:

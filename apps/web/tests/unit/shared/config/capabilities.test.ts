@@ -14,6 +14,19 @@ import {
 } from '../../../../src/shared/layout/navigation';
 
 describe('capability presets follow the Development Plan', () => {
+  it('keeps users and later releases unavailable in M10 HTTP even with prototype flags', () => {
+    const capabilities = resolveCapabilities({
+      VITE_USE_MOCK_API: 'false',
+      VITE_CAPABILITIES_PRESET: 'prototype',
+      VITE_ENABLE_DEMO_CONTROLS: 'true',
+      DEV: true,
+    });
+    expect(Object.values(capabilities).every((enabled) => !enabled)).toBe(true);
+    expect(isRouteAllowedForRole('/users', 'ADMINISTRATOR', capabilities)).toBe(false);
+    expect(isMechanicPathAllowed('/mechanic/pending', capabilities)).toBe(false);
+    expect(isMechanicPathAllowed('/mechanic/profile', capabilities)).toBe(true);
+  });
+
   it('Release 1 is only access and user administration', () => {
     const capabilities = CAPABILITY_PRESETS['release-1'];
 
@@ -86,9 +99,9 @@ describe('capability presets follow the Development Plan', () => {
     expect(CAPABILITY_PRESETS['release-6'].workOrders).toBe(false);
     expect(CAPABILITY_PRESETS['release-7'].workOrders).toBe(true);
     expect(CAPABILITY_PRESETS['release-7'].recovery).toBe(false);
-    expect(isRouteAllowedForRole('/recovery', 'ADMINISTRATOR', CAPABILITY_PRESETS['release-8'])).toBe(
-      true,
-    );
+    expect(
+      isRouteAllowedForRole('/recovery', 'ADMINISTRATOR', CAPABILITY_PRESETS['release-8']),
+    ).toBe(true);
   });
 
   it('keeps the prototype preset complete, including mechanic work orders', () => {

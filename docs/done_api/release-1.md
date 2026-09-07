@@ -2,7 +2,7 @@
 
 **Release:** Application Foundation and Access (Local Development)  
 **Plan de referencia:** [`../plans_api/plan-001.md`](../plans_api/plan-001.md)  
-**Estado:** en progreso: M1–M3 y M5–M9 completados en local; M4 mantiene verificación GitHub pendiente. M10–M11 pendientes. Integraciones M6–M7 ejecutadas satisfactoriamente durante el cierre de M8.
+**Estado:** en progreso: M1–M3 y M5–M10 completados en local; M4 mantiene verificación GitHub pendiente. M11 pendiente. Integraciones M6–M7 ejecutadas satisfactoriamente durante el cierre de M8.
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 1, a medida que se completan.  
 No sustituye a `plan-001.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -664,9 +664,13 @@ Detalle de decisiones, eventos, integración y operación en [`../plans_api/mile
 
 ## Milestone 10 — Frontend: login, logout, sesión y shell por rol
 
-**Estado:** pendiente
+**Estado:** completado y verificado localmente (2026-09-06). 708 pruebas aprobadas (139 unitarias API, 97 integraciones PostgreSQL y 472 web), typecheck, lint y build correctos; advertencias preexistentes de Fast Refresh y bundle. Browser validado: el usuario confirmó cambio y nuevo login en los tres roles; el agente verificó perfil persistente tras recarga, acceso restringido y logout.
 
-*(Se documentará al completar el milestone.)*
+- Integración real de `AuthRepository`: login, logout, sesión, perfil, cambio obligatorio/voluntario de contraseña y solicitud pública de recuperación.
+- Contratos públicos, cookie HttpOnly, CSRF, errores en español y guards para recarga/URL directa. Un cambio exitoso revoca acceso local y exige login nuevo.
+- Decisión del usuario: Usuarios temporalmente no disponible en HTTP hasta M11 y conservado en mock. HTTP limita navegación a acceso/perfil; los módulos posteriores continúan en el prototipo.
+- Harness web aislado del `.env` local; cobertura HTTP y regresiones del prototipo. Backend y migraciones sin cambios.
+- Integraciones sobre `DATABASE_URL_TEST` y cuentas temporales de navegador autorizadas expresamente por el usuario. Detalle de pruebas y decisiones en [`../plans_api/milestone-10-verification.md`](../plans_api/milestone-10-verification.md).
 
 ---
 

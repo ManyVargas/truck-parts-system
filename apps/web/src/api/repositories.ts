@@ -5,6 +5,7 @@
  * With VITE_USE_MOCK_API=false the HTTP stubs boot without calling mock services.
  */
 import { useMockApi } from './client/http-client';
+import type { AuthRepository } from './contracts/repositories';
 import {
   httpAuthRepository,
   httpCategoryRepository,
@@ -32,7 +33,7 @@ import {
   mockWorkOrderRepository,
 } from '../mocks/repositories';
 
-export const authRepository = useMockApi ? mockAuthRepository : httpAuthRepository;
+export const authRepository: AuthRepository = useMockApi ? mockAuthRepository : httpAuthRepository;
 export const userRepository = useMockApi ? mockUserRepository : httpUserRepository;
 export const inventoryRepository = useMockApi ? mockInventoryRepository : httpInventoryRepository;
 export const customerRepository = useMockApi ? mockCustomerRepository : httpCustomerRepository;

@@ -1,7 +1,7 @@
 # Plan 001 — Release 1 Milestones: Foundation + Access and Users
 
 **Release:** 1 — Application Foundation and Access (Local Development)  
-**Estado:** Milestone 9 completado en local — Milestone 4 mantiene pendiente la verificación en GitHub
+**Estado:** Milestone 10 completado en local — Milestone 4 mantiene pendiente la verificación en GitHub
 **Último milestone:** Milestone 11 — Integrar users HTTP + exit gate Release 1
 
 ---
@@ -145,7 +145,7 @@ flowchart TD
 | M7 | Autorización server-side (AUTH-002/005) | completado en local | **Listo para M10** (auth + shell); swap no default |
 | M8 | User management backend (AUTH-003/004) | completado en local | **Listo para M11** (`/users`) |
 | M9 | History envelope R1 + eventos de usuarios | completado en local | Sin UI R1; tests/API en el exit gate |
-| M10 | Integrar auth HTTP (login/sesión/perfil/shell) | pendiente | Swap `AuthRepository` mock → HTTP |
+| M10 | Integrar auth HTTP (login/sesión/perfil/shell) | completado en local | Swap `AuthRepository` mock → HTTP |
 | M11 | Integrar users HTTP + exit gate Release 1 | pendiente | Swap `UserRepository` mock → HTTP |
 
 ---
@@ -474,6 +474,10 @@ queda para el release de OT. El prototipo web permanece en mock.
 
 ## Milestone 10 — Integrar auth HTTP: login, sesión, perfil y shell
 
+**Avance:** completado en local. 708 pruebas aprobadas, typecheck/lint/build correctos y flujos de navegador verificados con participación del usuario para introducir contraseñas nuevas. Detalle en [`milestone-10-verification.md`](milestone-10-verification.md).
+
+**Transición aprobada para M10:** Usuarios queda temporalmente no disponible en modo HTTP hasta M11; se conserva en modo mock. El modo HTTP limita navegación a acceso/perfil y no consulta KPIs ni pantallas de releases posteriores. El prototipo completo permanece disponible con `VITE_USE_MOCK_API=true`.
+
 **Objetivo:** Sustituir el mock de `AuthRepository` por la API de M6–M7. La UI de login/shell/perfil **ya existe** (prototipo WM2 + perfil); se adapta al cambio obligatorio añadido en M8.
 
 **Alcance:**
@@ -546,13 +550,13 @@ Tras **cerrar Release 1**, la siguiente integración web de negocio es Release 2
 
 ## Próximo paso
 
-**Milestone 10:** integrar auth HTTP (login, sesión, perfil, cambio obligatorio de contraseña y solicitud de recuperación). M9 está cerrado localmente; la administración HTTP de usuarios se integra en M11.
+**Milestone 11:** integrar administración HTTP de usuarios y resolución de recuperación, y completar el exit gate de Release 1. M10 está cerrado localmente.
 
 **Pendientes de Milestone 4:** verificar el primer PR en GitHub y configurar el check
 obligatorio `R1 quality`. Se mantiene la decisión de
 hacer el PR al terminar Release 1.
 
-No integrar Access/Users a la web: el prototipo permanece en mock hasta M10–M11.
+Auth/perfil ya usa HTTP con `VITE_USE_MOCK_API=false`. Usuarios queda no disponible en ese modo hasta M11; el prototipo completo se conserva con `true`.
 
 Antes de seguir, asegúrate de tener `.env` con un `DATABASE_URL` válido, la base `truck_parts_dev` creada, y haber corrido:
 

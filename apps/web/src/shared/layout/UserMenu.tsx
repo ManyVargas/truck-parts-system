@@ -54,7 +54,7 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
     await onLogout();
     setIsLoggingOut(false);
     setOpen(false);
-    navigate('/login', { replace: true });
+    // AuthProvider clears the identity only after the server confirms logout.
   }
 
   return (

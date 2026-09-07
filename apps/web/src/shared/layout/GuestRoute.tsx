@@ -42,7 +42,11 @@ export function GuestRoute({ children }: GuestRouteProps) {
   }
 
   if (user) {
-    const returnPath = resolveReturnPath(location.state) ?? defaultPathForRole(user.role, capabilities);
+    if (user.mustChangePassword) {
+      return <Navigate to={user.role === 'MECHANIC' ? '/mechanic/profile' : '/profile'} replace />;
+    }
+    const returnPath =
+      resolveReturnPath(location.state) ?? defaultPathForRole(user.role, capabilities);
     return <Navigate to={returnPath} replace />;
   }
 

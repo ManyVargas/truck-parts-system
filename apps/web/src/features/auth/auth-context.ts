@@ -1,17 +1,18 @@
 import { createContext } from 'react';
 
-import type { Session, User } from '../../api/contracts/entities';
+import type { AuthSession, PublicUser } from '../../api/contracts/auth';
 import type { Result } from '../../shared/auth/types';
 
-export type AuthUser = Omit<User, 'password'>;
+export type AuthUser = PublicUser;
 
 export type AuthContextValue = {
   user: AuthUser | null;
-  session: Session | null;
+  session: AuthSession | null;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<Result<Session>>;
+  login: (username: string, password: string) => Promise<Result<AuthSession>>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
+  clearSession: () => void;
 };
 
 /**

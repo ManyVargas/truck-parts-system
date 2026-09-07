@@ -10,6 +10,7 @@ export const REPOSITORY_ENDPOINT_MAP = {
     getSession: 'GET /api/auth/session',
     getCurrentUser: 'GET /api/auth/me',
     updateOwnProfile: 'PATCH /api/auth/me',
+    requestRecovery: 'POST /api/auth/recovery-requests',
   },
   UserRepository: {
     list: 'GET /api/users',

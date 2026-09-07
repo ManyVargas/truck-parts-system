@@ -123,7 +123,7 @@ Deactivation must invalidate future access while preserving historical foreign-k
 - [x] Session-expired / inactive-account handling.
 - [x] Original Administrator user-management prototype (`name`, `username`, optional `phone`/`email`, role, active state), covered by tests (WM11). Its password field predates the 2026-09-05 decision and must be removed before HTTP integration.
 - [ ] Remove password inputs/free reset actions from administrative UI and user payloads; explain initial password, add recovery request resolution and one-time temporary-password display (M11).
-- [ ] Adapt login and own profile to mandatory password change, including reload/direct navigation and fresh login after completion (M10).
+- [x] Adapt login and own profile to mandatory password change, including reload/direct navigation and fresh login after completion (M10: automated component/HTTP coverage and local browser verification; owner confirmed password change and fresh login for all three roles).
 - [x] Role-aware navigation without treating hidden controls as security. Prototype mock 2.0-M1.2 also hides on-screen actions the role cannot perform (`can()` + route guards).
 - [x] Self-service profile edit (own name, optional phone/email, password) for every active role. Username, role, and active stay administrator-managed. Uses `profile.update`, not `users.manage`. Covered by unit, integration, and component tests.
 

@@ -32,6 +32,10 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
+  const profilePath = user.role === 'MECHANIC' ? '/mechanic/profile' : '/profile';
+  if (user.mustChangePassword && location.pathname !== profilePath)
+    return <Navigate to={profilePath} replace />;
+
   if (roles && !roles.includes(user.role)) {
     const decision = layoutAccessDecision(location.pathname, user.role, roles);
     if (decision === 'not_found') {

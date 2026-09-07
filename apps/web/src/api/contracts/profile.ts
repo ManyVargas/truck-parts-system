@@ -1,4 +1,4 @@
-import type { User } from './entities';
+import type { PublicUser } from './auth';
 
 /**
  * Self-service profile payload. Intentionally omits id, username, role, and active
@@ -13,4 +13,4 @@ export type UpdateOwnProfileInput = {
   confirmPassword?: string;
 };
 
-export type UpdateOwnProfileResult = Omit<User, 'password'>;
+export type UpdateOwnProfileResult = PublicUser;

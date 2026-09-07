@@ -1,4 +1,5 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
+import { useMockApi } from './api/client/http-client';
 
 import { LoginPage } from './features/auth/LoginPage';
 import { CustomersPage } from './features/customers/CustomersPage';
@@ -31,7 +32,7 @@ import { RouteAccessGuard } from './shared/layout/RouteAccessGuard';
 const desktopChildRoutes = [
   {
     path: '/dashboard',
-    element: <DashboardPage />,
+    element: useMockApi ? <DashboardPage /> : <Navigate to="/profile" replace />,
   },
   {
     path: '/inventory',
@@ -127,10 +128,7 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="/dashboard" replace /> },
       {
         element: <RouteAccessGuard />,
-        children: [
-          ...desktopChildRoutes,
-          { path: '*', element: <NotFoundPage /> },
-        ],
+        children: [...desktopChildRoutes, { path: '*', element: <NotFoundPage /> }],
       },
     ],
   },

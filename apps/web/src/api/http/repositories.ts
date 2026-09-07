@@ -13,33 +13,44 @@ import type {
   WorkOrderRepository,
 } from '../contracts/repositories';
 import type { ConfirmInvoicePayment } from '../contracts/sales';
-import { ok } from '../../shared/auth/types';
+import type { UpdateOwnProfileInput } from '../contracts/profile';
+import {
+  loginWithHttp,
+  logoutWithHttp,
+  getSessionWithHttp,
+  getCurrentUserWithHttp,
+  updateOwnProfileWithHttp,
+  requestRecoveryWithHttp,
+} from '../client/auth-api';
 import { httpNotImplemented } from '../client/http-not-implemented';
 
 /**
- * HTTP repository stubs selected when VITE_USE_MOCK_API=false.
- * getSession/getCurrentUser resolve empty so the app can boot to /login.
- * Other methods return a typed INTERNAL result until the matching API exists.
+ * Access/profile uses the real M6–M8 API. Other repositories remain unavailable
+ * until their integration milestone; capability guards keep their screens out of HTTP mode.
  */
 export class HttpAuthRepository implements AuthRepository {
-  async login() {
-    return httpNotImplemented('HttpAuthRepository', 'login');
+  async login(username: string, password: string) {
+    return loginWithHttp({ username, password });
   }
 
   async logout() {
-    return httpNotImplemented('HttpAuthRepository', 'logout');
+    return logoutWithHttp();
   }
 
   async getSession() {
-    return ok(null);
+    return getSessionWithHttp();
   }
 
   async getCurrentUser() {
-    return ok(null);
+    return getCurrentUserWithHttp();
   }
 
-  async updateOwnProfile() {
-    return httpNotImplemented('HttpAuthRepository', 'updateOwnProfile');
+  async updateOwnProfile(input: UpdateOwnProfileInput) {
+    return updateOwnProfileWithHttp(input);
+  }
+
+  async requestRecovery(username: string) {
+    return requestRecoveryWithHttp(username);
   }
 }
 

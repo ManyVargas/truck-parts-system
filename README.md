@@ -175,6 +175,6 @@ setup instructions, local commands, and the smoke checks that M6–M7 must add.
 
 ## Administración de usuarios — M8
 
-El backend incluye gestión de cuentas y recuperación autorizada. Aplicar migraciones locales con `npm run db:migrate:deploy` antes de iniciar la API. El frontend continúa en mock hasta M10–M11.
+El backend incluye gestión de cuentas y recuperación autorizada. Aplicar migraciones locales con `npm run db:migrate:deploy` antes de iniciar la API. Con `VITE_USE_MOCK_API=false`, M10 conecta login/logout, sesión, perfil y solicitud de recuperación. Usuarios queda temporalmente no disponible en HTTP hasta M11. El modo HTTP limita navegación a acceso/perfil; `VITE_USE_MOCK_API=true` conserva el prototipo completo. Las pruebas seleccionan su modo independientemente del `.env`. Detalles y verificación en [`milestone-10-verification.md`](docs/plans_api/milestone-10-verification.md).
 
 Contrato HTTP, ejemplos JSON y secuencias de alta, cambio obligatorio, recuperación y desactivación: [guía M8](docs/plans_api/milestone-8-verification.md). Las cuentas existentes conservan sus contraseñas; nuevas cuentas administrativas usan `solocamiones` y deben cambiarla. No hay recuperación por correo ni comando local de recuperación.
