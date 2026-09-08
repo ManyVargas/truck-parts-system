@@ -1,12 +1,15 @@
 import type { InvoiceLine, InvoiceStatus } from '@prisma/client';
 
 import { AppError } from '../../infrastructure/errors/app-error.js';
+import { CatalogRepository } from '../catalogs/repository.js';
 import { satisfiesFiscalIdentity } from '../customers/fiscal.js';
 import {
+  CATALOG_SERVICE_NOT_FOUND_MESSAGE,
   DEFAULT_DRAFT_CURRENCY,
   DRAFT_ONLY_DISCARD_MESSAGE,
   DRAFT_ONLY_EDIT_MESSAGE,
   FISCAL_IDENTITY_REQUIRED_MESSAGE,
+  INACTIVE_SERVICE_LINE_MESSAGE,
   LINE_NOT_FOUND_MESSAGE,
   MISSING_GENERIC_CUSTOMER_MESSAGE,
 } from './constants.js';
@@ -20,6 +23,7 @@ import {
   toPublicInvoiceListItem,
 } from './projection.js';
 import { salesTransaction, type SalesTransaction } from './transaction.js';
+import type { CreateInvoiceLineRecord } from './types.js';
 import {
   addInvoiceLineSchema,
   createDraftSchema,
@@ -27,9 +31,12 @@ import {
   invoiceIdSchema,
   invoiceLineIdSchema,
   listInvoicesSchema,
+  serviceDraftLineSchema,
   setLinePriceSchema,
   updateDraftMetaSchema,
 } from './validation.js';
+
+type DraftLineWrite = Omit<CreateInvoiceLineRecord, 'invoiceId'>;
 
 function assertDraftStatus(status: InvoiceStatus, message: string): void {
   if (status !== 'DRAFT') throw AppError.conflict(message);
@@ -42,6 +49,46 @@ function assertFiscalCustomer(
   if (fiscal && !satisfiesFiscalIdentity(customer)) {
     throw AppError.conflict(FISCAL_IDENTITY_REQUIRED_MESSAGE);
   }
+}
+
+function resolveGenericDraftLine(candidate: unknown): DraftLineWrite {
+  const profile = genericDraftLineSchema.parse(candidate);
+  const quantity =
+    profile.quantity === undefined
+      ? DEFAULT_LINE_QUANTITY
+      : parsePositiveDecimal(profile.quantity, 'quantity');
+  const cost = normalizeAcquisitionCost({
+    provenance: profile.costProvenance,
+    amount: profile.acquisitionCostDop,
+  });
+  return {
+    type: profile.type,
+    description: profile.description,
+    quantity,
+    unitPrice: profile.unitPrice,
+    acquisitionCostDop: cost.amount,
+    costProvenance: cost.provenance,
+  };
+}
+
+async function resolveServiceDraftLine(
+  catalogs: CatalogRepository,
+  candidate: unknown,
+): Promise<DraftLineWrite> {
+  const profile = serviceDraftLineSchema.parse(candidate);
+  const catalogService = await catalogs.findById(profile.serviceId);
+  if (!catalogService) throw AppError.notFound(CATALOG_SERVICE_NOT_FOUND_MESSAGE);
+  if (!catalogService.active) {
+    throw AppError.conflict(INACTIVE_SERVICE_LINE_MESSAGE, { serviceId: profile.serviceId });
+  }
+
+  return {
+    type: profile.type,
+    description: profile.description ?? catalogService.name,
+    quantity: DEFAULT_LINE_QUANTITY,
+    unitPrice: profile.unitPrice,
+    serviceId: profile.serviceId,
+  };
 }
 
 function addedLine(before: InvoiceLine[], after: InvoiceLine[]): InvoiceLine {
@@ -163,37 +210,27 @@ export class SalesService {
     invoiceIdSchema.parse({ id: invoiceId });
     const candidate = addInvoiceLineSchema.parse(input);
 
-    return this.transaction(async ({ sales, users, history }) => {
+    return this.transaction(async ({ sales, users, history, catalogs }) => {
       assertInvoiceManager(await users.findById(actorId));
       const existing = await sales.findById(invoiceId);
       if (!existing) throw AppError.notFound('Invoice not found');
       assertDraftStatus(existing.status, DRAFT_ONLY_EDIT_MESSAGE);
       assertDraftLineTypeEnabled(candidate.type);
-      const profile = genericDraftLineSchema.parse(candidate);
+      const line =
+        candidate.type === 'SERVICE'
+          ? await resolveServiceDraftLine(catalogs, candidate)
+          : resolveGenericDraftLine(candidate);
 
-      const quantity =
-        profile.quantity === undefined
-          ? DEFAULT_LINE_QUANTITY
-          : parsePositiveDecimal(profile.quantity, 'quantity');
       calculateLineMoney({
-        type: profile.type,
-        unitPrice: profile.unitPrice,
-        quantity,
+        type: line.type,
+        unitPrice: line.unitPrice,
+        quantity: line.quantity,
         fiscal: existing.fiscal,
-      });
-      const cost = normalizeAcquisitionCost({
-        provenance: profile.costProvenance,
-        amount: profile.acquisitionCostDop,
       });
 
       const updated = await sales.addLine({
         invoiceId,
-        type: profile.type,
-        description: profile.description,
-        quantity,
-        unitPrice: profile.unitPrice,
-        acquisitionCostDop: cost.amount,
-        costProvenance: cost.provenance,
+        ...line,
       });
       const created = addedLine(existing.lines, updated.lines);
       await history.append({

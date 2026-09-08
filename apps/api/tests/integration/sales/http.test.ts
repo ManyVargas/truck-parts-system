@@ -8,9 +8,11 @@ import { hashPassword } from '../../../src/features/access/password.js';
 import { CustomerRepository } from '../../../src/features/customers/repository.js';
 import { HistoryRepository } from '../../../src/features/history/repository.js';
 import {
+  CATALOG_SERVICE_NOT_FOUND_MESSAGE,
   DRAFT_ONLY_DISCARD_MESSAGE,
   DRAFT_ONLY_EDIT_MESSAGE,
   FISCAL_IDENTITY_REQUIRED_MESSAGE,
+  INACTIVE_SERVICE_LINE_MESSAGE,
   UNSUPPORTED_INVENTORY_LINE_MESSAGE,
   UNSUPPORTED_LINE_TYPE_MESSAGE,
 } from '../../../src/features/sales/constants.js';
@@ -47,6 +49,7 @@ async function cleanup() {
   vi.restoreAllMocks();
   await clearTestHistory();
   await prisma.invoice.deleteMany();
+  await prisma.mechanicalService.deleteMany();
   await prisma.customerContact.deleteMany({ where: { customer: { isDefault: false } } });
   await prisma.customer.deleteMany({ where: { isDefault: false } });
   await prisma.session.deleteMany();
@@ -303,12 +306,19 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
     expect(qty.body.error.message).toBe(UNSUPPORTED_INVENTORY_LINE_MESSAGE);
     expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(1);
 
-    const service = await admin.agent
+    const delivery = await admin.agent
       .post(`${ROOT}/${draft.body.id}/lines`)
       .set(CSRF)
-      .send({ type: 'SERVICE', description: 'Instalación', unitPrice: '500.00' });
-    expect(service.status).toBe(409);
-    expect(service.body.error.message).toBe(UNSUPPORTED_LINE_TYPE_MESSAGE);
+      .send({ type: 'DELIVERY', description: 'Envío', unitPrice: '200.00' });
+    expect(delivery.status).toBe(409);
+    expect(delivery.body.error.message).toBe(UNSUPPORTED_LINE_TYPE_MESSAGE);
+
+    const external = await admin.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({ type: 'EXTERNAL', description: 'Bomba externa', unitPrice: '300.00' });
+    expect(external.status).toBe(409);
+    expect(external.body.error.message).toBe(UNSUPPORTED_LINE_TYPE_MESSAGE);
   });
 
   it('rejects negative prices, textual placeholders, completed invoices, Mechanic, and CSRF-less writes', async () => {
@@ -391,6 +401,163 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
         costProvenance: 'UNKNOWN',
       }),
     ).rejects.toThrow('history-unavailable');
+    expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(0);
+  });
+});
+
+const SERVICES = '/api/catalogs/services';
+
+describe('M9 draft SERVICE lines (LINE-004)', () => {
+  afterEach(cleanup);
+
+  it('lets Seller add an active catalog service with negotiated price and zero ITBIS', async () => {
+    const admin = await fixture();
+    const seller = await fixture('SELLER');
+    const identified = await customers.create({
+      name: 'Taller Norte',
+      rnc: '131123456',
+    });
+    const catalog = await admin.agent.post(SERVICES).set(CSRF).send({ name: 'Instalación mecánica' });
+    expect(catalog.status).toBe(201);
+
+    const forbiddenCatalog = await seller.agent.post(SERVICES).set(CSRF).send({ name: 'Otro' });
+    expect(forbiddenCatalog.status).toBe(403);
+
+    const draft = await seller.agent
+      .post(ROOT)
+      .set(CSRF)
+      .send({ customerId: identified.id, fiscal: true });
+    expect(draft.status).toBe(201);
+
+    const generic = await seller.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({
+        type: 'GENERIC',
+        description: 'Filtro de aceite',
+        unitPrice: '118.00',
+        costProvenance: 'UNKNOWN',
+      });
+    expect(generic.status).toBe(201);
+
+    const copiedName = await seller.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({ type: 'SERVICE', serviceId: catalog.body.id, unitPrice: '500.00' });
+    expect(copiedName.status).toBe(201);
+    expect(copiedName.body.lines).toHaveLength(2);
+    expect(copiedName.body.lines[1]).toMatchObject({
+      type: 'SERVICE',
+      description: 'Instalación mecánica',
+      quantity: '1.00',
+      unitPrice: '500.00',
+      taxable: false,
+      gross: '500.00',
+      base: '500.00',
+      itbis: '0.00',
+      acquisitionCostDop: null,
+      costProvenance: null,
+      serviceId: catalog.body.id,
+    });
+    expect(copiedName.body.totals).toEqual({ gross: '618.00', base: '600.00', itbis: '18.00' });
+    const serviceAddedEvent = await prisma.historyEvent.findFirst({
+      where: {
+        subjectId: draft.body.id,
+        eventType: 'INVOICE_LINE_ADDED',
+        payload: { path: ['serviceId'], equals: catalog.body.id },
+      },
+    });
+    expect(serviceAddedEvent?.payload).toMatchObject({ serviceId: catalog.body.id });
+
+    const overridden = await seller.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({
+        type: 'SERVICE',
+        serviceId: catalog.body.id,
+        unitPrice: '0.00',
+        description: 'Instalación expres',
+      });
+    expect(overridden.status).toBe(201);
+    expect(overridden.body.lines[2]).toMatchObject({
+      type: 'SERVICE',
+      description: 'Instalación expres',
+      unitPrice: '0.00',
+      itbis: '0.00',
+      gross: '0.00',
+      serviceId: catalog.body.id,
+    });
+    expect(overridden.body.totals).toEqual({ gross: '618.00', base: '600.00', itbis: '18.00' });
+
+    const priced = await seller.agent
+      .patch(`${ROOT}/${draft.body.id}/lines/${copiedName.body.lines[1].id}`)
+      .set(CSRF)
+      .send({ unitPrice: '250.00' });
+    expect(priced.status).toBe(200);
+    expect(priced.body.lines[1]).toMatchObject({
+      unitPrice: '250.00',
+      itbis: '0.00',
+      gross: '250.00',
+    });
+    expect(priced.body.totals).toEqual({ gross: '368.00', base: '350.00', itbis: '18.00' });
+  });
+
+  it('rejects inactive and missing catalog services without inserting a line', async () => {
+    const admin = await fixture();
+    const draft = await admin.agent.post(ROOT).set(CSRF).send({});
+    const inactive = await admin.agent
+      .post(SERVICES)
+      .set(CSRF)
+      .send({ name: 'Diagnóstico', active: false });
+    expect(inactive.status).toBe(201);
+
+    const blocked = await admin.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({ type: 'SERVICE', serviceId: inactive.body.id, unitPrice: '200.00' });
+    expect(blocked.status).toBe(409);
+    expect(blocked.body.error.message).toBe(INACTIVE_SERVICE_LINE_MESSAGE);
+    expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(0);
+
+    const missing = await admin.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({
+        type: 'SERVICE',
+        serviceId: '11111111-1111-4111-8111-111111111111',
+        unitPrice: '200.00',
+      });
+    expect(missing.status).toBe(404);
+    expect(missing.body.error.message).toBe(CATALOG_SERVICE_NOT_FOUND_MESSAGE);
+    expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(0);
+  });
+
+  it('rejects SERVICE payloads with quantity, cost, or extra fields', async () => {
+    const admin = await fixture();
+    const catalog = await admin.agent.post(SERVICES).set(CSRF).send({ name: 'Balanceo' });
+    const draft = await admin.agent.post(ROOT).set(CSRF).send({});
+
+    const withQuantity = await admin.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({
+        type: 'SERVICE',
+        serviceId: catalog.body.id,
+        unitPrice: '100.00',
+        quantity: '2',
+      });
+    expect(withQuantity.status).toBe(400);
+
+    const withCost = await admin.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({
+        type: 'SERVICE',
+        serviceId: catalog.body.id,
+        unitPrice: '100.00',
+        costProvenance: 'UNKNOWN',
+      });
+    expect(withCost.status).toBe(400);
     expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(0);
   });
 });

@@ -114,5 +114,6 @@ export function toLineHistorySnapshot(line: InvoiceLine): InvoiceLineHistorySnap
     unitPrice: moneyString(line.unitPrice),
     acquisitionCostDop: line.acquisitionCostDop == null ? null : moneyString(line.acquisitionCostDop),
     costProvenance: line.costProvenance,
+    serviceId: line.serviceId,
   };
 }

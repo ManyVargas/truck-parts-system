@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M8 completados)
+**Estado:** en curso (M1–M9 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 2, a medida que se completan.  
 No sustituye a `plan_release_2.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -280,18 +280,40 @@ SERVICE/DELIVERY/EXTERNAL (M9–M11). Confirmación / `FAC-` (M12). Swap POS (M2
 
 ## Milestone 9 — Draft línea SERVICE
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-07
 
 ### Objetivo cumplido
 
+`addLine` HTTP acepta servicio de catálogo activo con precio negociado no gravado.
+
 ### Qué se entregó
+
+- `POST /api/sales/:id/lines` con `type: SERVICE`, `serviceId` y `unitPrice` (string decimal).
+- Descripción opcional: si falta, se copia el `name` del catálogo.
+- Recálculo M5: la línea SERVICE suma al bruto y no extrae ITBIS, incluso en factura fiscal.
+- `PATCH` de precio y `DELETE` de línea reutilizan M8.
+- History `INVOICE_LINE_ADDED` / `INVOICE_LINE_UPDATED` en la misma transacción, preservando `serviceId`.
 
 ### Decisiones técnicas
 
+- Contrato acordado: `serviceId` + `unitPrice` obligatorios; `description` opcional; `quantity` y costo rechazados (400).
+- Inactivo → 409; `serviceId` inexistente → 404; `unitPrice` `0.00` permitido.
+- `CatalogRepository.findById` corre en la misma transacción Serializable que el `addLine`.
+- PostgreSQL exige `serviceId` no nulo para toda línea `SERVICE`, además de impedirlo en otros tipos.
+- Seller escribe la línea; no escribe el catálogo (403 en `POST /api/catalogs/services`).
+- DELIVERY/EXTERNAL siguen 409.
+
 ### Validación
 
+- Integration: `apps/api/tests/integration/sales/http.test.ts` (bloque M9)
+- Integration: `apps/api/tests/integration/sales/repository.test.ts` (constraint de `serviceId` requerido)
+- Unit: `apps/api/tests/unit/sales/validation.test.ts` (schema SERVICE)
+- Unit: `apps/api/tests/unit/sales/history-validation.test.ts` (snapshot con `serviceId`)
+
 ### Fuera de alcance (intencional)
+
+DELIVERY/EXTERNAL (M10–M11). Confirmación / `FAC-` (M12). Swap POS (M21).
 
 ---
 

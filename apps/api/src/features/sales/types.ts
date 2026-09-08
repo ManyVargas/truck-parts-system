@@ -113,4 +113,5 @@ export type InvoiceLineHistorySnapshot = {
   unitPrice: string;
   acquisitionCostDop: string | null;
   costProvenance: CostProvenance | null;
+  serviceId: string | null;
 };

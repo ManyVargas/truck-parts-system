@@ -49,6 +49,7 @@ describe('invoice draft history validation', () => {
         unitPrice: '118.00',
         acquisitionCostDop: null,
         costProvenance: 'UNKNOWN' as const,
+        serviceId: null,
       },
     };
     expect(historyEventSchema.parse(event)).toEqual(event);

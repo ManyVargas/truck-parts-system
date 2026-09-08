@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 
 import { prisma } from '../../infrastructure/database/index.js';
 import { AppError } from '../../infrastructure/errors/app-error.js';
+import { CatalogRepository } from '../catalogs/repository.js';
 import { CustomerRepository } from '../customers/repository.js';
 import { HistoryRepository } from '../history/repository.js';
 import { UserRepository } from '../users/repository.js';
@@ -9,6 +10,7 @@ import { SalesRepository } from './repository.js';
 
 export type SalesRepositories = {
   sales: SalesRepository;
+  catalogs: CatalogRepository;
   customers: CustomerRepository;
   users: UserRepository;
   history: HistoryRepository;
@@ -24,6 +26,7 @@ export const salesTransaction: SalesTransaction = async (work) => {
         async (tx) =>
           work({
             sales: new SalesRepository(tx),
+            catalogs: new CatalogRepository(tx),
             customers: new CustomerRepository(tx),
             users: new UserRepository(tx),
             history: new HistoryRepository(tx),

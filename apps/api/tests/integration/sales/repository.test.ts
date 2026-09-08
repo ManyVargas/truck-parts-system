@@ -128,4 +128,22 @@ describe('SalesRepository (PostgreSQL)', () => {
       }),
     ).rejects.toThrow(/InvoiceLine_cost_check/);
   });
+
+  it('rejects a SERVICE line without a catalog service at the database', async () => {
+    const customer = await customers.findDefault();
+    const draft = await sales.createDraft({
+      customerId: customer!.id,
+      currency: InvoiceCurrency.DOP,
+      fiscal: false,
+    });
+
+    await expect(
+      sales.addLine({
+        invoiceId: draft.id,
+        type: InvoiceLineType.SERVICE,
+        description: 'Servicio sin catálogo',
+        unitPrice: '100',
+      }),
+    ).rejects.toThrow(/InvoiceLine_serviceId_required_check/);
+  });
 });

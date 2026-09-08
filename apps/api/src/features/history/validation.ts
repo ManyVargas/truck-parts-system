@@ -36,6 +36,7 @@ const invoiceLineSnapshot = z
     unitPrice: z.string(),
     acquisitionCostDop: z.string().nullable(),
     costProvenance: z.enum(['ACTUAL', 'ESTIMATED', 'UNKNOWN']).nullable(),
+    serviceId: z.uuid().nullable(),
   })
   .strict();
 const serviceSnapshot = z

@@ -77,6 +77,7 @@ export const addInvoiceLineSchema = z.strictObject({
   unitPrice: moneyStringSchema.optional(),
   costProvenance: costProvenanceSchema.optional(),
   acquisitionCostDop: moneyStringSchema.nullable().optional(),
+  serviceId: z.uuid().optional(),
 });
 
 export const genericDraftLineSchema = z
@@ -107,6 +108,13 @@ export const genericDraftLineSchema = z
       });
     }
   });
+
+export const serviceDraftLineSchema = z.strictObject({
+  type: z.literal('SERVICE'),
+  serviceId: z.uuid(),
+  unitPrice: decimal12x2StringSchema,
+  description: z.string().trim().min(1).optional(),
+});
 
 export const setLinePriceSchema = z.strictObject({
   unitPrice: decimal12x2StringSchema,

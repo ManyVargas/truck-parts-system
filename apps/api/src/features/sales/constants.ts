@@ -7,7 +7,10 @@ export const DRAFT_ONLY_DISCARD_MESSAGE = 'Only draft invoices can be discarded'
 export const DRAFT_META_REQUIRED_MESSAGE = 'At least one field is required';
 export const UNSUPPORTED_INVENTORY_LINE_MESSAGE =
   'Inventory-backed lines are not available; this invoice cannot create, reserve, or consume stock';
-export const UNSUPPORTED_LINE_TYPE_MESSAGE = 'Only GENERIC draft lines are supported';
+export const UNSUPPORTED_LINE_TYPE_MESSAGE =
+  'Only GENERIC and SERVICE draft lines are supported';
+export const INACTIVE_SERVICE_LINE_MESSAGE = 'Inactive catalog services cannot be added to a draft';
+export const CATALOG_SERVICE_NOT_FOUND_MESSAGE = 'Catalog service not found';
 export const LINE_NOT_FOUND_MESSAGE = 'Invoice line not found';
 export const UNKNOWN_COST_AMOUNT_MESSAGE = 'UNKNOWN cost must not include an amount';
 export const COST_AMOUNT_REQUIRED_MESSAGE =

@@ -8,6 +8,7 @@ import {
   addInvoiceLineSchema,
   createDraftSchema,
   genericDraftLineSchema,
+  serviceDraftLineSchema,
   setLinePriceSchema,
   updateDraftMetaSchema,
 } from '../../../src/features/sales/validation.js';
@@ -99,5 +100,68 @@ describe('draft GENERIC line validation', () => {
     );
     expect(setLinePriceSchema.safeParse({ unitPrice: '1e3' }).success).toBe(false);
     expect(setLinePriceSchema.safeParse({ unitPrice: '9999999999.99' }).success).toBe(true);
+  });
+});
+
+describe('draft SERVICE line validation', () => {
+  const serviceId = '11111111-1111-4111-8111-111111111111';
+
+  it('accepts serviceId plus unitPrice, including zero, and optional description', () => {
+    expect(
+      serviceDraftLineSchema.parse({
+        type: 'SERVICE',
+        serviceId,
+        unitPrice: '0.00',
+      }),
+    ).toEqual({
+      type: 'SERVICE',
+      serviceId,
+      unitPrice: '0.00',
+    });
+    expect(
+      serviceDraftLineSchema.parse({
+        type: 'SERVICE',
+        serviceId,
+        unitPrice: '500.00',
+        description: 'Instalación expres',
+      }),
+    ).toEqual({
+      type: 'SERVICE',
+      serviceId,
+      unitPrice: '500.00',
+      description: 'Instalación expres',
+    });
+  });
+
+  it('rejects quantity, cost, numeric money, and extra fields', () => {
+    expect(
+      serviceDraftLineSchema.safeParse({
+        type: 'SERVICE',
+        serviceId,
+        unitPrice: '100.00',
+        quantity: '2',
+      }).success,
+    ).toBe(false);
+    expect(
+      serviceDraftLineSchema.safeParse({
+        type: 'SERVICE',
+        serviceId,
+        unitPrice: '100.00',
+        costProvenance: 'UNKNOWN',
+      }).success,
+    ).toBe(false);
+    expect(
+      serviceDraftLineSchema.safeParse({
+        type: 'SERVICE',
+        serviceId,
+        unitPrice: 500,
+      }).success,
+    ).toBe(false);
+    expect(
+      serviceDraftLineSchema.safeParse({
+        type: 'SERVICE',
+        unitPrice: '100.00',
+      }).success,
+    ).toBe(false);
   });
 });
