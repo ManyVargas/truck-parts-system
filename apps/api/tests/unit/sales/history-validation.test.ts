@@ -65,4 +65,30 @@ describe('invoice draft history validation', () => {
       }).success,
     ).toBe(false);
   });
+
+  it('accepts INVOICE_CONFIRMED with FAC- number and customer snapshot', () => {
+    const event = {
+      actor: { actorType: 'USER' as const, actorUserId: id },
+      subjectType: 'INVOICE' as const,
+      subjectId: id,
+      eventType: 'INVOICE_CONFIRMED' as const,
+      payload: {
+        status: 'COMPLETED' as const,
+        number: 'FAC-000001',
+        currency: 'DOP' as const,
+        fiscal: false,
+        customerId: id,
+        customerSnapshot: { name: 'Cliente contado', rnc: null },
+        totals: { gross: '118.00', base: '118.00', itbis: '0.00' },
+        confirmedAt: '2026-09-08T18:00:00.000Z',
+      },
+    };
+    expect(historyEventSchema.parse(event)).toEqual(event);
+    expect(
+      historyEventSchema.safeParse({
+        ...event,
+        payload: { ...event.payload, passwordHash: 'secret' },
+      }).success,
+    ).toBe(false);
+  });
 });

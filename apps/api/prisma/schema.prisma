@@ -155,16 +155,22 @@ enum CostProvenance {
 }
 
 model Invoice {
-  id         String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  status     InvoiceStatus
-  currency   InvoiceCurrency
-  fiscal     Boolean
-  customerId String          @db.Uuid
-  number     String?         @unique
-  createdAt  DateTime        @default(now()) @db.Timestamptz(3)
-  updatedAt  DateTime        @updatedAt @db.Timestamptz(3)
-  customer   Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  lines      InvoiceLine[]
+  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  status       InvoiceStatus
+  currency     InvoiceCurrency
+  fiscal       Boolean
+  customerId   String          @db.Uuid
+  number       String?         @unique
+  confirmedAt  DateTime?       @db.Timestamptz(3)
+  customerName String?
+  customerRnc  String?
+  gross        Decimal?        @db.Decimal(12, 2)
+  base         Decimal?        @db.Decimal(12, 2)
+  itbis        Decimal?        @db.Decimal(12, 2)
+  createdAt    DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime        @updatedAt @db.Timestamptz(3)
+  customer     Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  lines        InvoiceLine[]
 
   @@index([customerId])
 }
@@ -179,6 +185,9 @@ model InvoiceLine {
   acquisitionCostDop Decimal?           @db.Decimal(12, 2)
   costProvenance     CostProvenance?
   serviceId          String?            @db.Uuid
+  gross              Decimal?           @db.Decimal(12, 2)
+  base               Decimal?           @db.Decimal(12, 2)
+  itbis              Decimal?           @db.Decimal(12, 2)
   createdAt          DateTime           @default(now()) @db.Timestamptz(3)
   invoice            Invoice            @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   service            MechanicalService? @relation(fields: [serviceId], references: [id], onDelete: Restrict)

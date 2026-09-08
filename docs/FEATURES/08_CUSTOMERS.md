@@ -58,8 +58,8 @@ At invoice confirmation, copy the applicable customer data into an immutable inv
 - [x] Define customer record and generic-customer strategy. *(API R2 M1: `Customer` + `Cliente contado`; prototipo mock: C0 bloqueado)*
 - [x] Implement create/search/edit. *(API R2 M2: `/api/customers`; WM4 mock)*
 - [x] Implement fiscal identity validation hook used by Sales. *(API R2 M2: `satisfiesFiscalIdentity`; confirmación fiscal en M7/M12)*
-- [x] Implement immutable invoice customer snapshot at confirmation. *(prototipo mock — WM8)*
-- [x] Prevent completed snapshots from following later customer edits. *(prototipo mock — WM8)*
+- [x] Implement immutable invoice customer snapshot at confirmation. *(prototipo mock — WM8; API R2 M12: `customerName`/`customerRnc` al confirmar)*
+- [x] Prevent completed snapshots from following later customer edits. *(prototipo mock — WM8; API R2 M12: GET completed usa el snapshot)*
 
 ### Frontend
 - [x] Customer search/select/create inside Draft flow. *(WM8: selector en POS; alta sigue en `/customers`)*
@@ -71,7 +71,7 @@ At invoice confirmation, copy the applicable customer data into an immutable inv
 ### Tests
 - [x] Generic nonfiscal sale succeeds. *(prototipo mock — C0 + `fiscal: false`)*
 - [x] Generic fiscal sale rejected. *(prototipo mock — WM8)*
-- [x] Later customer edit leaves completed invoice unchanged. *(prototipo mock — WM8 snapshot)*
+- [x] Later customer edit leaves completed invoice unchanged. *(prototipo mock — WM8 snapshot; API R2 M12 HTTP)*
 - [x] Mechanic access denied. *(WM4 — `customers.manage` en repositorio)*
 
 ## Canonical validated requirements

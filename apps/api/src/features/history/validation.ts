@@ -27,6 +27,30 @@ const invoiceDraftSnapshot = z
     customerId: z.uuid(),
   })
   .strict();
+const invoiceCustomerSnapshot = z
+  .object({
+    name: z.string(),
+    rnc: z.string().nullable(),
+  })
+  .strict();
+const invoiceConfirmedSnapshot = z
+  .object({
+    status: z.literal('COMPLETED'),
+    number: z.string(),
+    currency: z.enum(['DOP', 'USD']),
+    fiscal: z.boolean(),
+    customerId: z.uuid(),
+    customerSnapshot: invoiceCustomerSnapshot,
+    totals: z
+      .object({
+        gross: z.string(),
+        base: z.string(),
+        itbis: z.string(),
+      })
+      .strict(),
+    confirmedAt: z.string(),
+  })
+  .strict();
 const invoiceLineSnapshot = z
   .object({
     id: z.uuid(),
@@ -239,6 +263,13 @@ export const historyEventSchema = z
         ...invoiceBase,
         eventType: z.literal('INVOICE_LINE_REMOVED'),
         payload: invoiceLineSnapshot,
+      })
+      .strict(),
+    z
+      .object({
+        ...invoiceBase,
+        eventType: z.literal('INVOICE_CONFIRMED'),
+        payload: invoiceConfirmedSnapshot,
       })
       .strict(),
   ])

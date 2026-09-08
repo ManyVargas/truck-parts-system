@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   COST_AMOUNT_REQUIRED_MESSAGE,
+  formatInvoiceNumber,
   UNKNOWN_COST_AMOUNT_MESSAGE,
 } from '../../../src/features/sales/constants.js';
 import {
   addInvoiceLineSchema,
+  confirmInvoiceSchema,
   createDraftSchema,
   deliveryDraftLineSchema,
   externalDraftLineSchema,
@@ -35,6 +37,14 @@ describe('draft HTTP validation', () => {
     expect(updateDraftMetaSchema.safeParse({}).success).toBe(false);
     expect(createDraftSchema.safeParse({ currency: 'EUR' }).success).toBe(false);
     expect(createDraftSchema.safeParse({ extra: true }).success).toBe(false);
+  });
+
+  it('accepts an empty confirm body and rejects payment or unknown fields', () => {
+    expect(confirmInvoiceSchema.parse({})).toEqual({});
+    expect(confirmInvoiceSchema.safeParse({ payment: { amount: '10.00' } }).success).toBe(false);
+    expect(confirmInvoiceSchema.safeParse({ extra: true }).success).toBe(false);
+    expect(formatInvoiceNumber(1)).toBe('FAC-000001');
+    expect(formatInvoiceNumber(12)).toBe('FAC-000012');
   });
 });
 

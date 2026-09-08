@@ -130,3 +130,5 @@ export const deliveryDraftLineSchema = z.strictObject({
 export const setLinePriceSchema = z.strictObject({
   unitPrice: decimal12x2StringSchema,
 });
+
+export const confirmInvoiceSchema = z.strictObject({});

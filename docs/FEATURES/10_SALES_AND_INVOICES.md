@@ -75,8 +75,8 @@ Invoice PDF rendering is secondary to sale validity. Preserve all invoice facts 
 ### Release 2 — Billing Core
 - [x] Invoice aggregate and Draft/Completed/Cancelled state model.
 - [x] DOP/USD single-currency rule. *(prototipo mock — WM8)*
-- [x] Shared transactional `FAC-` sequence. *(prototipo mock — `facSeq`; un hilo)*
-- [x] Customer snapshot integration. *(prototipo mock — WM8)*
+- [x] Shared transactional `FAC-` sequence. *(prototipo mock — `facSeq`; API R2 M12: lock + `FAC-000001`, DOP/USD compartida)*
+- [x] Customer snapshot integration. *(prototipo mock — WM8; API R2 M12: `name` + `rnc`)*
 - [x] Generic merchandise line. *(prototipo mock — WM8; API draft HTTP — R2 M8)*
 - [x] Mechanical service catalog selection + negotiated price. *(prototipo mock — WM8)*
 - [x] Delivery paid/free/omitted line. *(prototipo mock — WM8; API draft HTTP — R2 M10)*
@@ -99,11 +99,11 @@ Invoice PDF rendering is secondary to sale validity. Preserve all invoice facts 
 
 ### Tests
 - [x] Decimal-safe invoice calculations.
-- [x] FAC uniqueness/non-reuse under concurrency/retry. *(prototipo mock — idempotencia de `confirmInvoice`; un hilo)*
+- [x] FAC uniqueness/non-reuse under concurrency/retry. *(prototipo mock — idempotencia de `confirmInvoice`; API R2 M12: HTTP concurrente + retry idempotente)*
 - [x] Mixed-currency rejection. *(una moneda por factura; el draft no mezcla líneas)*
 - [ ] PDF failure/regeneration without sale rerun.
-- [x] Forced transaction failure leaves no partial sale/inventory/WO state. *(prototipo mock — validar todo antes de mutar)*
-- [x] Duplicate confirmation is idempotent or safely conflicts.
+- [x] Forced transaction failure leaves no partial sale/inventory/WO state. *(prototipo mock — validar todo antes de mutar; API R2 M12: fallo de history no consume `FAC-`)*
+- [x] Duplicate confirmation is idempotent or safely conflicts. *(API R2 M12: segundo POST → 200 y el mismo número)*
 
 ## Canonical validated requirements
 

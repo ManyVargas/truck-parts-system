@@ -11,11 +11,13 @@ import {
   getInvoices,
   patchDraft,
   patchDraftLine,
+  postConfirmInvoice,
   postDraft,
   postDraftLine,
 } from './controller.js';
 import {
   addInvoiceLineSchema,
+  confirmInvoiceSchema,
   createDraftSchema,
   invoiceIdSchema,
   invoiceLineIdSchema,
@@ -44,6 +46,12 @@ salesRouter.delete(
   requireCsrfHeader,
   validate({ params: invoiceIdSchema }),
   deleteDraft,
+);
+salesRouter.post(
+  '/:id/confirm',
+  requireCsrfHeader,
+  validate({ params: invoiceIdSchema, body: confirmInvoiceSchema }),
+  postConfirmInvoice,
 );
 salesRouter.post(
   '/:id/lines',

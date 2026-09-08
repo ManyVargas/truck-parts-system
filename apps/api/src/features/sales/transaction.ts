@@ -32,6 +32,12 @@ function isDuplicateDeliveryConstraint(error: Prisma.PrismaClientKnownRequestErr
   );
 }
 
+function isSerializationConflict(error: Prisma.PrismaClientKnownRequestError): boolean {
+  // Prisma maps ORM write conflicts to P2034, while PostgreSQL 40001 from a raw
+  // SELECT ... FOR UPDATE is wrapped as P2010.
+  return error.code === 'P2034' || (error.code === 'P2010' && error.meta?.code === '40001');
+}
+
 export const salesTransaction: SalesTransaction = async (work) => {
   for (let attempt = 0; ; attempt += 1) {
     try {
@@ -48,13 +54,13 @@ export const salesTransaction: SalesTransaction = async (work) => {
       );
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2034' && attempt < 3) continue;
+        if (isSerializationConflict(error) && attempt < 3) continue;
         if (error.code === 'P2025') throw AppError.notFound();
         if (error.code === 'P2003') throw AppError.notFound('Customer not found');
         if (error.code === 'P2002' && isDuplicateDeliveryConstraint(error)) {
           throw AppError.conflict(DUPLICATE_DELIVERY_LINE_MESSAGE);
         }
-        if (error.code === 'P2034')
+        if (isSerializationConflict(error))
           throw AppError.conflict('Concurrent invoice change; retry the request');
       }
       throw error;

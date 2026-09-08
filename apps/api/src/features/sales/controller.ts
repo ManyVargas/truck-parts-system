@@ -37,6 +37,10 @@ export async function deleteDraft(req: Request, res: Response) {
   res.status(204).send();
 }
 
+export async function postConfirmInvoice(req: Request, res: Response) {
+  res.json(await salesService.confirm(actor(req), id(req), req.validated?.body ?? {}));
+}
+
 export async function postDraftLine(req: Request, res: Response) {
   res.status(201).json(await salesService.addLine(actor(req), id(req), req.validated?.body));
 }

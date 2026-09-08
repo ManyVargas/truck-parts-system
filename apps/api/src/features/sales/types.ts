@@ -49,6 +49,25 @@ export type UpdateInvoiceLinePriceRecord = {
   unitPrice: Prisma.Decimal | string;
 };
 
+export type CompleteInvoiceLineMoneyRecord = {
+  id: string;
+  gross: Prisma.Decimal | string;
+  base: Prisma.Decimal | string;
+  itbis: Prisma.Decimal | string;
+};
+
+export type CompleteInvoiceRecord = {
+  id: string;
+  number: string;
+  confirmedAt: Date;
+  customerName: string;
+  customerRnc: string | null;
+  gross: Prisma.Decimal | string;
+  base: Prisma.Decimal | string;
+  itbis: Prisma.Decimal | string;
+  lines: CompleteInvoiceLineMoneyRecord[];
+};
+
 export type InvoiceSequenceRecord = InvoiceSequence;
 
 export type InvoiceCustomerView = {
@@ -56,6 +75,11 @@ export type InvoiceCustomerView = {
   name: string;
   rnc: string | null;
   isDefault: boolean;
+};
+
+export type InvoiceCustomerSnapshot = {
+  name: string;
+  rnc: string | null;
 };
 
 export type PublicInvoiceLine = {
@@ -80,6 +104,8 @@ export type PublicInvoice = {
   currency: InvoiceCurrency;
   fiscal: boolean;
   customer: InvoiceCustomerView;
+  customerSnapshot: InvoiceCustomerSnapshot | null;
+  confirmedAt: string | null;
   lines: PublicInvoiceLine[];
   totals: { gross: string; base: string; itbis: string };
   createdAt: string;
@@ -93,6 +119,8 @@ export type PublicInvoiceListItem = {
   currency: InvoiceCurrency;
   fiscal: boolean;
   customer: InvoiceCustomerView;
+  customerSnapshot: InvoiceCustomerSnapshot | null;
+  confirmedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -103,6 +131,17 @@ export type InvoiceDraftHistorySnapshot = {
   currency: InvoiceCurrency;
   fiscal: boolean;
   customerId: string;
+};
+
+export type InvoiceConfirmedHistorySnapshot = {
+  status: 'COMPLETED';
+  number: string;
+  currency: InvoiceCurrency;
+  fiscal: boolean;
+  customerId: string;
+  customerSnapshot: InvoiceCustomerSnapshot;
+  totals: { gross: string; base: string; itbis: string };
+  confirmedAt: string;
 };
 
 export type InvoiceLineHistorySnapshot = {

@@ -1,7 +1,9 @@
 import type { Invoice, InvoiceSequence, Prisma } from '@prisma/client';
 
 import { prisma } from '../../infrastructure/database/index.js';
+import { formatInvoiceNumber } from './constants.js';
 import type {
+  CompleteInvoiceRecord,
   CreateDraftInvoiceRecord,
   CreateInvoiceLineRecord,
   InvoiceListRecord,
@@ -137,6 +139,15 @@ export class SalesRepository {
     return this.database.invoiceSequence.findUnique({ where: { name } });
   }
 
+  async lockById(id: string): Promise<void> {
+    await this.database.$queryRaw`
+      SELECT "id"
+      FROM "Invoice"
+      WHERE "id" = ${id}::uuid
+      FOR UPDATE
+    `;
+  }
+
   async lockSequenceForUpdate(
     name = INVOICE_SEQUENCE_NAME,
   ): Promise<InvoiceSequenceRecord> {
@@ -151,5 +162,38 @@ export class SalesRepository {
       throw new Error(`Invoice sequence ${name} is missing`);
     }
     return { name: sequence.name, nextValue: Number(sequence.nextValue) };
+  }
+
+  async allocateNextNumber(name = INVOICE_SEQUENCE_NAME): Promise<string> {
+    const sequence = await this.lockSequenceForUpdate(name);
+    const number = formatInvoiceNumber(sequence.nextValue);
+    await this.database.invoiceSequence.update({
+      where: { name },
+      data: { nextValue: sequence.nextValue + 1 },
+    });
+    return number;
+  }
+
+  completeInvoice(input: CompleteInvoiceRecord): Promise<InvoiceRecord> {
+    return this.database.invoice.update({
+      where: { id: input.id },
+      data: {
+        status: 'COMPLETED',
+        number: input.number,
+        confirmedAt: input.confirmedAt,
+        customerName: input.customerName,
+        customerRnc: input.customerRnc,
+        gross: input.gross,
+        base: input.base,
+        itbis: input.itbis,
+        lines: {
+          update: input.lines.map((line) => ({
+            where: { id: line.id },
+            data: { gross: line.gross, base: line.base, itbis: line.itbis },
+          })),
+        },
+      },
+      include: invoiceDetailInclude,
+    });
   }
 }

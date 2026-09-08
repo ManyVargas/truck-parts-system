@@ -15,6 +15,10 @@ const catalog = new CatalogRepository();
 async function cleanupSales() {
   await prisma.invoice.deleteMany();
   await prisma.mechanicalService.deleteMany();
+  await prisma.invoiceSequence.update({
+    where: { name: 'FAC' },
+    data: { nextValue: 1 },
+  });
 }
 
 describe('SalesRepository (PostgreSQL)', () => {
@@ -62,6 +66,57 @@ describe('SalesRepository (PostgreSQL)', () => {
     });
 
     expect(await sales.findSequence()).toMatchObject({ name: 'FAC', nextValue: 1 });
+  });
+
+  it('allocates FAC-000001 from the locked sequence and persists confirmation money', async () => {
+    const customer = await customers.findDefault();
+    const draft = await sales.createDraft({
+      customerId: customer!.id,
+      currency: InvoiceCurrency.DOP,
+      fiscal: false,
+    });
+    const withLine = await sales.addLine({
+      invoiceId: draft.id,
+      type: InvoiceLineType.GENERIC,
+      description: 'Filtro',
+      unitPrice: '118.00',
+      costProvenance: CostProvenance.UNKNOWN,
+    });
+
+    const completed = await prisma.$transaction(async (tx) => {
+      const transactional = new SalesRepository(tx);
+      const number = await transactional.allocateNextNumber();
+      expect(number).toBe('FAC-000001');
+      return transactional.completeInvoice({
+        id: withLine.id,
+        number,
+        confirmedAt: new Date('2026-09-08T18:00:00.000Z'),
+        customerName: customer!.name,
+        customerRnc: customer!.rnc,
+        gross: '118.00',
+        base: '118.00',
+        itbis: '0.00',
+        lines: [
+          {
+            id: withLine.lines[0]!.id,
+            gross: '118.00',
+            base: '118.00',
+            itbis: '0.00',
+          },
+        ],
+      });
+    });
+
+    expect(completed).toMatchObject({
+      status: 'COMPLETED',
+      number: 'FAC-000001',
+      customerName: customer!.name,
+      customerRnc: null,
+    });
+    expect(completed.confirmedAt?.toISOString()).toBe('2026-09-08T18:00:00.000Z');
+    expect(Number(completed.gross)).toBe(118);
+    expect(Number(completed.lines[0]?.gross)).toBe(118);
+    expect(await sales.findSequence()).toMatchObject({ name: 'FAC', nextValue: 2 });
   });
 
   it('persists GENERIC cost-actual, SERVICE, and EXTERNAL lines on a draft', async () => {

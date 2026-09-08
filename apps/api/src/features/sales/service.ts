@@ -6,9 +6,11 @@ import { satisfiesFiscalIdentity } from '../customers/fiscal.js';
 import {
   CATALOG_SERVICE_NOT_FOUND_MESSAGE,
   DEFAULT_DRAFT_CURRENCY,
+  DRAFT_ONLY_CONFIRM_MESSAGE,
   DRAFT_ONLY_DISCARD_MESSAGE,
   DRAFT_ONLY_EDIT_MESSAGE,
   DUPLICATE_DELIVERY_LINE_MESSAGE,
+  EMPTY_DRAFT_CONFIRM_MESSAGE,
   FISCAL_IDENTITY_REQUIRED_MESSAGE,
   INACTIVE_SERVICE_LINE_MESSAGE,
   LINE_NOT_FOUND_MESSAGE,
@@ -19,9 +21,11 @@ import {
   calculateLineMoney,
   normalizeAcquisitionCost,
   parsePositiveDecimal,
+  sumInvoiceMoney,
 } from './money/index.js';
 import { assertDraftLineTypeEnabled, assertInvoiceManager } from './policies.js';
 import {
+  toConfirmedHistorySnapshot,
   toDraftHistorySnapshot,
   toLineHistorySnapshot,
   toPublicInvoice,
@@ -31,6 +35,7 @@ import { salesTransaction, type SalesTransaction } from './transaction.js';
 import type { CreateInvoiceLineRecord } from './types.js';
 import {
   addInvoiceLineSchema,
+  confirmInvoiceSchema,
   createDraftSchema,
   deliveryDraftLineSchema,
   externalDraftLineSchema,
@@ -344,6 +349,64 @@ export class SalesService {
       });
       const updated = await sales.removeLine(invoiceId, lineId);
       return toPublicInvoice(updated);
+    });
+  }
+
+  async confirm(actorId: string, id: string, input: unknown) {
+    invoiceIdSchema.parse({ id });
+    confirmInvoiceSchema.parse(input ?? {});
+    return this.transaction(async ({ sales, customers, users, history }) => {
+      assertInvoiceManager(await users.findById(actorId));
+      await sales.lockById(id);
+      const existing = await sales.findById(id);
+      if (!existing) throw AppError.notFound('Invoice not found');
+      if (existing.status === 'COMPLETED') return toPublicInvoice(existing);
+      if (existing.status !== 'DRAFT') throw AppError.conflict(DRAFT_ONLY_CONFIRM_MESSAGE);
+      if (existing.lines.length === 0) throw AppError.conflict(EMPTY_DRAFT_CONFIRM_MESSAGE);
+
+      for (const line of existing.lines) {
+        assertDraftLineTypeEnabled(line.type);
+      }
+
+      const customer = await customers.findById(existing.customerId);
+      if (!customer) throw AppError.notFound('Customer not found');
+      assertFiscalCustomer(customer, existing.fiscal);
+
+      const lineMoney = existing.lines.map((line) => ({
+        line,
+        money: calculateLineMoney({
+          type: line.type,
+          unitPrice: line.unitPrice,
+          quantity: line.quantity,
+          fiscal: existing.fiscal,
+        }),
+      }));
+      const totals = sumInvoiceMoney(lineMoney.map((entry) => entry.money));
+      const number = await sales.allocateNextNumber();
+      const completed = await sales.completeInvoice({
+        id,
+        number,
+        confirmedAt: new Date(),
+        customerName: customer.name,
+        customerRnc: customer.rnc,
+        gross: totals.gross,
+        base: totals.base,
+        itbis: totals.itbis,
+        lines: lineMoney.map(({ line, money }) => ({
+          id: line.id,
+          gross: money.gross,
+          base: money.base,
+          itbis: money.itbis,
+        })),
+      });
+      await history.append({
+        actor: { actorType: 'USER', actorUserId: actorId },
+        subjectType: 'INVOICE',
+        subjectId: id,
+        eventType: 'INVOICE_CONFIRMED',
+        payload: toConfirmedHistorySnapshot(completed),
+      });
+      return toPublicInvoice(completed);
     });
   }
 }

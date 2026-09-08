@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M11 completados)
+**Estado:** en curso (M1–M12 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 2, a medida que se completan.  
 No sustituye a `plan_release_2.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -393,18 +393,38 @@ Confirmación / `FAC-` (M12). Profit Administrator (M13). Swap POS (M21).
 
 ## Milestone 12 — Confirmación + `FAC-` + snapshot de cliente
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-08
 
 ### Objetivo cumplido
 
+Confirmar un draft válido en una transacción: número `FAC-` único, snapshot inmutable de cliente y dinero, estado `Completed`.
+
 ### Qué se entregó
+
+- `POST /api/sales/:id/confirm` (body vacío `{}`; CSRF; Seller/Administrator).
+- Asignación `FAC-000001` (secuencia compartida DOP/USD; lock `FOR UPDATE`).
+- Snapshot de cliente `name` + `rnc` y columnas de dinero `gross`/`base`/`itbis` en cabecera y líneas.
+- History `INVOICE_CONFIRMED` en la misma transacción.
+- Idempotencia: un segundo POST al completed devuelve 200 y el mismo `FAC-`.
 
 ### Decisiones técnicas
 
+- Draft vacío → 409. Payload de pago u otros campos → 400.
+- GET de completed proyecta el snapshot, no el cliente vivo.
+- PDF y FX quedan fuera de la transacción. Isolation Serializable, igual que el draft.
+- Los conflictos PostgreSQL `40001` del lock raw de la secuencia se reintentan igual que `P2034`.
+- La migración materializa snapshot y dinero para facturas finalizadas antes de M12 antes de exigir las nuevas restricciones; usa los datos actuales del cliente y `updatedAt` porque el snapshot histórico todavía no existía.
+
 ### Validación
 
+- Integration: `apps/api/tests/integration/sales/http.test.ts` (bloque M12)
+- Integration: `apps/api/tests/integration/sales/repository.test.ts` (allocate + complete)
+- Unit: `apps/api/tests/unit/sales/validation.test.ts`, `history-validation.test.ts`
+
 ### Fuera de alcance (intencional)
+
+Profit (M13). PDF (M17). Swap web de confirmación (M22).
 
 ---
 

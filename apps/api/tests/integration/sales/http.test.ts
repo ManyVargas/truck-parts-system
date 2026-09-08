@@ -13,6 +13,7 @@ import {
   DRAFT_ONLY_DISCARD_MESSAGE,
   DRAFT_ONLY_EDIT_MESSAGE,
   DUPLICATE_DELIVERY_LINE_MESSAGE,
+  EMPTY_DRAFT_CONFIRM_MESSAGE,
   FISCAL_IDENTITY_REQUIRED_MESSAGE,
   INACTIVE_SERVICE_LINE_MESSAGE,
   UNSUPPORTED_INVENTORY_LINE_MESSAGE,
@@ -52,6 +53,10 @@ async function cleanup() {
   await clearTestHistory();
   await prisma.invoice.deleteMany();
   await prisma.mechanicalService.deleteMany();
+  await prisma.invoiceSequence.update({
+    where: { name: 'FAC' },
+    data: { nextValue: 1 },
+  });
   await prisma.customerContact.deleteMany({ where: { customer: { isDefault: false } } });
   await prisma.customer.deleteMany({ where: { isDefault: false } });
   await prisma.session.deleteMany();
@@ -142,6 +147,12 @@ describe('M7 draft HTTP shell (SALE-001 draft)', () => {
         fiscal: false,
         customerId: generic!.id,
         number: `FAC-${randomUUID().slice(0, 6)}`,
+        confirmedAt: new Date(),
+        customerName: generic!.name,
+        customerRnc: generic!.rnc,
+        gross: '0.00',
+        base: '0.00',
+        itbis: '0.00',
       },
     });
     const blocked = await admin.agent.delete(`${ROOT}/${completed.id}`).set(CSRF);
@@ -352,6 +363,12 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
         fiscal: false,
         customerId: generic!.id,
         number: `FAC-${randomUUID().slice(0, 6)}`,
+        confirmedAt: new Date(),
+        customerName: generic!.name,
+        customerRnc: generic!.rnc,
+        gross: '0.00',
+        base: '0.00',
+        itbis: '0.00',
       },
     });
     const blocked = await admin.agent.post(`${ROOT}/${completed.id}/lines`).set(CSRF).send({
@@ -828,3 +845,232 @@ describe('M11 draft EXTERNAL lines (LINE-005)', () => {
     expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(0);
   });
 });
+
+describe('M12 confirmation FAC- snapshot (SALE-001, CUST-003)', () => {
+  afterEach(cleanup);
+
+  async function addGenericLine(agent: Awaited<ReturnType<typeof fixture>>['agent'], invoiceId: string) {
+    const added = await agent.post(`${ROOT}/${invoiceId}/lines`).set(CSRF).send({
+      type: 'GENERIC',
+      description: 'Filtro',
+      unitPrice: '118.00',
+      costProvenance: 'UNKNOWN',
+    });
+    expect(added.status).toBe(201);
+    return added;
+  }
+
+  it('confirms DOP and USD drafts with a shared FAC- sequence and frozen money', async () => {
+    const seller = await fixture('SELLER');
+    const generic = await customers.findDefault();
+    const identified = await customers.create({
+      name: 'Taller Norte',
+      rnc: '131123456',
+    });
+
+    const dopDraft = await seller.agent.post(ROOT).set(CSRF).send({});
+    expect(dopDraft.status).toBe(201);
+    await addGenericLine(seller.agent, dopDraft.body.id);
+    const dop = await seller.agent.post(`${ROOT}/${dopDraft.body.id}/confirm`).set(CSRF).send({});
+    expect(dop.status).toBe(200);
+    expect(dop.body).toMatchObject({
+      status: 'COMPLETED',
+      number: 'FAC-000001',
+      currency: 'DOP',
+      fiscal: false,
+      customer: { id: generic!.id, name: generic!.name, rnc: null },
+      customerSnapshot: { name: generic!.name, rnc: null },
+      totals: { gross: '118.00', base: '118.00', itbis: '0.00' },
+    });
+    expect(dop.body.confirmedAt).toEqual(expect.any(String));
+    expect(dop.body.lines[0]).toMatchObject({
+      gross: '118.00',
+      base: '118.00',
+      itbis: '0.00',
+    });
+    expect(
+      await prisma.historyEvent.findFirst({
+        where: { subjectId: dop.body.id, eventType: 'INVOICE_CONFIRMED' },
+      }),
+    ).toMatchObject({
+      actorUserId: seller.user.id,
+      payload: expect.objectContaining({ number: 'FAC-000001' }),
+    });
+
+    const usdDraft = await seller.agent
+      .post(ROOT)
+      .set(CSRF)
+      .send({ currency: 'USD', customerId: identified.id, fiscal: true });
+    expect(usdDraft.status).toBe(201);
+    await addGenericLine(seller.agent, usdDraft.body.id);
+    const usd = await seller.agent.post(`${ROOT}/${usdDraft.body.id}/confirm`).set(CSRF).send({});
+    expect(usd.status).toBe(200);
+    expect(usd.body).toMatchObject({
+      status: 'COMPLETED',
+      number: 'FAC-000002',
+      currency: 'USD',
+      fiscal: true,
+      customerSnapshot: { name: 'Taller Norte', rnc: '131123456' },
+      totals: { gross: '118.00', base: '100.00', itbis: '18.00' },
+    });
+    expect(await prisma.invoiceSequence.findUnique({ where: { name: 'FAC' } })).toMatchObject({
+      nextValue: 3,
+    });
+  });
+
+  it('is idempotent on retry and does not consume another number', async () => {
+    const admin = await fixture();
+    const draft = await admin.agent.post(ROOT).set(CSRF).send({});
+    await addGenericLine(admin.agent, draft.body.id);
+    const first = await admin.agent.post(`${ROOT}/${draft.body.id}/confirm`).set(CSRF).send({});
+    expect(first.status).toBe(200);
+    expect(first.body.number).toBe('FAC-000001');
+
+    const second = await admin.agent.post(`${ROOT}/${draft.body.id}/confirm`).set(CSRF).send({});
+    expect(second.status).toBe(200);
+    expect(second.body.number).toBe('FAC-000001');
+    expect(second.body.confirmedAt).toBe(first.body.confirmedAt);
+    expect(
+      await prisma.historyEvent.count({
+        where: { subjectId: draft.body.id, eventType: 'INVOICE_CONFIRMED' },
+      }),
+    ).toBe(1);
+    expect(await prisma.invoiceSequence.findUnique({ where: { name: 'FAC' } })).toMatchObject({
+      nextValue: 2,
+    });
+  });
+
+  it('assigns unique FAC- numbers under concurrent confirmation', async () => {
+    const admin = await fixture();
+    const firstDraft = await admin.agent.post(ROOT).set(CSRF).send({});
+    const secondDraft = await admin.agent.post(ROOT).set(CSRF).send({});
+    await addGenericLine(admin.agent, firstDraft.body.id);
+    await addGenericLine(admin.agent, secondDraft.body.id);
+
+    const [first, second] = await Promise.all([
+      admin.agent.post(`${ROOT}/${firstDraft.body.id}/confirm`).set(CSRF).send({}),
+      admin.agent.post(`${ROOT}/${secondDraft.body.id}/confirm`).set(CSRF).send({}),
+    ]);
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect([first.body.number, second.body.number].sort()).toEqual(['FAC-000001', 'FAC-000002']);
+    expect(await prisma.invoiceSequence.findUnique({ where: { name: 'FAC' } })).toMatchObject({
+      nextValue: 3,
+    });
+  });
+
+  it('keeps the customer snapshot after a later customer edit', async () => {
+    const admin = await fixture();
+    const identified = await customers.create({
+      name: 'Taller Norte',
+      rnc: '131123456',
+    });
+    const draft = await admin.agent
+      .post(ROOT)
+      .set(CSRF)
+      .send({ customerId: identified.id, fiscal: true });
+    await addGenericLine(admin.agent, draft.body.id);
+    const confirmed = await admin.agent
+      .post(`${ROOT}/${draft.body.id}/confirm`)
+      .set(CSRF)
+      .send({});
+    expect(confirmed.status).toBe(200);
+    expect(confirmed.body.customerSnapshot).toEqual({ name: 'Taller Norte', rnc: '131123456' });
+
+    const renamed = await admin.agent
+      .patch(`/api/customers/${identified.id}`)
+      .set(CSRF)
+      .send({ name: 'Taller Sur' });
+    expect(renamed.status).toBe(200);
+    expect(renamed.body.name).toBe('Taller Sur');
+
+    const loaded = await admin.agent.get(`${ROOT}/${draft.body.id}`);
+    expect(loaded.status).toBe(200);
+    expect(loaded.body.customerSnapshot).toEqual({ name: 'Taller Norte', rnc: '131123456' });
+    expect(loaded.body.customer).toMatchObject({
+      id: identified.id,
+      name: 'Taller Norte',
+      rnc: '131123456',
+    });
+  });
+
+  it('rejects empty drafts, payment payloads, Mechanic, CSRF-less writes, and completed edits', async () => {
+    const mechanic = await fixture('MECHANIC');
+    const admin = await fixture();
+    const empty = await admin.agent.post(ROOT).set(CSRF).send({});
+    const emptyConfirm = await admin.agent
+      .post(`${ROOT}/${empty.body.id}/confirm`)
+      .set(CSRF)
+      .send({});
+    expect(emptyConfirm.status).toBe(409);
+    expect(emptyConfirm.body.error.message).toBe(EMPTY_DRAFT_CONFIRM_MESSAGE);
+    expect(await prisma.invoice.findUnique({ where: { id: empty.body.id } })).toMatchObject({
+      status: 'DRAFT',
+      number: null,
+    });
+    expect(await prisma.invoiceSequence.findUnique({ where: { name: 'FAC' } })).toMatchObject({
+      nextValue: 1,
+    });
+
+    const draft = await admin.agent.post(ROOT).set(CSRF).send({});
+    await addGenericLine(admin.agent, draft.body.id);
+    const payment = await admin.agent
+      .post(`${ROOT}/${draft.body.id}/confirm`)
+      .set(CSRF)
+      .send({ payment: { amount: '10.00' } });
+    expect(payment.status).toBe(400);
+
+    expect(
+      (await mechanic.agent.post(`${ROOT}/${draft.body.id}/confirm`).set(CSRF).send({})).status,
+    ).toBe(403);
+    expect((await admin.agent.post(`${ROOT}/${draft.body.id}/confirm`).send({})).status).toBe(403);
+
+    const confirmed = await admin.agent.post(`${ROOT}/${draft.body.id}/confirm`).set(CSRF).send({});
+    expect(confirmed.status).toBe(200);
+    const blockedEdit = await admin.agent
+      .patch(`${ROOT}/${confirmed.body.id}`)
+      .set(CSRF)
+      .send({ currency: 'USD' });
+    expect(blockedEdit.status).toBe(409);
+    expect(blockedEdit.body.error.message).toBe(DRAFT_ONLY_EDIT_MESSAGE);
+    const blockedLine = await admin.agent
+      .post(`${ROOT}/${confirmed.body.id}/lines`)
+      .set(CSRF)
+      .send({
+        type: 'GENERIC',
+        description: 'Otra',
+        unitPrice: '10.00',
+        costProvenance: 'UNKNOWN',
+      });
+    expect(blockedLine.status).toBe(409);
+    expect(blockedLine.body.error.message).toBe(DRAFT_ONLY_EDIT_MESSAGE);
+    const blockedDiscard = await admin.agent.delete(`${ROOT}/${confirmed.body.id}`).set(CSRF);
+    expect(blockedDiscard.status).toBe(409);
+    expect(blockedDiscard.body.error.message).toBe(DRAFT_ONLY_DISCARD_MESSAGE);
+  });
+
+  it('does not complete or consume a FAC- number when history append fails', async () => {
+    const admin = await fixture();
+    const draft = await admin.agent.post(ROOT).set(CSRF).send({});
+    await addGenericLine(admin.agent, draft.body.id);
+    vi.spyOn(HistoryRepository.prototype, 'append').mockImplementation(async () => {
+      throw new Error('history-unavailable');
+    });
+    await expect(service.confirm(admin.user.id, draft.body.id, {})).rejects.toThrow(
+      'history-unavailable',
+    );
+    expect(await prisma.invoice.findUnique({ where: { id: draft.body.id } })).toMatchObject({
+      status: 'DRAFT',
+      number: null,
+    });
+    expect(await prisma.invoiceSequence.findUnique({ where: { name: 'FAC' } })).toMatchObject({
+      nextValue: 1,
+    });
+    expect(
+      await prisma.historyEvent.findFirst({
+        where: { subjectId: draft.body.id, eventType: 'INVOICE_CONFIRMED' },
+      }),
+    ).toBeNull();
+  });
+});
+
