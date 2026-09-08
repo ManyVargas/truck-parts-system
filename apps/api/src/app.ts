@@ -8,6 +8,8 @@ import { catalogsRouter } from './features/catalogs/routes.js';
 import { customersRouter } from './features/customers/routes.js';
 import { profitabilityRouter } from './features/profitability/routes.js';
 import { salesRouter } from './features/sales/routes.js';
+import { SalesService } from './features/sales/service.js';
+import { salesTransaction } from './features/sales/transaction.js';
 import { healthRouter } from './features/health/routes.js';
 import { usersRouter } from './features/users/routes.js';
 import {
@@ -16,6 +18,7 @@ import {
   requestIdMiddleware,
   requestLoggingMiddleware,
 } from './infrastructure/http/index.js';
+import { createFxRateProvider, type FxRateProvider } from './infrastructure/fx/index.js';
 
 export type CreateAppOptions = {
   /** Test-only routers, mounted after feature routes and before the 404 handler. */
@@ -25,6 +28,8 @@ export type CreateAppOptions = {
    * Defaults to TRUST_PROXY=1|true. Leave unset unless the API is reached only via nginx.
    */
   trustProxy?: boolean;
+  /** Test double for COST-003. Production uses ExchangeRate-API via env. */
+  fxRateProvider?: FxRateProvider;
 };
 
 /** Matches body-parser's default; bodies over this size map to 413 PAYLOAD_TOO_LARGE. */
@@ -42,6 +47,11 @@ export function trustImmediateProxyHop(_address: string, hop: number, enabled: b
 export function createApp(options: CreateAppOptions = {}): express.Application {
   const app = express();
   const trustProxy = options.trustProxy ?? isTrustProxyEnabled(process.env.TRUST_PROXY);
+  const salesService = new SalesService(
+    salesTransaction,
+    options.fxRateProvider ?? createFxRateProvider(),
+  );
+  app.locals.salesService = salesService;
 
   // nginx replaces X-Forwarded-For with one client address. Enable only behind that unpublished hop.
   app.set('trust proxy', (address: string, hop: number) =>

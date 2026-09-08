@@ -1,6 +1,11 @@
 import type { InvoiceLine, InvoiceLineType, InvoiceStatus } from '@prisma/client';
 
 import { AppError } from '../../infrastructure/errors/app-error.js';
+import {
+  unavailableFxRateProvider,
+  type FxRateProvider,
+} from '../../infrastructure/fx/index.js';
+import { logger } from '../../infrastructure/logging/index.js';
 import { CatalogRepository } from '../catalogs/repository.js';
 import { satisfiesFiscalIdentity } from '../customers/fiscal.js';
 import {
@@ -31,8 +36,9 @@ import {
   toPublicInvoice,
   toPublicInvoiceListItem,
 } from './projection.js';
+import { SalesRepository } from './repository.js';
 import { salesTransaction, type SalesTransaction } from './transaction.js';
-import type { CreateInvoiceLineRecord } from './types.js';
+import type { CreateInvoiceLineRecord, InvoiceRecord } from './types.js';
 import {
   addInvoiceLineSchema,
   confirmInvoiceSchema,
@@ -140,7 +146,11 @@ function addedLine(before: InvoiceLine[], after: InvoiceLine[]): InvoiceLine {
 }
 
 export class SalesService {
-  constructor(private readonly transaction: SalesTransaction = salesTransaction) {}
+  constructor(
+    private readonly transaction: SalesTransaction = salesTransaction,
+    private readonly fxRateProvider: FxRateProvider = unavailableFxRateProvider,
+    private readonly sales: SalesRepository = new SalesRepository(),
+  ) {}
 
   async createDraft(actorId: string, input: unknown) {
     const profile = createDraftSchema.parse(input ?? {});
@@ -355,59 +365,98 @@ export class SalesService {
   async confirm(actorId: string, id: string, input: unknown) {
     invoiceIdSchema.parse({ id });
     confirmInvoiceSchema.parse(input ?? {});
-    return this.transaction(async ({ sales, customers, users, history }) => {
-      const actor = requireInvoiceManager(await users.findById(actorId));
-      await sales.lockById(id);
-      const existing = await sales.findById(id);
-      if (!existing) throw AppError.notFound('Invoice not found');
-      if (existing.status === 'COMPLETED') return toPublicInvoice(existing, actor);
-      if (existing.status !== 'DRAFT') throw AppError.conflict(DRAFT_ONLY_CONFIRM_MESSAGE);
-      if (existing.lines.length === 0) throw AppError.conflict(EMPTY_DRAFT_CONFIRM_MESSAGE);
+    const { invoice, actor, alreadyCompleted } = await this.transaction(
+      async ({ sales, customers, users, history }) => {
+        const actor = requireInvoiceManager(await users.findById(actorId));
+        await sales.lockById(id);
+        const existing = await sales.findById(id);
+        if (!existing) throw AppError.notFound('Invoice not found');
+        if (existing.status === 'COMPLETED') {
+          return { invoice: existing, actor, alreadyCompleted: true };
+        }
+        if (existing.status !== 'DRAFT') throw AppError.conflict(DRAFT_ONLY_CONFIRM_MESSAGE);
+        if (existing.lines.length === 0) throw AppError.conflict(EMPTY_DRAFT_CONFIRM_MESSAGE);
 
-      for (const line of existing.lines) {
-        assertDraftLineTypeEnabled(line.type);
+        for (const line of existing.lines) {
+          assertDraftLineTypeEnabled(line.type);
+        }
+
+        const customer = await customers.findById(existing.customerId);
+        if (!customer) throw AppError.notFound('Customer not found');
+        assertFiscalCustomer(customer, existing.fiscal);
+
+        const lineMoney = existing.lines.map((line) => ({
+          line,
+          money: calculateLineMoney({
+            type: line.type,
+            unitPrice: line.unitPrice,
+            quantity: line.quantity,
+            fiscal: existing.fiscal,
+          }),
+        }));
+        const totals = sumInvoiceMoney(lineMoney.map((entry) => entry.money));
+        const number = await sales.allocateNextNumber();
+        const completed = await sales.completeInvoice({
+          id,
+          number,
+          confirmedAt: new Date(),
+          customerName: customer.name,
+          customerRnc: customer.rnc,
+          gross: totals.gross,
+          base: totals.base,
+          itbis: totals.itbis,
+          lines: lineMoney.map(({ line, money }) => ({
+            id: line.id,
+            gross: money.gross,
+            base: money.base,
+            itbis: money.itbis,
+          })),
+        });
+        await history.append({
+          actor: { actorType: 'USER', actorUserId: actorId },
+          subjectType: 'INVOICE',
+          subjectId: id,
+          eventType: 'INVOICE_CONFIRMED',
+          payload: toConfirmedHistorySnapshot(completed),
+        });
+        return { invoice: completed, actor, alreadyCompleted: false };
+      },
+    );
+    const enriched = alreadyCompleted ? invoice : await this.enrichUsdProfitability(invoice);
+    return toPublicInvoice(enriched, actor);
+  }
+
+  /**
+   * FX is outside the commercial transaction. Failure leaves the sale committed
+   * and profitability PENDING_FX_RATE.
+   */
+  private async enrichUsdProfitability(invoice: InvoiceRecord): Promise<InvoiceRecord> {
+    if (invoice.currency !== 'USD' || invoice.exchangeRateDopPerUsd != null) {
+      return invoice;
+    }
+
+    try {
+      const result = await this.fxRateProvider.getUsdToDopRate();
+      if (!result.ok) {
+        logger.warn({ invoiceId: invoice.id, reason: result.reason }, 'USD FX rate unavailable');
+        return invoice;
       }
-
-      const customer = await customers.findById(existing.customerId);
-      if (!customer) throw AppError.notFound('Customer not found');
-      assertFiscalCustomer(customer, existing.fiscal);
-
-      const lineMoney = existing.lines.map((line) => ({
-        line,
-        money: calculateLineMoney({
-          type: line.type,
-          unitPrice: line.unitPrice,
-          quantity: line.quantity,
-          fiscal: existing.fiscal,
-        }),
-      }));
-      const totals = sumInvoiceMoney(lineMoney.map((entry) => entry.money));
-      const number = await sales.allocateNextNumber();
-      const completed = await sales.completeInvoice({
-        id,
-        number,
-        confirmedAt: new Date(),
-        customerName: customer.name,
-        customerRnc: customer.rnc,
-        gross: totals.gross,
-        base: totals.base,
-        itbis: totals.itbis,
-        lines: lineMoney.map(({ line, money }) => ({
-          id: line.id,
-          gross: money.gross,
-          base: money.base,
-          itbis: money.itbis,
-        })),
-      });
-      await history.append({
-        actor: { actorType: 'USER', actorUserId: actorId },
-        subjectType: 'INVOICE',
-        subjectId: id,
-        eventType: 'INVOICE_CONFIRMED',
-        payload: toConfirmedHistorySnapshot(completed),
-      });
-      return toPublicInvoice(completed, actor);
-    });
+      return (
+        (await this.sales.recordUsdFxRate({
+          id: invoice.id,
+          exchangeRateDopPerUsd: result.quote.exchangeRateDopPerUsd,
+          source: result.quote.source,
+          rateUpdatedAt: result.quote.rateUpdatedAt,
+          obtainedAt: result.quote.obtainedAt,
+        })) ?? invoice
+      );
+    } catch (error) {
+      logger.warn(
+        { invoiceId: invoice.id, reason: error instanceof Error ? error.name : 'unknown' },
+        'USD FX lookup failed',
+      );
+      return invoice;
+    }
   }
 }
 

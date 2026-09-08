@@ -169,6 +169,10 @@ model Invoice {
   itbis        Decimal?        @db.Decimal(12, 2)
   manualGrossProfitDop Decimal?  @db.Decimal(12, 2)
   manualGrossProfitAt  DateTime? @db.Timestamptz(3)
+  exchangeRateDopPerUsd Decimal?  @db.Decimal(18, 8)
+  fxRateSource          String?
+  fxRateUpdatedAt       DateTime? @db.Timestamptz(3)
+  fxRateObtainedAt      DateTime? @db.Timestamptz(3)
   createdAt    DateTime        @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime        @updatedAt @db.Timestamptz(3)
   customer     Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)

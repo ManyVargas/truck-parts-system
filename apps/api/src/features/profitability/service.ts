@@ -39,6 +39,7 @@ export class ProfitabilityService {
           acquisitionCostDop: line.acquisitionCostDop,
           costProvenance: line.costProvenance,
         })),
+        exchangeRateDopPerUsd: existing.exchangeRateDopPerUsd,
       });
       if (calculated == null) throw AppError.conflict(COMPLETED_ONLY_MANUAL_PROFIT_MESSAGE);
       if (calculated.reason === PROFITABILITY_REASONS.PENDING_FX_RATE) {

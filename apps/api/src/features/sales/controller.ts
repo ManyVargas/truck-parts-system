@@ -1,7 +1,13 @@
 import type { Request, Response } from 'express';
 
 import { AppError } from '../../infrastructure/errors/app-error.js';
-import { salesService } from './service.js';
+import { SalesService } from './service.js';
+
+function salesServiceOf(req: Request): SalesService {
+  const service = req.app.locals.salesService as SalesService | undefined;
+  if (!service) throw new Error('salesService is not configured on the app');
+  return service;
+}
 
 function actor(req: Request): string {
   if (!req.auth) throw AppError.unauthorized();
@@ -17,38 +23,38 @@ function lineId(req: Request): string {
 }
 
 export async function postDraft(req: Request, res: Response) {
-  res.status(201).json(await salesService.createDraft(actor(req), req.validated?.body ?? {}));
+  res.status(201).json(await salesServiceOf(req).createDraft(actor(req), req.validated?.body ?? {}));
 }
 
 export async function getInvoices(req: Request, res: Response) {
-  res.json(await salesService.list(actor(req), req.validated?.query));
+  res.json(await salesServiceOf(req).list(actor(req), req.validated?.query));
 }
 
 export async function getInvoice(req: Request, res: Response) {
-  res.json(await salesService.getById(actor(req), id(req)));
+  res.json(await salesServiceOf(req).getById(actor(req), id(req)));
 }
 
 export async function patchDraft(req: Request, res: Response) {
-  res.json(await salesService.updateMeta(actor(req), id(req), req.validated?.body));
+  res.json(await salesServiceOf(req).updateMeta(actor(req), id(req), req.validated?.body));
 }
 
 export async function deleteDraft(req: Request, res: Response) {
-  await salesService.discard(actor(req), id(req));
+  await salesServiceOf(req).discard(actor(req), id(req));
   res.status(204).send();
 }
 
 export async function postConfirmInvoice(req: Request, res: Response) {
-  res.json(await salesService.confirm(actor(req), id(req), req.validated?.body ?? {}));
+  res.json(await salesServiceOf(req).confirm(actor(req), id(req), req.validated?.body ?? {}));
 }
 
 export async function postDraftLine(req: Request, res: Response) {
-  res.status(201).json(await salesService.addLine(actor(req), id(req), req.validated?.body));
+  res.status(201).json(await salesServiceOf(req).addLine(actor(req), id(req), req.validated?.body));
 }
 
 export async function patchDraftLine(req: Request, res: Response) {
-  res.json(await salesService.setLinePrice(actor(req), id(req), lineId(req), req.validated?.body));
+  res.json(await salesServiceOf(req).setLinePrice(actor(req), id(req), lineId(req), req.validated?.body));
 }
 
 export async function deleteDraftLine(req: Request, res: Response) {
-  res.json(await salesService.removeLine(actor(req), id(req), lineId(req)));
+  res.json(await salesServiceOf(req).removeLine(actor(req), id(req), lineId(req)));
 }

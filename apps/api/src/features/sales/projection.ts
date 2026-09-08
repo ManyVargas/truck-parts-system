@@ -4,6 +4,7 @@ import { MONEY_DECIMAL_PLACES } from './money/constants.js';
 import {
   calculateLineMoney,
   calculateLineProfitDop,
+  calculateLineProfitUsdReportingDop,
   calculatedCompletedProfitability,
   isTaxableLineType,
   reportedInvoiceProfitability,
@@ -18,6 +19,7 @@ import type {
   InvoiceListRecord,
   InvoiceRecord,
   InvoiceViewer,
+  PublicFxProvenance,
   PublicInvoice,
   PublicInvoiceLine,
   PublicInvoiceListItem,
@@ -28,12 +30,33 @@ function moneyString(value: { toFixed(places: number): string }): string {
   return value.toFixed(MONEY_DECIMAL_PLACES);
 }
 
-function toPublicProfitability(value: Profitability): PublicProfitability {
+function toPublicFxProvenance(invoice: InvoiceRecord | InvoiceListRecord): PublicFxProvenance | undefined {
+  if (
+    invoice.exchangeRateDopPerUsd == null ||
+    invoice.fxRateSource == null ||
+    invoice.fxRateUpdatedAt == null ||
+    invoice.fxRateObtainedAt == null
+  ) {
+    return undefined;
+  }
+  return {
+    exchangeRateDopPerUsd: invoice.exchangeRateDopPerUsd.toString(),
+    source: invoice.fxRateSource,
+    rateUpdatedAt: invoice.fxRateUpdatedAt.toISOString(),
+    obtainedAt: invoice.fxRateObtainedAt.toISOString(),
+  };
+}
+
+function toPublicProfitability(
+  value: Profitability,
+  fx?: PublicFxProvenance,
+): PublicProfitability {
   return {
     status: value.status,
     reason: value.reason,
     profitDop: value.profitDop == null ? null : moneyString(value.profitDop),
     margin: value.margin == null ? null : moneyString(value.margin),
+    ...(fx ? { fx } : {}),
   };
 }
 
@@ -75,6 +98,12 @@ function invoiceSellingPrice(invoice: InvoiceRecord | InvoiceListRecord): Prisma
   return new Prisma.Decimal(invoiceTotals(invoice).gross);
 }
 
+function invoiceSellingPriceDop(invoice: InvoiceRecord | InvoiceListRecord): Prisma.Decimal {
+  const sellingPrice = invoiceSellingPrice(invoice);
+  if (invoice.currency !== 'USD' || invoice.exchangeRateDopPerUsd == null) return sellingPrice;
+  return sellingPrice.times(invoice.exchangeRateDopPerUsd);
+}
+
 function deriveCompletedProfitability(invoice: InvoiceRecord | InvoiceListRecord): {
   invoice: PublicProfitability;
   lines: PublicProfitability[];
@@ -85,14 +114,16 @@ function deriveCompletedProfitability(invoice: InvoiceRecord | InvoiceListRecord
     currency: invoice.currency,
     fiscal: invoice.fiscal,
     lines: lineInputs,
+    exchangeRateDopPerUsd: invoice.exchangeRateDopPerUsd,
   });
   const reported = reportedInvoiceProfitability(
     calculated,
     invoice.manualGrossProfitDop,
-    invoiceSellingPrice(invoice),
+    invoiceSellingPriceDop(invoice),
   );
   if (reported == null) return null;
 
+  const fx = toPublicFxProvenance(invoice);
   if (reported.reason === PROFITABILITY_REASONS.PENDING_FX_RATE) {
     const pendingFx = toPublicProfitability(reported);
     return {
@@ -101,11 +132,15 @@ function deriveCompletedProfitability(invoice: InvoiceRecord | InvoiceListRecord
     };
   }
 
+  const lineProfit =
+    invoice.currency === 'USD' && invoice.exchangeRateDopPerUsd != null
+      ? (input: (typeof lineInputs)[number]) =>
+          calculateLineProfitUsdReportingDop(input, invoice.fiscal, invoice.exchangeRateDopPerUsd!)
+      : (input: (typeof lineInputs)[number]) => calculateLineProfitDop(input, invoice.fiscal);
+
   return {
-    invoice: toPublicProfitability(reported),
-    lines: lineInputs.map((input) =>
-      toPublicProfitability(calculateLineProfitDop(input, invoice.fiscal)),
-    ),
+    invoice: toPublicProfitability(reported, fx),
+    lines: lineInputs.map((input) => toPublicProfitability(lineProfit(input))),
   };
 }
 

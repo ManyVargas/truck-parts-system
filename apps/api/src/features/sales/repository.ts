@@ -11,6 +11,7 @@ import type {
   InvoiceSequenceRecord,
   ListInvoicesQuery,
   RecordManualGrossProfitRecord,
+  RecordUsdFxRateRecord,
   UpdateDraftInvoiceRecord,
   UpdateInvoiceLinePriceRecord,
 } from './types.js';
@@ -208,5 +209,23 @@ export class SalesRepository {
       },
       include: invoiceDetailInclude,
     });
+  }
+
+  async recordUsdFxRate(input: RecordUsdFxRateRecord): Promise<InvoiceRecord | null> {
+    await this.database.invoice.updateMany({
+      where: {
+        id: input.id,
+        status: 'COMPLETED',
+        currency: 'USD',
+        exchangeRateDopPerUsd: null,
+      },
+      data: {
+        exchangeRateDopPerUsd: input.exchangeRateDopPerUsd,
+        fxRateSource: input.source,
+        fxRateUpdatedAt: input.rateUpdatedAt,
+        fxRateObtainedAt: input.obtainedAt,
+      },
+    });
+    return this.findById(input.id);
   }
 }

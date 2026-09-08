@@ -6,6 +6,8 @@ import {
   ITBIS_INCLUDED_RATE,
   calculateLineMoney,
   calculateLineProfitDop,
+  calculateLineProfitUsdReportingDop,
+  calculatedCompletedProfitability,
   isTaxableLineType,
   knownCostAmount,
   normalizeAcquisitionCost,
@@ -279,6 +281,84 @@ describe('calculateLineProfitDop', () => {
     expectMoney(service.margin as Prisma.Decimal, '100.00');
     expectMoney(freeDelivery.profitDop as Prisma.Decimal, '0.00');
     expect(freeDelivery.margin).toBeNull();
+  });
+});
+
+describe('USD profitability COST-003', () => {
+  const generic = {
+    type: 'GENERIC' as const,
+    unitPrice: '118.00',
+    quantity: '1',
+    gross: money('118.00'),
+    acquisitionCostDop: money('80.00'),
+    costProvenance: 'ACTUAL' as const,
+  };
+
+  it('divides stored DOP cost by DOP-per-USD and reports profitDop = profitUsd * rate', () => {
+    const rate = money('61.50');
+    const line = calculateLineProfitUsdReportingDop(generic, false, rate);
+    expect(line.status).toBe('CALCULATED');
+    expectMoney(line.profitDop as Prisma.Decimal, '7177.00');
+    expectMoney(line.margin as Prisma.Decimal, '98.90');
+  });
+
+  it('does not invert a USD/DOP conversion_rate', () => {
+    const inverted = calculateLineProfitUsdReportingDop(generic, false, money('1').div('61.50'));
+    expect(inverted.profitDop?.toFixed(2)).not.toBe('7177.00');
+  });
+
+  it('keeps USD without a rate as PENDING_FX_RATE and leaves DOP independent of a rate', () => {
+    const pending = calculatedCompletedProfitability({
+      status: 'COMPLETED',
+      currency: 'USD',
+      fiscal: false,
+      lines: [generic],
+    });
+    const withRate = calculatedCompletedProfitability({
+      status: 'COMPLETED',
+      currency: 'USD',
+      fiscal: false,
+      lines: [generic],
+      exchangeRateDopPerUsd: money('61.50'),
+    });
+    const dop = calculatedCompletedProfitability({
+      status: 'COMPLETED',
+      currency: 'DOP',
+      fiscal: false,
+      lines: [generic],
+      exchangeRateDopPerUsd: money('61.50'),
+    });
+
+    expect(pending).toMatchObject({
+      status: 'UNAVAILABLE',
+      reason: PROFITABILITY_REASONS.PENDING_FX_RATE,
+      profitDop: null,
+    });
+    expectMoney(withRate!.profitDop as Prisma.Decimal, '7177.00');
+    expectMoney(dop!.profitDop as Prisma.Decimal, '38.00');
+  });
+
+  it('uses UNKNOWN_COST after a rate is present rather than pending FX', () => {
+    const unknown = calculatedCompletedProfitability({
+      status: 'COMPLETED',
+      currency: 'USD',
+      fiscal: false,
+      lines: [
+        {
+          type: 'GENERIC',
+          unitPrice: '118.00',
+          quantity: '1',
+          gross: money('118.00'),
+          acquisitionCostDop: null,
+          costProvenance: 'UNKNOWN',
+        },
+      ],
+      exchangeRateDopPerUsd: money('61.50'),
+    });
+    expect(unknown).toMatchObject({
+      status: 'UNAVAILABLE',
+      reason: PROFITABILITY_REASONS.UNKNOWN_COST,
+    });
   });
 });
 

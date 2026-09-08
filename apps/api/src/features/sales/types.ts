@@ -85,11 +85,27 @@ export type InvoiceCustomerSnapshot = {
   rnc: string | null;
 };
 
+export type RecordUsdFxRateRecord = {
+  id: string;
+  exchangeRateDopPerUsd: Prisma.Decimal | string;
+  source: string;
+  rateUpdatedAt: Date;
+  obtainedAt: Date;
+};
+
+export type PublicFxProvenance = {
+  exchangeRateDopPerUsd: string;
+  source: string;
+  rateUpdatedAt: string;
+  obtainedAt: string;
+};
+
 export type PublicProfitability = {
   status: 'CALCULATED' | 'UNAVAILABLE' | 'MANUAL';
   reason: 'UNKNOWN_COST' | 'PENDING_FX_RATE' | null;
   profitDop: string | null;
   margin: string | null;
+  fx?: PublicFxProvenance;
 };
 
 export type RecordManualGrossProfitRecord = {

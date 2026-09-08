@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M14 completados)
+**Estado:** en curso (M1–M15 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 2, a medida que se completan.  
 No sustituye a `plan_release_2.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -504,18 +504,39 @@ FX/retry (M15–M16). Snapshot HTTP de rentabilidad (M24). Swap web (M24).
 
 ## Milestone 15 — Adaptador FX + pending
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-08
 
 ### Objetivo cumplido
 
+Enriquecer facturas USD con la tasa USD→DOP de ExchangeRate-API sin bloquear ni revertir la confirmación. Si no hay tasa, la venta queda `COMPLETED` y el profit Admin es `UNAVAILABLE / PENDING_FX_RATE`.
+
 ### Qué se entregó
+
+- Adaptador en `infrastructure/fx`: interfaz `FxRateProvider`, cliente Pair `USD/DOP`, double de tests que no llama a la red.
+- Persistencia de provenance en `Invoice` (`exchangeRateDopPerUsd`, fuente, `time_last_update_*`, obtención local).
+- Confirmación USD intenta FX **después** de commitear M12. Fallo/timeout/`quota-reached`/clave ausente → pending, `FAC-` intacto.
+- Cálculo COST-003: `costUsd = storedCostDop / rate`, `profitUsd = priceUsd - costUsd`, `profitDop = profitUsd * rate`; los valores USD intermedios conservan precisión decimal completa y solo se redondea la salida final.
+- Margen COST-005 de facturas USD: tanto el profit manual como el total de venta usado como denominador se expresan en DOP mediante la tasa preservada.
+- Seller no recibe pending, profit ni tasas. DOP no llama FX. COST-005 sigue sin cerrar pending FX.
 
 ### Decisiones técnicas
 
+- Timeout acotado a 3 s (`EXCHANGE_RATE_API_TIMEOUT_MS`). No se invierte `conversion_rate`.
+- Pending se deriva (USD completed sin tasa). La tasa se persiste para que el resultado no cambie con tasas live posteriores.
+- En `NODE_ENV=test` el proveedor por defecto es unavailable; los tests inyectan un double.
+- Retry Admin es M16; el segundo confirm idempotente no vuelve a pedir tasa.
+
 ### Validación
 
+- Unit: `apps/api/tests/unit/sales/money.test.ts` (división USD/DOP)
+- Unit: `apps/api/tests/unit/infrastructure/fx.test.ts`
+- Integration: `apps/api/tests/integration/sales/fx-http.test.ts`
+- Integration: `apps/api/tests/integration/sales/http.test.ts` (USD pending por defecto)
+
 ### Fuera de alcance (intencional)
+
+Retry FX (M16). PDF (M17). Swap web de rentabilidad (M24).
 
 ---
 

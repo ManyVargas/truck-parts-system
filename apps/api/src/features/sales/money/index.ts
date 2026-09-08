@@ -3,6 +3,7 @@ export { knownCostAmount, isUnknownCost, normalizeAcquisitionCost } from './cost
 export { calculateLineMoney, isTaxableLineType } from './line.js';
 export {
   calculateLineProfitDop,
+  calculateLineProfitUsdReportingDop,
   calculatedCompletedProfitability,
   manualProfitability,
   pendingFxProfitability,
