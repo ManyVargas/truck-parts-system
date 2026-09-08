@@ -28,6 +28,7 @@ const invoiceDetailInclude = {
 
 const invoiceListInclude = {
   customer: true,
+  lines: { orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }] },
 };
 
 export class SalesRepository {

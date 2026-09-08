@@ -1074,3 +1074,203 @@ describe('M12 confirmation FAC- snapshot (SALE-001, CUST-003)', () => {
   });
 });
 
+describe('M13 DOP profitability Administrator boundary (COST-001..004)', () => {
+  afterEach(cleanup);
+
+  const SERVICES = '/api/catalogs/services';
+
+  function expectNoProfitability(body: { profitability?: unknown; lines?: unknown[] }) {
+    expect(body.profitability).toBeUndefined();
+    for (const line of body.lines ?? []) {
+      expect(line).not.toHaveProperty('profitability');
+    }
+  }
+
+  it('keeps mixed-cost invoice profit unavailable while calculating known lines', async () => {
+    const admin = await fixture();
+    const seller = await fixture('SELLER');
+    const catalog = await admin.agent.post(SERVICES).set(CSRF).send({ name: 'Balanceo' });
+    expect(catalog.status).toBe(201);
+
+    const draft = await admin.agent.post(ROOT).set(CSRF).send({});
+    expect(
+      (
+        await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+          type: 'GENERIC',
+          description: 'Filtro',
+          unitPrice: '18000.00',
+          costProvenance: 'ACTUAL',
+          acquisitionCostDop: '12300.00',
+        })
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+          type: 'EXTERNAL',
+          description: 'Bomba externa',
+          unitPrice: '200.00',
+          costProvenance: 'ESTIMATED',
+          acquisitionCostDop: '80.00',
+        })
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+          type: 'GENERIC',
+          description: 'Sin costo',
+          unitPrice: '100.00',
+          costProvenance: 'UNKNOWN',
+        })
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+          type: 'SERVICE',
+          serviceId: catalog.body.id,
+          unitPrice: '500.00',
+        })
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+          type: 'DELIVERY',
+          description: 'Entrega Santiago',
+          unitPrice: '0.00',
+        })
+      ).status,
+    ).toBe(201);
+
+    const confirmed = await admin.agent
+      .post(`${ROOT}/${draft.body.id}/confirm`)
+      .set(CSRF)
+      .send({});
+    expect(confirmed.status).toBe(200);
+    expect(confirmed.body.profitability).toEqual({
+      status: 'UNAVAILABLE',
+      reason: 'UNKNOWN_COST',
+      profitDop: null,
+      margin: null,
+    });
+    expect(confirmed.body.lines[0].profitability).toEqual({
+      status: 'CALCULATED',
+      reason: null,
+      profitDop: '5700.00',
+      margin: '31.67',
+    });
+    expect(confirmed.body.lines[0].costProvenance).toBe('ACTUAL');
+    expect(confirmed.body.lines[1].profitability).toEqual({
+      status: 'CALCULATED',
+      reason: null,
+      profitDop: '120.00',
+      margin: '60.00',
+    });
+    expect(confirmed.body.lines[1].costProvenance).toBe('ESTIMATED');
+    expect(confirmed.body.lines[2].profitability).toEqual({
+      status: 'UNAVAILABLE',
+      reason: 'UNKNOWN_COST',
+      profitDop: null,
+      margin: null,
+    });
+    expect(confirmed.body.lines[2].acquisitionCostDop).toBeNull();
+    expect(confirmed.body.lines[3].profitability).toEqual({
+      status: 'CALCULATED',
+      reason: null,
+      profitDop: '500.00',
+      margin: '100.00',
+    });
+    expect(confirmed.body.lines[4].profitability).toEqual({
+      status: 'CALCULATED',
+      reason: null,
+      profitDop: '0.00',
+      margin: null,
+    });
+
+    const listed = await admin.agent.get(`${ROOT}?status=COMPLETED`);
+    expect(listed.status).toBe(200);
+    expect(listed.body.items[0].profitability).toEqual(confirmed.body.profitability);
+
+    const sellerView = await seller.agent.get(`${ROOT}/${draft.body.id}`);
+    expect(sellerView.status).toBe(200);
+    expect(sellerView.body.lines[0].acquisitionCostDop).toBe('12300.00');
+    expectNoProfitability(sellerView.body);
+
+    const sellerList = await seller.agent.get(`${ROOT}?status=COMPLETED`);
+    expect(sellerList.status).toBe(200);
+    expect(sellerList.body.items[0].profitability).toBeUndefined();
+
+    const mechanic = await fixture('MECHANIC');
+    expect((await mechanic.agent.get(`${ROOT}/${draft.body.id}`)).status).toBe(403);
+  });
+
+  it('marks completed USD profitability unavailable without FX and omits profit on drafts', async () => {
+    const admin = await fixture();
+    const identified = await customers.create({
+      name: 'Taller Norte',
+      rnc: '131123456',
+    });
+    const usdDraft = await admin.agent
+      .post(ROOT)
+      .set(CSRF)
+      .send({ currency: 'USD', customerId: identified.id, fiscal: true });
+    expect(usdDraft.status).toBe(201);
+    expectNoProfitability(usdDraft.body);
+
+    expect(
+      (
+        await admin.agent.post(`${ROOT}/${usdDraft.body.id}/lines`).set(CSRF).send({
+          type: 'GENERIC',
+          description: 'Filtro',
+          unitPrice: '118.00',
+          costProvenance: 'ACTUAL',
+          acquisitionCostDop: '80.00',
+        })
+      ).status,
+    ).toBe(201);
+    const usd = await admin.agent.post(`${ROOT}/${usdDraft.body.id}/confirm`).set(CSRF).send({});
+    expect(usd.status).toBe(200);
+    expect(usd.body.profitability).toEqual({
+      status: 'UNAVAILABLE',
+      reason: 'PENDING_FX_RATE',
+      profitDop: null,
+      margin: null,
+    });
+    expect(usd.body.lines[0].profitability).toEqual(usd.body.profitability);
+    expect(usd.body.lines[0].acquisitionCostDop).toBe('80.00');
+
+    const seller = await fixture('SELLER');
+    const sellerUsd = await seller.agent.get(`${ROOT}/${usdDraft.body.id}`);
+    expect(sellerUsd.status).toBe(200);
+    expect(sellerUsd.body.lines[0].acquisitionCostDop).toBe('80.00');
+    expectNoProfitability(sellerUsd.body);
+  });
+
+  it('leaves an all-unknown DOP invoice unavailable rather than profit 0', async () => {
+    const admin = await fixture();
+    const draft = await admin.agent.post(ROOT).set(CSRF).send({});
+    expect(
+      (
+        await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+          type: 'GENERIC',
+          description: 'Sin costo',
+          unitPrice: '100.00',
+          costProvenance: 'UNKNOWN',
+        })
+      ).status,
+    ).toBe(201);
+    const confirmed = await admin.agent
+      .post(`${ROOT}/${draft.body.id}/confirm`)
+      .set(CSRF)
+      .send({});
+    expect(confirmed.status).toBe(200);
+    expect(confirmed.body.profitability).toEqual({
+      status: 'UNAVAILABLE',
+      reason: 'UNKNOWN_COST',
+      profitDop: null,
+      margin: null,
+    });
+  });
+});

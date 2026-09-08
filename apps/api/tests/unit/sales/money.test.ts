@@ -5,11 +5,14 @@ import { AppError } from '../../../src/infrastructure/errors/app-error.js';
 import {
   ITBIS_INCLUDED_RATE,
   calculateLineMoney,
+  calculateLineProfitDop,
   isTaxableLineType,
   knownCostAmount,
   normalizeAcquisitionCost,
   parsePositiveDecimal,
+  PROFITABILITY_REASONS,
   roundMoney,
+  sumCalculatedProfit,
   sumInvoiceMoney,
 } from '../../../src/features/sales/money/index.js';
 
@@ -194,6 +197,137 @@ describe('normalizeAcquisitionCost', () => {
 
     expect(actualZero.amount?.equals(money('0'))).toBe(true);
     expect(estimated.amount?.equals(money('250.50'))).toBe(true);
+  });
+});
+
+describe('calculateLineProfitDop', () => {
+  it('subtracts actual or estimated DOP cost from selling price and never treats UNKNOWN as zero', () => {
+    const actual = calculateLineProfitDop(
+      {
+        type: 'GENERIC',
+        unitPrice: '18000.00',
+        quantity: '1',
+        gross: money('18000.00'),
+        acquisitionCostDop: money('12300.00'),
+        costProvenance: 'ACTUAL',
+      },
+      false,
+    );
+    const estimated = calculateLineProfitDop(
+      {
+        type: 'EXTERNAL',
+        unitPrice: '18000.00',
+        quantity: '1',
+        gross: money('18000.00'),
+        acquisitionCostDop: money('12300.00'),
+        costProvenance: 'ESTIMATED',
+      },
+      false,
+    );
+    const unknown = calculateLineProfitDop(
+      {
+        type: 'GENERIC',
+        unitPrice: '18000.00',
+        quantity: '1',
+        gross: money('18000.00'),
+        acquisitionCostDop: null,
+        costProvenance: 'UNKNOWN',
+      },
+      false,
+    );
+
+    expect(actual.status).toBe('CALCULATED');
+    expectMoney(actual.profitDop as Prisma.Decimal, '5700.00');
+    expectMoney(actual.margin as Prisma.Decimal, '31.67');
+    expect(estimated.status).toBe('CALCULATED');
+    expectMoney(estimated.profitDop as Prisma.Decimal, '5700.00');
+    expect(unknown).toMatchObject({
+      status: 'UNAVAILABLE',
+      reason: PROFITABILITY_REASONS.UNKNOWN_COST,
+      profitDop: null,
+      margin: null,
+    });
+  });
+
+  it('counts SERVICE and DELIVERY selling price as profit without inventing a stored cost', () => {
+    const service = calculateLineProfitDop(
+      {
+        type: 'SERVICE',
+        unitPrice: '500.00',
+        quantity: '1',
+        gross: money('500.00'),
+        acquisitionCostDop: null,
+        costProvenance: null,
+      },
+      true,
+    );
+    const freeDelivery = calculateLineProfitDop(
+      {
+        type: 'DELIVERY',
+        unitPrice: '0.00',
+        quantity: '1',
+        gross: money('0.00'),
+        acquisitionCostDop: null,
+        costProvenance: null,
+      },
+      true,
+    );
+
+    expectMoney(service.profitDop as Prisma.Decimal, '500.00');
+    expectMoney(service.margin as Prisma.Decimal, '100.00');
+    expectMoney(freeDelivery.profitDop as Prisma.Decimal, '0.00');
+    expect(freeDelivery.margin).toBeNull();
+  });
+});
+
+describe('sumCalculatedProfit', () => {
+  it('leaves the invoice unavailable when any line has an unknown cost', () => {
+    const known = calculateLineProfitDop(
+      {
+        type: 'GENERIC',
+        unitPrice: '18000.00',
+        quantity: '1',
+        gross: money('18000.00'),
+        acquisitionCostDop: money('12300.00'),
+        costProvenance: 'ACTUAL',
+      },
+      false,
+    );
+    const unknown = calculateLineProfitDop(
+      {
+        type: 'GENERIC',
+        unitPrice: '100.00',
+        quantity: '1',
+        gross: money('100.00'),
+        acquisitionCostDop: null,
+        costProvenance: 'UNKNOWN',
+      },
+      false,
+    );
+    const mixed = sumCalculatedProfit([
+      { profitability: known, sellingPrice: money('18000.00') },
+      { profitability: unknown, sellingPrice: money('100.00') },
+    ]);
+    const allKnown = sumCalculatedProfit([
+      { profitability: known, sellingPrice: money('18000.00') },
+    ]);
+    const none = sumCalculatedProfit([
+      { profitability: unknown, sellingPrice: money('100.00') },
+    ]);
+
+    expectMoney(allKnown.profitDop as Prisma.Decimal, '5700.00');
+    expectMoney(allKnown.margin as Prisma.Decimal, '31.67');
+    expect(mixed).toMatchObject({
+      status: 'UNAVAILABLE',
+      reason: PROFITABILITY_REASONS.UNKNOWN_COST,
+      profitDop: null,
+      margin: null,
+    });
+    expect(none).toMatchObject({
+      status: 'UNAVAILABLE',
+      reason: PROFITABILITY_REASONS.UNKNOWN_COST,
+      profitDop: null,
+    });
   });
 });
 

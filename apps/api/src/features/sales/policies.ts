@@ -12,9 +12,13 @@ const ENABLED_DRAFT_LINE_TYPES = new Set<InvoiceLineType>([
   'EXTERNAL',
 ]);
 
-export function assertInvoiceManager(
-  user: { active: boolean; role: Role; mustChangePassword: boolean } | null,
-): void {
+type InvoiceManager = { active: boolean; role: Role; mustChangePassword: boolean };
+
+export function assertInvoiceManager(user: InvoiceManager | null): void {
+  requireInvoiceManager(user);
+}
+
+export function requireInvoiceManager(user: InvoiceManager | null): InvoiceManager {
   if (!user?.active) throw AppError.unauthorized();
   if (user.mustChangePassword) {
     throw new AppError('FORBIDDEN', 'Password change required', {
@@ -22,6 +26,7 @@ export function assertInvoiceManager(
     });
   }
   if (!INVOICE_MANAGER_ROLES.has(user.role)) throw AppError.forbidden();
+  return user;
 }
 
 export function assertDraftLineTypeEnabled(type: InvoiceLineType): void {

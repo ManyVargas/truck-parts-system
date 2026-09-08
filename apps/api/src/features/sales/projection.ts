@@ -1,7 +1,16 @@
 import type { InvoiceLine } from '@prisma/client';
 
 import { MONEY_DECIMAL_PLACES } from './money/constants.js';
-import { calculateLineMoney, isTaxableLineType, sumInvoiceMoney } from './money/index.js';
+import {
+  calculateLineMoney,
+  calculateLineProfitDop,
+  isTaxableLineType,
+  pendingFxProfitability,
+  sellingPriceOf,
+  sumCalculatedProfit,
+  sumInvoiceMoney,
+} from './money/index.js';
+import type { Profitability } from './money/types.js';
 import type {
   InvoiceConfirmedHistorySnapshot,
   InvoiceCustomerSnapshot,
@@ -9,13 +18,24 @@ import type {
   InvoiceLineHistorySnapshot,
   InvoiceListRecord,
   InvoiceRecord,
+  InvoiceViewer,
   PublicInvoice,
   PublicInvoiceLine,
   PublicInvoiceListItem,
+  PublicProfitability,
 } from './types.js';
 
 function moneyString(value: { toFixed(places: number): string }): string {
   return value.toFixed(MONEY_DECIMAL_PLACES);
+}
+
+function toPublicProfitability(value: Profitability): PublicProfitability {
+  return {
+    status: value.status,
+    reason: value.reason,
+    profitDop: value.profitDop == null ? null : moneyString(value.profitDop),
+    margin: value.margin == null ? null : moneyString(value.margin),
+  };
 }
 
 function customerSnapshotOf(
@@ -40,7 +60,56 @@ function persistedLineMoney(line: InvoiceLine) {
   return { gross: line.gross, base: line.base, itbis: line.itbis };
 }
 
-function toPublicLine(line: InvoiceLine, fiscal: boolean): PublicInvoiceLine {
+function lineProfitInput(line: InvoiceLine) {
+  return {
+    type: line.type,
+    unitPrice: line.unitPrice,
+    quantity: line.quantity,
+    gross: line.gross,
+    acquisitionCostDop: line.acquisitionCostDop,
+    costProvenance: line.costProvenance,
+  };
+}
+
+function deriveCompletedProfitability(invoice: InvoiceRecord | InvoiceListRecord): {
+  invoice: PublicProfitability;
+  lines: PublicProfitability[];
+} | null {
+  if (invoice.status !== 'COMPLETED') return null;
+  if (invoice.currency === 'USD') {
+    const pendingFx = toPublicProfitability(pendingFxProfitability());
+    return {
+      invoice: pendingFx,
+      lines: invoice.lines.map(() => pendingFx),
+    };
+  }
+
+  const lineResults = invoice.lines.map((line) => {
+    const input = lineProfitInput(line);
+    return {
+      profitability: calculateLineProfitDop(input, invoice.fiscal),
+      sellingPrice: sellingPriceOf(input, invoice.fiscal),
+    };
+  });
+  return {
+    invoice: toPublicProfitability(sumCalculatedProfit(lineResults)),
+    lines: lineResults.map((line) => toPublicProfitability(line.profitability)),
+  };
+}
+
+function administratorProfitability(
+  invoice: InvoiceRecord | InvoiceListRecord,
+  viewer: InvoiceViewer,
+) {
+  if (viewer.role !== 'ADMINISTRATOR') return null;
+  return deriveCompletedProfitability(invoice);
+}
+
+function toPublicLine(
+  line: InvoiceLine,
+  fiscal: boolean,
+  profitability?: PublicProfitability,
+): PublicInvoiceLine {
   const money =
     persistedLineMoney(line) ??
     calculateLineMoney({
@@ -62,10 +131,11 @@ function toPublicLine(line: InvoiceLine, fiscal: boolean): PublicInvoiceLine {
     acquisitionCostDop: line.acquisitionCostDop == null ? null : moneyString(line.acquisitionCostDop),
     costProvenance: line.costProvenance,
     serviceId: line.serviceId,
+    ...(profitability ? { profitability } : {}),
   };
 }
 
-function invoiceTotals(invoice: InvoiceRecord) {
+function invoiceTotals(invoice: InvoiceRecord | InvoiceListRecord) {
   if (invoice.gross != null && invoice.base != null && invoice.itbis != null) {
     return {
       gross: moneyString(invoice.gross),
@@ -90,7 +160,8 @@ function invoiceTotals(invoice: InvoiceRecord) {
   };
 }
 
-export function toPublicInvoice(invoice: InvoiceRecord): PublicInvoice {
+export function toPublicInvoice(invoice: InvoiceRecord, viewer: InvoiceViewer): PublicInvoice {
+  const profitability = administratorProfitability(invoice, viewer);
   return {
     id: invoice.id,
     status: invoice.status,
@@ -100,14 +171,21 @@ export function toPublicInvoice(invoice: InvoiceRecord): PublicInvoice {
     customer: toCustomerView(invoice),
     customerSnapshot: customerSnapshotOf(invoice),
     confirmedAt: invoice.confirmedAt?.toISOString() ?? null,
-    lines: invoice.lines.map((line) => toPublicLine(line, invoice.fiscal)),
+    lines: invoice.lines.map((line, index) =>
+      toPublicLine(line, invoice.fiscal, profitability?.lines[index]),
+    ),
     totals: invoiceTotals(invoice),
+    ...(profitability ? { profitability: profitability.invoice } : {}),
     createdAt: invoice.createdAt.toISOString(),
     updatedAt: invoice.updatedAt.toISOString(),
   };
 }
 
-export function toPublicInvoiceListItem(invoice: InvoiceListRecord): PublicInvoiceListItem {
+export function toPublicInvoiceListItem(
+  invoice: InvoiceListRecord,
+  viewer: InvoiceViewer,
+): PublicInvoiceListItem {
+  const profitability = administratorProfitability(invoice, viewer);
   return {
     id: invoice.id,
     status: invoice.status,
@@ -117,6 +195,7 @@ export function toPublicInvoiceListItem(invoice: InvoiceListRecord): PublicInvoi
     customer: toCustomerView(invoice),
     customerSnapshot: customerSnapshotOf(invoice),
     confirmedAt: invoice.confirmedAt?.toISOString() ?? null,
+    ...(profitability ? { profitability: profitability.invoice } : {}),
     createdAt: invoice.createdAt.toISOString(),
     updatedAt: invoice.updatedAt.toISOString(),
   };

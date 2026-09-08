@@ -1,6 +1,12 @@
 export { INCLUDED_ITBIS_DIVISOR, ITBIS_INCLUDED_RATE, MONEY_DECIMAL_PLACES } from './constants.js';
 export { knownCostAmount, isUnknownCost, normalizeAcquisitionCost } from './cost.js';
 export { calculateLineMoney, isTaxableLineType } from './line.js';
+export {
+  calculateLineProfitDop,
+  pendingFxProfitability,
+  sellingPriceOf,
+  sumCalculatedProfit,
+} from './profit.js';
 export { parseNonNegativeDecimal, parsePositiveDecimal } from './parse.js';
 export { roundMoney } from './round.js';
 export { sumInvoiceMoney } from './totals.js';
@@ -11,7 +17,11 @@ export type {
   InvoiceMoneyTotals,
   LineMoney,
   LineMoneyInput,
+  LineProfitInput,
   MoneyInput,
+  Profitability,
+  ProfitabilityReason,
+  ProfitabilityStatus,
   RoundedLineMoney,
 } from './types.js';
-export { COST_PROVENANCES, INVOICE_LINE_TYPES } from './types.js';
+export { COST_PROVENANCES, INVOICE_LINE_TYPES, PROFITABILITY_REASONS } from './types.js';

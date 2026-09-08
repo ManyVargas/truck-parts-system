@@ -23,7 +23,7 @@ import {
   parsePositiveDecimal,
   sumInvoiceMoney,
 } from './money/index.js';
-import { assertDraftLineTypeEnabled, assertInvoiceManager } from './policies.js';
+import { assertDraftLineTypeEnabled, requireInvoiceManager } from './policies.js';
 import {
   toConfirmedHistorySnapshot,
   toDraftHistorySnapshot,
@@ -145,7 +145,7 @@ export class SalesService {
   async createDraft(actorId: string, input: unknown) {
     const profile = createDraftSchema.parse(input ?? {});
     return this.transaction(async ({ sales, customers, users, history }) => {
-      assertInvoiceManager(await users.findById(actorId));
+      const actor = requireInvoiceManager(await users.findById(actorId));
       const customer = profile.customerId
         ? await customers.findById(profile.customerId)
         : await customers.findDefault();
@@ -168,26 +168,26 @@ export class SalesService {
         eventType: 'INVOICE_DRAFT_CREATED',
         payload: toDraftHistorySnapshot(invoice),
       });
-      return toPublicInvoice(invoice);
+      return toPublicInvoice(invoice, actor);
     });
   }
 
   async list(actorId: string, query: unknown) {
     const filters = listInvoicesSchema.parse(query);
     return this.transaction(async ({ sales, users }) => {
-      assertInvoiceManager(await users.findById(actorId));
+      const actor = requireInvoiceManager(await users.findById(actorId));
       const result = await sales.list(filters);
-      return { ...result, items: result.items.map(toPublicInvoiceListItem) };
+      return { ...result, items: result.items.map((item) => toPublicInvoiceListItem(item, actor)) };
     });
   }
 
   async getById(actorId: string, id: string) {
     invoiceIdSchema.parse({ id });
     return this.transaction(async ({ sales, users }) => {
-      assertInvoiceManager(await users.findById(actorId));
+      const actor = requireInvoiceManager(await users.findById(actorId));
       const invoice = await sales.findById(id);
       if (!invoice) throw AppError.notFound('Invoice not found');
-      return toPublicInvoice(invoice);
+      return toPublicInvoice(invoice, actor);
     });
   }
 
@@ -195,7 +195,7 @@ export class SalesService {
     invoiceIdSchema.parse({ id });
     const patch = updateDraftMetaSchema.parse(input);
     return this.transaction(async ({ sales, customers, users, history }) => {
-      assertInvoiceManager(await users.findById(actorId));
+      const actor = requireInvoiceManager(await users.findById(actorId));
       const existing = await sales.findById(id);
       if (!existing) throw AppError.notFound('Invoice not found');
       assertDraftStatus(existing.status, DRAFT_ONLY_EDIT_MESSAGE);
@@ -225,14 +225,14 @@ export class SalesService {
           after: toDraftHistorySnapshot(updated),
         },
       });
-      return toPublicInvoice(updated);
+      return toPublicInvoice(updated, actor);
     });
   }
 
   async discard(actorId: string, id: string) {
     invoiceIdSchema.parse({ id });
     return this.transaction(async ({ sales, users, history }) => {
-      assertInvoiceManager(await users.findById(actorId));
+      requireInvoiceManager(await users.findById(actorId));
       const existing = await sales.findById(id);
       if (!existing) throw AppError.notFound('Invoice not found');
       assertDraftStatus(existing.status, DRAFT_ONLY_DISCARD_MESSAGE);
@@ -252,7 +252,7 @@ export class SalesService {
     const candidate = addInvoiceLineSchema.parse(input);
 
     return this.transaction(async ({ sales, users, history, catalogs }) => {
-      assertInvoiceManager(await users.findById(actorId));
+      const actor = requireInvoiceManager(await users.findById(actorId));
       const existing = await sales.findById(invoiceId);
       if (!existing) throw AppError.notFound('Invoice not found');
       assertDraftStatus(existing.status, DRAFT_ONLY_EDIT_MESSAGE);
@@ -284,7 +284,7 @@ export class SalesService {
         eventType: 'INVOICE_LINE_ADDED',
         payload: toLineHistorySnapshot(created),
       });
-      return toPublicInvoice(updated);
+      return toPublicInvoice(updated, actor);
     });
   }
 
@@ -293,7 +293,7 @@ export class SalesService {
     const patch = setLinePriceSchema.parse(input);
 
     return this.transaction(async ({ sales, users, history }) => {
-      assertInvoiceManager(await users.findById(actorId));
+      const actor = requireInvoiceManager(await users.findById(actorId));
       const existing = await sales.findById(invoiceId);
       if (!existing) throw AppError.notFound('Invoice not found');
       assertDraftStatus(existing.status, DRAFT_ONLY_EDIT_MESSAGE);
@@ -325,7 +325,7 @@ export class SalesService {
           after: toLineHistorySnapshot(next),
         },
       });
-      return toPublicInvoice(updated);
+      return toPublicInvoice(updated, actor);
     });
   }
 
@@ -333,7 +333,7 @@ export class SalesService {
     invoiceLineIdSchema.parse({ id: invoiceId, lineId });
 
     return this.transaction(async ({ sales, users, history }) => {
-      assertInvoiceManager(await users.findById(actorId));
+      const actor = requireInvoiceManager(await users.findById(actorId));
       const existing = await sales.findById(invoiceId);
       if (!existing) throw AppError.notFound('Invoice not found');
       assertDraftStatus(existing.status, DRAFT_ONLY_EDIT_MESSAGE);
@@ -348,7 +348,7 @@ export class SalesService {
         payload: toLineHistorySnapshot(line),
       });
       const updated = await sales.removeLine(invoiceId, lineId);
-      return toPublicInvoice(updated);
+      return toPublicInvoice(updated, actor);
     });
   }
 
@@ -356,11 +356,11 @@ export class SalesService {
     invoiceIdSchema.parse({ id });
     confirmInvoiceSchema.parse(input ?? {});
     return this.transaction(async ({ sales, customers, users, history }) => {
-      assertInvoiceManager(await users.findById(actorId));
+      const actor = requireInvoiceManager(await users.findById(actorId));
       await sales.lockById(id);
       const existing = await sales.findById(id);
       if (!existing) throw AppError.notFound('Invoice not found');
-      if (existing.status === 'COMPLETED') return toPublicInvoice(existing);
+      if (existing.status === 'COMPLETED') return toPublicInvoice(existing, actor);
       if (existing.status !== 'DRAFT') throw AppError.conflict(DRAFT_ONLY_CONFIRM_MESSAGE);
       if (existing.lines.length === 0) throw AppError.conflict(EMPTY_DRAFT_CONFIRM_MESSAGE);
 
@@ -406,7 +406,7 @@ export class SalesService {
         eventType: 'INVOICE_CONFIRMED',
         payload: toConfirmedHistorySnapshot(completed),
       });
-      return toPublicInvoice(completed);
+      return toPublicInvoice(completed, actor);
     });
   }
 }

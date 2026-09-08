@@ -8,11 +8,14 @@ import type {
   InvoiceSequence,
   InvoiceStatus,
   Prisma,
+  Role,
 } from '@prisma/client';
 
 export type InvoiceRecord = Invoice & { lines: InvoiceLine[]; customer: Customer };
 
-export type InvoiceListRecord = Invoice & { customer: Customer };
+export type InvoiceListRecord = Invoice & { customer: Customer; lines: InvoiceLine[] };
+
+export type InvoiceViewer = { role: Role };
 
 export type CreateDraftInvoiceRecord = {
   customerId: string;
@@ -82,6 +85,13 @@ export type InvoiceCustomerSnapshot = {
   rnc: string | null;
 };
 
+export type PublicProfitability = {
+  status: 'CALCULATED' | 'UNAVAILABLE';
+  reason: 'UNKNOWN_COST' | 'PENDING_FX_RATE' | null;
+  profitDop: string | null;
+  margin: string | null;
+};
+
 export type PublicInvoiceLine = {
   id: string;
   type: InvoiceLineType;
@@ -95,6 +105,7 @@ export type PublicInvoiceLine = {
   acquisitionCostDop: string | null;
   costProvenance: CostProvenance | null;
   serviceId: string | null;
+  profitability?: PublicProfitability;
 };
 
 export type PublicInvoice = {
@@ -108,6 +119,7 @@ export type PublicInvoice = {
   confirmedAt: string | null;
   lines: PublicInvoiceLine[];
   totals: { gross: string; base: string; itbis: string };
+  profitability?: PublicProfitability;
   createdAt: string;
   updatedAt: string;
 };
@@ -121,6 +133,7 @@ export type PublicInvoiceListItem = {
   customer: InvoiceCustomerView;
   customerSnapshot: InvoiceCustomerSnapshot | null;
   confirmedAt: string | null;
+  profitability?: PublicProfitability;
   createdAt: string;
   updatedAt: string;
 };

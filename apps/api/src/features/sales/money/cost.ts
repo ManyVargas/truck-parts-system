@@ -7,7 +7,7 @@ import { COST_PROVENANCES, type AcquisitionCost, type CostProvenance, type Money
 
 /**
  * Cost is not used in ITBIS. This helper keeps UNKNOWN distinct from zero so
- * later profitability work is not blocked by a silent 0 coercion.
+ * profitability never treats a missing cost as 0.
  */
 export function normalizeAcquisitionCost(input: {
   provenance: CostProvenance;

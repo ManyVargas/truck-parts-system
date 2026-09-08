@@ -430,18 +430,38 @@ Profit (M13). PDF (M17). Swap web de confirmación (M22).
 
 ## Milestone 13 — Rentabilidad DOP + frontera Administrator
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-08
 
 ### Objetivo cumplido
 
+Calcular profit DOP sobre el snapshot completed y proyectarlo solo a Administrator, omitiendo esos campos para Seller.
+
 ### Qué se entregó
+
+- Motor `calculateLineProfitDop` / `sumCalculatedProfit`: precio de venta (gross) − costo ACTUAL/ESTIMATED; UNKNOWN → `UNAVAILABLE` / `UNKNOWN_COST` (nunca 0).
+- SERVICE/DELIVERY: el precio de venta cuenta entero como profit (sin COGS).
+- Total de factura: si cualquier línea aplicable tiene costo `UNKNOWN`, queda `UNAVAILABLE / UNKNOWN_COST`; las líneas conocidas conservan su cálculo individual y nunca se presenta un subtotal parcial como profit total.
+- GET, confirm y list: Administrator recibe `profitability` (`profitDop` + `margin` % sobre el precio de venta) en completed DOP.
+- Seller sigue viendo `acquisitionCostDop`; no recibe claves de profit.
+- Completed USD: `UNAVAILABLE` / `PENDING_FX_RATE` (sin restar monedas). Drafts no proyectan profit.
+- Mechanic 403 en `/api/sales`.
 
 ### Decisiones técnicas
 
+- Derivado al leer, sin columnas nuevas. M14/M15 persistirán status cuando lo necesiten.
+- La omisión de profit es en `toPublicInvoice` según `role`, no en la UI.
+- `margin` es porcentaje a dos decimales del precio de venta (gross). Precio 0 → `margin` null.
+- History de confirmación no incluye profit (no hay hecho persistido).
+
 ### Validación
 
+- Unit: `apps/api/tests/unit/sales/money.test.ts` (profit DOP)
+- Integration: `apps/api/tests/integration/sales/http.test.ts` (bloque M13)
+
 ### Fuera de alcance (intencional)
+
+COST-005 (M14). FX/retry (M15–M16). PDF (M17). Swap web de rentabilidad (M24).
 
 ---
 
