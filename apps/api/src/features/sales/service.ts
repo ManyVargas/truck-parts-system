@@ -33,6 +33,7 @@ import {
   addInvoiceLineSchema,
   createDraftSchema,
   deliveryDraftLineSchema,
+  externalDraftLineSchema,
   genericDraftLineSchema,
   invoiceIdSchema,
   invoiceLineIdSchema,
@@ -57,8 +58,15 @@ function assertFiscalCustomer(
   }
 }
 
-function resolveGenericDraftLine(candidate: unknown): DraftLineWrite {
-  const profile = genericDraftLineSchema.parse(candidate);
+function toMerchandiseDraftLine(profile: {
+  type: 'GENERIC' | 'EXTERNAL';
+  description: string;
+  quantity?: string;
+  unitPrice: string;
+  costProvenance: 'ACTUAL' | 'ESTIMATED' | 'UNKNOWN';
+  acquisitionCostDop?: string | null;
+}): DraftLineWrite {
+  // GENERIC and EXTERNAL share COST-001: DOP cost + provenance, optional quantity.
   const quantity =
     profile.quantity === undefined
       ? DEFAULT_LINE_QUANTITY
@@ -113,7 +121,10 @@ async function resolveDraftLineWrite(
 ): Promise<DraftLineWrite> {
   if (candidate.type === 'SERVICE') return resolveServiceDraftLine(catalogs, candidate);
   if (candidate.type === 'DELIVERY') return resolveDeliveryDraftLine(candidate);
-  return resolveGenericDraftLine(candidate);
+  if (candidate.type === 'EXTERNAL') {
+    return toMerchandiseDraftLine(externalDraftLineSchema.parse(candidate));
+  }
+  return toMerchandiseDraftLine(genericDraftLineSchema.parse(candidate));
 }
 
 function addedLine(before: InvoiceLine[], after: InvoiceLine[]): InvoiceLine {

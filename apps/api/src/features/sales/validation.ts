@@ -80,34 +80,39 @@ export const addInvoiceLineSchema = z.strictObject({
   serviceId: z.uuid().optional(),
 });
 
-export const genericDraftLineSchema = z
-  .strictObject({
-    type: z.literal('GENERIC'),
-    description: z.string().trim().min(1),
-    quantity: positiveDecimal12x2StringSchema.optional(),
-    unitPrice: decimal12x2StringSchema,
-    costProvenance: costProvenanceSchema,
-    acquisitionCostDop: decimal12x2StringSchema.nullable().optional(),
-  })
-  .superRefine((value, context) => {
-    if (value.costProvenance === 'UNKNOWN') {
-      if (value.acquisitionCostDop != null) {
+function merchandiseDraftLineSchema<T extends 'GENERIC' | 'EXTERNAL'>(type: T) {
+  return z
+    .strictObject({
+      type: z.literal(type),
+      description: z.string().trim().min(1),
+      quantity: positiveDecimal12x2StringSchema.optional(),
+      unitPrice: decimal12x2StringSchema,
+      costProvenance: costProvenanceSchema,
+      acquisitionCostDop: decimal12x2StringSchema.nullable().optional(),
+    })
+    .superRefine((value, context) => {
+      if (value.costProvenance === 'UNKNOWN') {
+        if (value.acquisitionCostDop != null) {
+          context.addIssue({
+            code: 'custom',
+            message: UNKNOWN_COST_AMOUNT_MESSAGE,
+            path: ['acquisitionCostDop'],
+          });
+        }
+        return;
+      }
+      if (value.acquisitionCostDop == null) {
         context.addIssue({
           code: 'custom',
-          message: UNKNOWN_COST_AMOUNT_MESSAGE,
+          message: COST_AMOUNT_REQUIRED_MESSAGE,
           path: ['acquisitionCostDop'],
         });
       }
-      return;
-    }
-    if (value.acquisitionCostDop == null) {
-      context.addIssue({
-        code: 'custom',
-        message: COST_AMOUNT_REQUIRED_MESSAGE,
-        path: ['acquisitionCostDop'],
-      });
-    }
-  });
+    });
+}
+
+export const genericDraftLineSchema = merchandiseDraftLineSchema('GENERIC');
+export const externalDraftLineSchema = merchandiseDraftLineSchema('EXTERNAL');
 
 export const serviceDraftLineSchema = z.strictObject({
   type: z.literal('SERVICE'),

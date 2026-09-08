@@ -8,6 +8,7 @@ import {
   addInvoiceLineSchema,
   createDraftSchema,
   deliveryDraftLineSchema,
+  externalDraftLineSchema,
   genericDraftLineSchema,
   serviceDraftLineSchema,
   setLinePriceSchema,
@@ -101,6 +102,61 @@ describe('draft GENERIC line validation', () => {
     );
     expect(setLinePriceSchema.safeParse({ unitPrice: '1e3' }).success).toBe(false);
     expect(setLinePriceSchema.safeParse({ unitPrice: '9999999999.99' }).success).toBe(true);
+  });
+});
+
+describe('draft EXTERNAL line validation', () => {
+  it('accepts EXTERNAL with string money and UNKNOWN without an amount', () => {
+    expect(
+      externalDraftLineSchema.parse({
+        type: 'EXTERNAL',
+        description: 'Bomba externa',
+        unitPrice: '300.00',
+        costProvenance: 'UNKNOWN',
+      }),
+    ).toEqual({
+      type: 'EXTERNAL',
+      description: 'Bomba externa',
+      unitPrice: '300.00',
+      costProvenance: 'UNKNOWN',
+    });
+  });
+
+  it('rejects numeric money, UNKNOWN with amount, missing actual cost, and extra fields', () => {
+    expect(
+      externalDraftLineSchema.safeParse({
+        type: 'EXTERNAL',
+        description: 'Bomba externa',
+        unitPrice: 300,
+        costProvenance: 'UNKNOWN',
+      }).success,
+    ).toBe(false);
+    expect(
+      externalDraftLineSchema.safeParse({
+        type: 'EXTERNAL',
+        description: 'Bomba externa',
+        unitPrice: '300.00',
+        costProvenance: 'UNKNOWN',
+        acquisitionCostDop: '0.00',
+      }).error?.issues[0]?.message,
+    ).toBe(UNKNOWN_COST_AMOUNT_MESSAGE);
+    expect(
+      externalDraftLineSchema.safeParse({
+        type: 'EXTERNAL',
+        description: 'Bomba externa',
+        unitPrice: '300.00',
+        costProvenance: 'ACTUAL',
+      }).error?.issues[0]?.message,
+    ).toBe(COST_AMOUNT_REQUIRED_MESSAGE);
+    expect(
+      externalDraftLineSchema.safeParse({
+        type: 'EXTERNAL',
+        description: 'Bomba externa',
+        unitPrice: '300.00',
+        costProvenance: 'UNKNOWN',
+        serviceId: '11111111-1111-4111-8111-111111111111',
+      }).success,
+    ).toBe(false);
   });
 });
 

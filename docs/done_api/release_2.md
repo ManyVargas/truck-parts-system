@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M10 completados)
+**Estado:** en curso (M1–M11 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 2, a medida que se completan.  
 No sustituye a `plan_release_2.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -356,18 +356,38 @@ EXTERNAL (M11). Confirmación / `FAC-` (M12). Swap POS (M21).
 
 ## Milestone 11 — Draft línea EXTERNAL + costo
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-08
 
 ### Objetivo cumplido
 
+`addLine` HTTP acepta reventa externa gravada con costo DOP (actual/estimado/desconocido), sin fingir stock local.
+
 ### Qué se entregó
+
+- `POST /api/sales/:id/lines` con `type: EXTERNAL`, descripción, `unitPrice`, `costProvenance` y costo DOP.
+- `quantity` opcional (si falta, `1`), igual que GENERIC.
+- Recálculo M5: la línea extrae ITBIS incluido cuando la factura es fiscal.
+- `PATCH` de precio y `DELETE` reutilizan M8.
+- History `INVOICE_LINE_ADDED` / `INVOICE_LINE_UPDATED` / `INVOICE_LINE_REMOVED` en la misma transacción.
+- ITEM/QTY siguen 409; no hay tablas de inventario que mutar.
 
 ### Decisiones técnicas
 
+- Contrato: mismas reglas de costo que GENERIC (COST-001). `UNKNOWN` no acepta monto; el check SQL sigue impidiendo UNKNOWN=0.
+- Schema Zod compartido GENERIC/EXTERNAL para no divergir las reglas de provenance.
+- Seller escribe la línea. Confirmación y profit quedan en M12/M13.
+
 ### Validación
 
+- Integration: `apps/api/tests/integration/sales/http.test.ts` (bloque M11)
+- Integration: `apps/api/tests/integration/sales/repository.test.ts` (persistencia EXTERNAL UNKNOWN)
+- Unit: `apps/api/tests/unit/sales/validation.test.ts` (schema EXTERNAL)
+- Unit: `apps/api/tests/unit/sales/history-validation.test.ts` (snapshot `type: EXTERNAL`)
+
 ### Fuera de alcance (intencional)
+
+Confirmación / `FAC-` (M12). Profit Administrator (M13). Swap POS (M21).
 
 ---
 

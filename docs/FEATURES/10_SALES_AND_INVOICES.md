@@ -80,7 +80,7 @@ Invoice PDF rendering is secondary to sale validity. Preserve all invoice facts 
 - [x] Generic merchandise line. *(prototipo mock — WM8; API draft HTTP — R2 M8)*
 - [x] Mechanical service catalog selection + negotiated price. *(prototipo mock — WM8)*
 - [x] Delivery paid/free/omitted line. *(prototipo mock — WM8; API draft HTTP — R2 M10)*
-- [x] External resale line if its cost dependency is enabled. *(prototipo mock — WM8)*
+- [x] External resale line if its cost dependency is enabled. *(prototipo mock — WM8; API draft HTTP — R2 M11)*
 - [x] Tax-inclusive 18% calculation and per-line rounding.
 - [x] Printable/regenerable internal PDF with blank NCF field.
 - [x] Explicitly reject unavailable inventory-backed line actions until their feature release. *(API R2 M8: ITEM/QTY 409; el mock POS aún vende inventario hasta M21)*

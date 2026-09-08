@@ -16,7 +16,6 @@ import {
   FISCAL_IDENTITY_REQUIRED_MESSAGE,
   INACTIVE_SERVICE_LINE_MESSAGE,
   UNSUPPORTED_INVENTORY_LINE_MESSAGE,
-  UNSUPPORTED_LINE_TYPE_MESSAGE,
 } from '../../../src/features/sales/constants.js';
 import { SalesService } from '../../../src/features/sales/service.js';
 import { UserRepository } from '../../../src/features/users/repository.js';
@@ -300,13 +299,6 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
     expect(qty.status).toBe(409);
     expect(qty.body.error.message).toBe(UNSUPPORTED_INVENTORY_LINE_MESSAGE);
     expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(1);
-
-    const external = await admin.agent
-      .post(`${ROOT}/${draft.body.id}/lines`)
-      .set(CSRF)
-      .send({ type: 'EXTERNAL', description: 'Bomba externa', unitPrice: '300.00' });
-    expect(external.status).toBe(409);
-    expect(external.body.error.message).toBe(UNSUPPORTED_LINE_TYPE_MESSAGE);
   });
 
   it('rejects negative prices, textual placeholders, completed invoices, Mechanic, and CSRF-less writes', async () => {
@@ -678,6 +670,161 @@ describe('M10 draft DELIVERY lines (LINE-006)', () => {
       costProvenance: 'UNKNOWN',
     });
     expect(withCost.status).toBe(400);
+    expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(0);
+  });
+});
+
+describe('M11 draft EXTERNAL lines (LINE-005)', () => {
+  afterEach(cleanup);
+
+  it('adds EXTERNAL with actual, estimated, and unknown cost, recalculates included ITBIS, then updates and removes', async () => {
+    const seller = await fixture('SELLER');
+    const identified = await customers.create({
+      name: 'Taller Norte',
+      rnc: '131123456',
+    });
+    const draft = await seller.agent
+      .post(ROOT)
+      .set(CSRF)
+      .send({ customerId: identified.id, fiscal: true });
+    expect(draft.status).toBe(201);
+
+    const actual = await seller.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'EXTERNAL',
+      description: 'Bomba hidráulica',
+      quantity: '2',
+      unitPrice: '118.00',
+      costProvenance: 'ACTUAL',
+      acquisitionCostDop: '80.00',
+    });
+    expect(actual.status).toBe(201);
+    expect(actual.body.lines[0]).toMatchObject({
+      type: 'EXTERNAL',
+      description: 'Bomba hidráulica',
+      quantity: '2.00',
+      unitPrice: '118.00',
+      taxable: true,
+      gross: '236.00',
+      base: '200.00',
+      itbis: '36.00',
+      acquisitionCostDop: '80.00',
+      costProvenance: 'ACTUAL',
+      serviceId: null,
+    });
+    expect(actual.body.totals).toEqual({ gross: '236.00', base: '200.00', itbis: '36.00' });
+
+    const estimated = await seller.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'EXTERNAL',
+      description: 'Sensor usado',
+      unitPrice: '118.00',
+      costProvenance: 'ESTIMATED',
+      acquisitionCostDop: '40.00',
+    });
+    expect(estimated.status).toBe(201);
+    expect(estimated.body.lines[1]).toMatchObject({
+      type: 'EXTERNAL',
+      quantity: '1.00',
+      taxable: true,
+      gross: '118.00',
+      base: '100.00',
+      itbis: '18.00',
+      acquisitionCostDop: '40.00',
+      costProvenance: 'ESTIMATED',
+    });
+    expect(estimated.body.totals).toEqual({ gross: '354.00', base: '300.00', itbis: '54.00' });
+
+    const unknown = await seller.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'EXTERNAL',
+      description: 'Pieza sin factura',
+      unitPrice: '19.50',
+      costProvenance: 'UNKNOWN',
+    });
+    expect(unknown.status).toBe(201);
+    expect(unknown.body.lines[2]).toMatchObject({
+      type: 'EXTERNAL',
+      acquisitionCostDop: null,
+      costProvenance: 'UNKNOWN',
+      gross: '19.50',
+    });
+    expect(unknown.body.lines[2].acquisitionCostDop).not.toBe('0.00');
+    expect(unknown.body.lines.every((line: { type: string }) => line.type === 'EXTERNAL')).toBe(
+      true,
+    );
+    expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(3);
+
+    const priced = await seller.agent
+      .patch(`${ROOT}/${draft.body.id}/lines/${actual.body.lines[0].id}`)
+      .set(CSRF)
+      .send({ unitPrice: '59.00' });
+    expect(priced.status).toBe(200);
+    expect(priced.body.lines[0]).toMatchObject({
+      type: 'EXTERNAL',
+      unitPrice: '59.00',
+      gross: '118.00',
+      base: '100.00',
+      itbis: '18.00',
+      acquisitionCostDop: '80.00',
+    });
+
+    const removed = await seller.agent
+      .delete(`${ROOT}/${draft.body.id}/lines/${unknown.body.lines[2].id}`)
+      .set(CSRF);
+    expect(removed.status).toBe(200);
+    expect(removed.body.lines).toHaveLength(2);
+    expect(
+      await prisma.historyEvent.findFirst({
+        where: { subjectId: draft.body.id, eventType: 'INVOICE_LINE_ADDED' },
+      }),
+    ).not.toBeNull();
+  });
+
+  it('rejects UNKNOWN with amount, missing actual cost, numeric money, extra fields, and ITEM/QTY', async () => {
+    const admin = await fixture();
+    const draft = await admin.agent.post(ROOT).set(CSRF).send({});
+
+    const unknownWithAmount = await admin.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({
+        type: 'EXTERNAL',
+        description: 'Bomba',
+        unitPrice: '300.00',
+        costProvenance: 'UNKNOWN',
+        acquisitionCostDop: '0.00',
+      });
+    expect(unknownWithAmount.status).toBe(400);
+
+    const missingCost = await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'EXTERNAL',
+      description: 'Bomba',
+      unitPrice: '300.00',
+      costProvenance: 'ACTUAL',
+    });
+    expect(missingCost.status).toBe(400);
+
+    const numericMoney = await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'EXTERNAL',
+      description: 'Bomba',
+      unitPrice: 300,
+      costProvenance: 'UNKNOWN',
+    });
+    expect(numericMoney.status).toBe(400);
+
+    const extraField = await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'EXTERNAL',
+      description: 'Bomba',
+      unitPrice: '300.00',
+      costProvenance: 'UNKNOWN',
+      serviceId: '11111111-1111-4111-8111-111111111111',
+    });
+    expect(extraField.status).toBe(400);
+
+    const item = await admin.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({ type: 'ITEM', description: 'Tracked part', unitPrice: '10.00' });
+    expect(item.status).toBe(409);
+    expect(item.body.error.message).toBe(UNSUPPORTED_INVENTORY_LINE_MESSAGE);
     expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(0);
   });
 });

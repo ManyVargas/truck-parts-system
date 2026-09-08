@@ -64,7 +64,7 @@ describe('SalesRepository (PostgreSQL)', () => {
     expect(await sales.findSequence()).toMatchObject({ name: 'FAC', nextValue: 1 });
   });
 
-  it('persists GENERIC cost-actual and SERVICE lines on a draft', async () => {
+  it('persists GENERIC cost-actual, SERVICE, and EXTERNAL lines on a draft', async () => {
     const customer = await customers.findDefault();
     const service = await catalog.create({ name: 'Instalación mecánica' });
     const draft = await sales.createDraft({
@@ -109,6 +109,23 @@ describe('SalesRepository (PostgreSQL)', () => {
     });
     expect(Number(withService.lines[1]?.quantity)).toBe(1);
     expect(Number(withService.lines[1]?.unitPrice)).toBe(0);
+
+    const withExternal = await sales.addLine({
+      invoiceId: draft.id,
+      type: InvoiceLineType.EXTERNAL,
+      description: 'Bomba externa',
+      unitPrice: '300',
+      costProvenance: CostProvenance.UNKNOWN,
+    });
+    expect(withExternal.lines).toHaveLength(3);
+    expect(withExternal.lines[2]).toMatchObject({
+      type: InvoiceLineType.EXTERNAL,
+      description: 'Bomba externa',
+      costProvenance: CostProvenance.UNKNOWN,
+      acquisitionCostDop: null,
+      serviceId: null,
+    });
+    expect(Number(withExternal.lines[2]?.quantity)).toBe(1);
   });
 
   it('requires a DELIVERY description and maps the unique constraint to a conflict', async () => {

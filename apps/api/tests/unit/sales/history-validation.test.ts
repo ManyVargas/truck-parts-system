@@ -53,6 +53,11 @@ describe('invoice draft history validation', () => {
       },
     };
     expect(historyEventSchema.parse(event)).toEqual(event);
+    const externalEvent = {
+      ...event,
+      payload: { ...event.payload, type: 'EXTERNAL' as const, description: 'Bomba externa' },
+    };
+    expect(historyEventSchema.parse(externalEvent)).toEqual(externalEvent);
     expect(
       historyEventSchema.safeParse({
         ...event,
