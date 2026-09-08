@@ -542,18 +542,35 @@ Retry FX (M16). PDF (M17). Swap web de rentabilidad (M24).
 
 ## Milestone 16 — Retry FX Administrator
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-08
 
 ### Objetivo cumplido
 
+Completar el cálculo USD (COST-003) sin reejecutar la venta, pidiendo a ExchangeRate-API la tasa histórica del día UTC de `confirmedAt`. Si esa tasa no existe (plan Free, timeout, error), la factura sigue `COMPLETED` con `PENDING_FX_RATE`.
+
 ### Qué se entregó
+
+- `POST /api/profitability/:invoiceId/retry` (CSRF; solo Administrator).
+- Lookup histórico `history/USD/{year}/{month}/{day}` (`conversion_rates.DOP`). Confirmación M15 sigue usando Pair live.
+- History `INVOICE_USD_FX_RETRIED` en cada intento que consulta FX (RECORDED o UNAVAILABLE).
+- 409 si el proveedor no da histórica, si ya hay tasa, o si la factura no es USD completed. COST-005 sigue sin cerrar pending FX.
 
 ### Decisiones técnicas
 
+- Día UTC de `confirmedAt`; no se persiste Pair live como si fuera la tasa de la venta.
+- El FX se consulta fuera de la transacción comercial; solo se escriben columnas FX + history.
+- Seller/Mechanic 403. Swap web de rentabilidad es M24.
+
 ### Validación
 
+- Unit: `apps/api/tests/unit/infrastructure/fx.test.ts` (histórico)
+- Unit: `apps/api/tests/unit/sales/history-validation.test.ts`
+- Integration: `apps/api/tests/integration/profitability/fx-retry-http.test.ts`
+
 ### Fuera de alcance (intencional)
+
+PDF (M17). Swap web de rentabilidad (M24). Endpoint de recovery HTTP.
 
 ---
 

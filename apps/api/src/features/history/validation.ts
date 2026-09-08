@@ -284,6 +284,28 @@ export const historyEventSchema = z
           .strict(),
       })
       .strict(),
+    z
+      .object({
+        ...invoiceBase,
+        eventType: z.literal('INVOICE_USD_FX_RETRIED'),
+        payload: z
+          .object({
+            outcome: z.enum(['RECORDED', 'UNAVAILABLE']),
+            reason: z.string().nullable(),
+            asOf: z.string(),
+            after: z
+              .object({
+                exchangeRateDopPerUsd: z.string(),
+                source: z.string(),
+                rateUpdatedAt: z.string(),
+                obtainedAt: z.string(),
+              })
+              .strict()
+              .nullable(),
+          })
+          .strict(),
+      })
+      .strict(),
   ])
   .superRefine((event, context) => {
     const expected =

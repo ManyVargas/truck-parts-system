@@ -441,15 +441,14 @@ export class SalesService {
         logger.warn({ invoiceId: invoice.id, reason: result.reason }, 'USD FX rate unavailable');
         return invoice;
       }
-      return (
-        (await this.sales.recordUsdFxRate({
-          id: invoice.id,
-          exchangeRateDopPerUsd: result.quote.exchangeRateDopPerUsd,
-          source: result.quote.source,
-          rateUpdatedAt: result.quote.rateUpdatedAt,
-          obtainedAt: result.quote.obtainedAt,
-        })) ?? invoice
-      );
+      const persisted = await this.sales.recordUsdFxRate({
+        id: invoice.id,
+        exchangeRateDopPerUsd: result.quote.exchangeRateDopPerUsd,
+        source: result.quote.source,
+        rateUpdatedAt: result.quote.rateUpdatedAt,
+        obtainedAt: result.quote.obtainedAt,
+      });
+      return persisted.invoice ?? invoice;
     } catch (error) {
       logger.warn(
         { invoiceId: invoice.id, reason: error instanceof Error ? error.name : 'unknown' },

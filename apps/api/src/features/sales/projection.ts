@@ -19,6 +19,7 @@ import type {
   InvoiceListRecord,
   InvoiceRecord,
   InvoiceViewer,
+  InvoiceUsdFxRetryHistorySnapshot,
   PublicFxProvenance,
   PublicInvoice,
   PublicInvoiceLine,
@@ -151,6 +152,33 @@ export function toManualGrossProfitHistorySnapshot(
   return {
     before: before == null ? null : moneyString(before),
     after: moneyString(after),
+  };
+}
+
+export function toUsdFxRetryHistorySnapshot(input: {
+  outcome: 'RECORDED' | 'UNAVAILABLE';
+  reason: string | null;
+  asOf: Date;
+  after: {
+    exchangeRateDopPerUsd: { toString(): string };
+    source: string;
+    rateUpdatedAt: Date;
+    obtainedAt: Date;
+  } | null;
+}): InvoiceUsdFxRetryHistorySnapshot {
+  return {
+    outcome: input.outcome,
+    reason: input.reason,
+    asOf: input.asOf.toISOString(),
+    after:
+      input.after == null
+        ? null
+        : {
+            exchangeRateDopPerUsd: input.after.exchangeRateDopPerUsd.toString(),
+            source: input.after.source,
+            rateUpdatedAt: input.after.rateUpdatedAt.toISOString(),
+            obtainedAt: input.after.obtainedAt.toISOString(),
+          },
   };
 }
 

@@ -114,4 +114,44 @@ describe('invoice draft history validation', () => {
       }).success,
     ).toBe(false);
   });
+
+  it('accepts INVOICE_USD_FX_RETRIED for recorded and unavailable outcomes', () => {
+    const event = {
+      actor: { actorType: 'USER' as const, actorUserId: id },
+      subjectType: 'INVOICE' as const,
+      subjectId: id,
+      eventType: 'INVOICE_USD_FX_RETRIED' as const,
+      payload: {
+        outcome: 'UNAVAILABLE' as const,
+        reason: 'plan-upgrade-required',
+        asOf: '2026-09-08T18:00:00.000Z',
+        after: null,
+      },
+    };
+    expect(historyEventSchema.parse(event)).toEqual(event);
+    const recorded = historyEventSchema.parse({
+      ...event,
+      payload: {
+        outcome: 'RECORDED',
+        reason: null,
+        asOf: '2026-09-08T18:00:00.000Z',
+        after: {
+          exchangeRateDopPerUsd: '61.5',
+          source: 'ExchangeRate-API',
+          rateUpdatedAt: '2026-09-08T00:00:00.000Z',
+          obtainedAt: '2026-09-08T12:00:00.000Z',
+        },
+      },
+    });
+    expect(recorded.eventType).toBe('INVOICE_USD_FX_RETRIED');
+    if (recorded.eventType === 'INVOICE_USD_FX_RETRIED') {
+      expect(recorded.payload.outcome).toBe('RECORDED');
+    }
+    expect(
+      historyEventSchema.safeParse({
+        ...event,
+        payload: { ...event.payload, extra: true },
+      }).success,
+    ).toBe(false);
+  });
 });

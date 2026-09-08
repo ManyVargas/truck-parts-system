@@ -70,7 +70,7 @@ Seller and Administrator may view acquisition cost. Only Administrator may view 
 - [x] Implement DOP gross-profit calculation. *(API R2 M13: derivado del snapshot completed, Administrator-only)*
 - [x] Implement FX adapter interface and normalization to DOP-per-USD. *(API R2 M15: ExchangeRate-API Pair USD/DOP)*
 - [x] Persist FX provenance and profitability status. *(API R2 M15: tasa persistida; pending derivado si falta)*
-- [ ] Implement pending-profitability retry command. *(API R2 M16)*
+- [x] Implement pending-profitability retry command. *(API R2 M16: `POST /api/profitability/:invoiceId/retry`, tasa histórica del día UTC de `confirmedAt`)*
 - [x] Implement protected acquisition-cost correction with history.
 - [x] Enforce Administrator-only profitability projections. *(API R2 M13: GET/confirm/list omiten profit para Seller)*
 - [x] Persist Administrator-recorded DOP gross profit when calculation is unavailable. *(API R2 M14: COST-005, `POST /api/profitability/:invoiceId/manual-gross-profit`)*
@@ -80,7 +80,7 @@ Seller and Administrator may view acquisition cost. Only Administrator may view 
 - [x] DOP calculation. *(API R2 M13)*
 - [x] USD division/rate-direction tests. *(API R2 M15)*
 - [x] FX timeout/error still confirms sale. *(API R2 M15)*
-- [ ] Retry never reruns sale or changes payments. *(API R2 M16)*
+- [x] Retry never reruns sale or changes payments. *(API R2 M16)*
 - [x] Seller profit endpoint/field denial. *(API R2 M13: omisión de campos en GET/confirm/list)*
 - [x] Administrator-recorded unknown-cost profit; denial for seller, pending FX, and already-calculated invoices. *(API R2 M14)*
 

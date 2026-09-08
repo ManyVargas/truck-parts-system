@@ -7,6 +7,7 @@ import { accessRouter } from './features/access/routes.js';
 import { catalogsRouter } from './features/catalogs/routes.js';
 import { customersRouter } from './features/customers/routes.js';
 import { profitabilityRouter } from './features/profitability/routes.js';
+import { ProfitabilityService } from './features/profitability/service.js';
 import { salesRouter } from './features/sales/routes.js';
 import { SalesService } from './features/sales/service.js';
 import { salesTransaction } from './features/sales/transaction.js';
@@ -47,11 +48,11 @@ export function trustImmediateProxyHop(_address: string, hop: number, enabled: b
 export function createApp(options: CreateAppOptions = {}): express.Application {
   const app = express();
   const trustProxy = options.trustProxy ?? isTrustProxyEnabled(process.env.TRUST_PROXY);
-  const salesService = new SalesService(
-    salesTransaction,
-    options.fxRateProvider ?? createFxRateProvider(),
-  );
+  const fxRateProvider = options.fxRateProvider ?? createFxRateProvider();
+  const salesService = new SalesService(salesTransaction, fxRateProvider);
+  const profitabilityService = new ProfitabilityService(salesTransaction, fxRateProvider);
   app.locals.salesService = salesService;
+  app.locals.profitabilityService = profitabilityService;
 
   // nginx replaces X-Forwarded-For with one client address. Enable only behind that unpublished hop.
   app.set('trust proxy', (address: string, hop: number) =>

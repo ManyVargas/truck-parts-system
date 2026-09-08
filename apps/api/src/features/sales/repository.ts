@@ -211,8 +211,10 @@ export class SalesRepository {
     });
   }
 
-  async recordUsdFxRate(input: RecordUsdFxRateRecord): Promise<InvoiceRecord | null> {
-    await this.database.invoice.updateMany({
+  async recordUsdFxRate(
+    input: RecordUsdFxRateRecord,
+  ): Promise<{ invoice: InvoiceRecord | null; recorded: boolean }> {
+    const result = await this.database.invoice.updateMany({
       where: {
         id: input.id,
         status: 'COMPLETED',
@@ -226,6 +228,6 @@ export class SalesRepository {
         fxRateObtainedAt: input.obtainedAt,
       },
     });
-    return this.findById(input.id);
+    return { invoice: await this.findById(input.id), recorded: result.count > 0 };
   }
 }

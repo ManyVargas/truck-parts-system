@@ -179,6 +179,13 @@ export type InvoiceConfirmedHistorySnapshot = {
   confirmedAt: string;
 };
 
+export type InvoiceUsdFxRetryHistorySnapshot = {
+  outcome: 'RECORDED' | 'UNAVAILABLE';
+  reason: string | null;
+  asOf: string;
+  after: PublicFxProvenance | null;
+};
+
 export type InvoiceLineHistorySnapshot = {
   id: string;
   type: InvoiceLineType;

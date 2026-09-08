@@ -6,8 +6,9 @@ import {
   EXCHANGE_RATE_API_PAIR_PATH,
   EXCHANGE_RATE_API_SOURCE,
   EXCHANGE_RATE_API_TIMEOUT_MS,
+  exchangeRateApiHistoryPath,
 } from './constants.js';
-import type { FxRateLookupResult, FxRateProvider, FxRateQuote } from './types.js';
+import type { FxRateLookupQuery, FxRateLookupResult, FxRateProvider, FxRateQuote } from './types.js';
 
 type ExchangeRateApiClientOptions = {
   apiKey: string | undefined;
@@ -20,6 +21,10 @@ type ExchangeRateApiPayload = {
   result?: unknown;
   'error-type'?: unknown;
   conversion_rate?: unknown;
+  conversion_rates?: unknown;
+  year?: unknown;
+  month?: unknown;
+  day?: unknown;
   time_last_update_unix?: unknown;
   time_last_update_utc?: unknown;
 };
@@ -54,6 +59,33 @@ function parsePositiveRate(value: unknown): Prisma.Decimal | null {
   return null;
 }
 
+function conversionRatesRecord(value: unknown): Record<string, unknown> | null {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function parseHistoricalRateDate(payload: ExchangeRateApiPayload): Date | null {
+  if (
+    typeof payload.year !== 'number' ||
+    typeof payload.month !== 'number' ||
+    typeof payload.day !== 'number' ||
+    !Number.isInteger(payload.year) ||
+    !Number.isInteger(payload.month) ||
+    !Number.isInteger(payload.day)
+  ) {
+    return null;
+  }
+  const parsed = new Date(Date.UTC(payload.year, payload.month - 1, payload.day));
+  if (
+    parsed.getUTCFullYear() !== payload.year ||
+    parsed.getUTCMonth() + 1 !== payload.month ||
+    parsed.getUTCDate() !== payload.day
+  ) {
+    return null;
+  }
+  return parsed;
+}
+
 function parseRateUpdatedAt(payload: ExchangeRateApiPayload): Date | null {
   if (typeof payload.time_last_update_unix === 'number' && Number.isFinite(payload.time_last_update_unix)) {
     return new Date(payload.time_last_update_unix * 1000);
@@ -78,12 +110,13 @@ export class ExchangeRateApiClient implements FxRateProvider {
     this.now = options.now ?? (() => new Date());
   }
 
-  async getUsdToDopRate(): Promise<FxRateLookupResult> {
+  async getUsdToDopRate(query?: FxRateLookupQuery): Promise<FxRateLookupResult> {
     if (!this.apiKey) {
       return { ok: false, reason: 'missing-api-key' };
     }
 
-    const url = `${EXCHANGE_RATE_API_BASE_URL}/${this.apiKey}/${EXCHANGE_RATE_API_PAIR_PATH}`;
+    const path = query?.asOf ? exchangeRateApiHistoryPath(query.asOf) : EXCHANGE_RATE_API_PAIR_PATH;
+    const url = `${EXCHANGE_RATE_API_BASE_URL}/${this.apiKey}/${path}`;
     try {
       const response = await this.fetchImpl(url, {
         method: 'GET',
@@ -91,7 +124,7 @@ export class ExchangeRateApiClient implements FxRateProvider {
         signal: AbortSignal.timeout(this.timeoutMs),
       });
       const payload = asRecord(await response.json());
-      return this.parsePayload(payload);
+      return this.parsePayload(payload, query?.asOf != null);
     } catch (error) {
       if (isTimeoutError(error)) {
         return { ok: false, reason: 'timeout' };
@@ -102,7 +135,7 @@ export class ExchangeRateApiClient implements FxRateProvider {
     }
   }
 
-  private parsePayload(payload: ExchangeRateApiPayload | null): FxRateLookupResult {
+  private parsePayload(payload: ExchangeRateApiPayload | null, historical: boolean): FxRateLookupResult {
     if (payload == null) {
       return { ok: false, reason: 'invalid-payload' };
     }
@@ -111,8 +144,10 @@ export class ExchangeRateApiClient implements FxRateProvider {
       return { ok: false, reason: errorType };
     }
 
-    const rate = parsePositiveRate(payload.conversion_rate);
-    const rateUpdatedAt = parseRateUpdatedAt(payload);
+    const rate = historical
+      ? parsePositiveRate(conversionRatesRecord(payload.conversion_rates)?.DOP)
+      : parsePositiveRate(payload.conversion_rate);
+    const rateUpdatedAt = historical ? parseHistoricalRateDate(payload) : parseRateUpdatedAt(payload);
     if (rate == null || rateUpdatedAt == null) {
       return { ok: false, reason: 'invalid-payload' };
     }
