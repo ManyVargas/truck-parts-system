@@ -1,16 +1,15 @@
-import type { InvoiceLine } from '@prisma/client';
+import { Prisma, type InvoiceLine } from '@prisma/client';
 
 import { MONEY_DECIMAL_PLACES } from './money/constants.js';
 import {
   calculateLineMoney,
   calculateLineProfitDop,
+  calculatedCompletedProfitability,
   isTaxableLineType,
-  pendingFxProfitability,
-  sellingPriceOf,
-  sumCalculatedProfit,
+  reportedInvoiceProfitability,
   sumInvoiceMoney,
 } from './money/index.js';
-import type { Profitability } from './money/types.js';
+import { PROFITABILITY_REASONS, type Profitability } from './money/types.js';
 import type {
   InvoiceConfirmedHistorySnapshot,
   InvoiceCustomerSnapshot,
@@ -71,29 +70,52 @@ function lineProfitInput(line: InvoiceLine) {
   };
 }
 
+function invoiceSellingPrice(invoice: InvoiceRecord | InvoiceListRecord): Prisma.Decimal {
+  if (invoice.gross != null) return invoice.gross;
+  return new Prisma.Decimal(invoiceTotals(invoice).gross);
+}
+
 function deriveCompletedProfitability(invoice: InvoiceRecord | InvoiceListRecord): {
   invoice: PublicProfitability;
   lines: PublicProfitability[];
 } | null {
-  if (invoice.status !== 'COMPLETED') return null;
-  if (invoice.currency === 'USD') {
-    const pendingFx = toPublicProfitability(pendingFxProfitability());
+  const lineInputs = invoice.lines.map(lineProfitInput);
+  const calculated = calculatedCompletedProfitability({
+    status: invoice.status,
+    currency: invoice.currency,
+    fiscal: invoice.fiscal,
+    lines: lineInputs,
+  });
+  const reported = reportedInvoiceProfitability(
+    calculated,
+    invoice.manualGrossProfitDop,
+    invoiceSellingPrice(invoice),
+  );
+  if (reported == null) return null;
+
+  if (reported.reason === PROFITABILITY_REASONS.PENDING_FX_RATE) {
+    const pendingFx = toPublicProfitability(reported);
     return {
       invoice: pendingFx,
       lines: invoice.lines.map(() => pendingFx),
     };
   }
 
-  const lineResults = invoice.lines.map((line) => {
-    const input = lineProfitInput(line);
-    return {
-      profitability: calculateLineProfitDop(input, invoice.fiscal),
-      sellingPrice: sellingPriceOf(input, invoice.fiscal),
-    };
-  });
   return {
-    invoice: toPublicProfitability(sumCalculatedProfit(lineResults)),
-    lines: lineResults.map((line) => toPublicProfitability(line.profitability)),
+    invoice: toPublicProfitability(reported),
+    lines: lineInputs.map((input) =>
+      toPublicProfitability(calculateLineProfitDop(input, invoice.fiscal)),
+    ),
+  };
+}
+
+export function toManualGrossProfitHistorySnapshot(
+  before: { toFixed(places: number): string } | null,
+  after: { toFixed(places: number): string },
+) {
+  return {
+    before: before == null ? null : moneyString(before),
+    after: moneyString(after),
   };
 }
 

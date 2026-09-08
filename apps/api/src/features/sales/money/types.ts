@@ -48,7 +48,7 @@ export type AcquisitionCost = {
   provenance: CostProvenance;
 };
 
-export const PROFITABILITY_STATUSES = ['CALCULATED', 'UNAVAILABLE'] as const;
+export const PROFITABILITY_STATUSES = ['CALCULATED', 'UNAVAILABLE', 'MANUAL'] as const;
 export type ProfitabilityStatus = (typeof PROFITABILITY_STATUSES)[number];
 
 export const PROFITABILITY_REASONS = {

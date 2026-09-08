@@ -272,6 +272,18 @@ export const historyEventSchema = z
         payload: invoiceConfirmedSnapshot,
       })
       .strict(),
+    z
+      .object({
+        ...invoiceBase,
+        eventType: z.literal('INVOICE_GROSS_PROFIT_RECORDED'),
+        payload: z
+          .object({
+            before: z.string().nullable(),
+            after: z.string(),
+          })
+          .strict(),
+      })
+      .strict(),
   ])
   .superRefine((event, context) => {
     const expected =

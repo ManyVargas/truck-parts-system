@@ -167,6 +167,8 @@ model Invoice {
   gross        Decimal?        @db.Decimal(12, 2)
   base         Decimal?        @db.Decimal(12, 2)
   itbis        Decimal?        @db.Decimal(12, 2)
+  manualGrossProfitDop Decimal?  @db.Decimal(12, 2)
+  manualGrossProfitAt  DateTime? @db.Timestamptz(3)
   createdAt    DateTime        @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime        @updatedAt @db.Timestamptz(3)
   customer     Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)

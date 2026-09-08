@@ -86,10 +86,16 @@ export type InvoiceCustomerSnapshot = {
 };
 
 export type PublicProfitability = {
-  status: 'CALCULATED' | 'UNAVAILABLE';
+  status: 'CALCULATED' | 'UNAVAILABLE' | 'MANUAL';
   reason: 'UNKNOWN_COST' | 'PENDING_FX_RATE' | null;
   profitDop: string | null;
   margin: string | null;
+};
+
+export type RecordManualGrossProfitRecord = {
+  id: string;
+  profitDop: Prisma.Decimal | string;
+  recordedAt: Date;
 };
 
 export type PublicInvoiceLine = {

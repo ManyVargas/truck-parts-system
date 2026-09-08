@@ -72,6 +72,53 @@ export function pendingFxProfitability(): Profitability {
   return UNAVAILABLE_PENDING_FX;
 }
 
+export function manualProfitability(
+  profitDop: Prisma.Decimal,
+  sellingPrice: Prisma.Decimal,
+): Profitability {
+  const rounded = roundMoney(profitDop);
+  return {
+    status: 'MANUAL',
+    reason: null,
+    profitDop: rounded,
+    margin: percentOf(rounded, sellingPrice),
+  };
+}
+
+export function calculatedCompletedProfitability(
+  invoice: {
+    status: string;
+    currency: string;
+    fiscal: boolean;
+    lines: readonly LineProfitInput[];
+  },
+): Profitability | null {
+  if (invoice.status !== 'COMPLETED') return null;
+  if (invoice.currency === 'USD') return pendingFxProfitability();
+
+  const lineResults = invoice.lines.map((line) => ({
+    profitability: calculateLineProfitDop(line, invoice.fiscal),
+    sellingPrice: sellingPriceOf(line, invoice.fiscal),
+  }));
+  return sumCalculatedProfit(lineResults);
+}
+
+/**
+ * Calculated COST-003 wins over a recorded amount. Pending FX stays pending.
+ * MANUAL is only the invoice-level fallback when cost is unknown.
+ */
+export function reportedInvoiceProfitability(
+  calculated: Profitability | null,
+  manualGrossProfitDop: Prisma.Decimal | null,
+  sellingPrice: Prisma.Decimal,
+): Profitability | null {
+  if (calculated == null) return null;
+  if (calculated.status === 'CALCULATED') return calculated;
+  if (calculated.reason === PROFITABILITY_REASONS.PENDING_FX_RATE) return calculated;
+  if (manualGrossProfitDop == null) return calculated;
+  return manualProfitability(manualGrossProfitDop, sellingPrice);
+}
+
 export function sumCalculatedProfit(
   lines: readonly { profitability: Profitability; sellingPrice: Prisma.Decimal }[],
 ): Profitability {

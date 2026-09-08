@@ -3,7 +3,10 @@ export { knownCostAmount, isUnknownCost, normalizeAcquisitionCost } from './cost
 export { calculateLineMoney, isTaxableLineType } from './line.js';
 export {
   calculateLineProfitDop,
+  calculatedCompletedProfitability,
+  manualProfitability,
   pendingFxProfitability,
+  reportedInvoiceProfitability,
   sellingPriceOf,
   sumCalculatedProfit,
 } from './profit.js';
@@ -24,4 +27,9 @@ export type {
   ProfitabilityStatus,
   RoundedLineMoney,
 } from './types.js';
-export { COST_PROVENANCES, INVOICE_LINE_TYPES, PROFITABILITY_REASONS } from './types.js';
+export {
+  COST_PROVENANCES,
+  INVOICE_LINE_TYPES,
+  PROFITABILITY_REASONS,
+  PROFITABILITY_STATUSES,
+} from './types.js';

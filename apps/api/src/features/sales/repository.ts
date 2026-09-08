@@ -10,6 +10,7 @@ import type {
   InvoiceRecord,
   InvoiceSequenceRecord,
   ListInvoicesQuery,
+  RecordManualGrossProfitRecord,
   UpdateDraftInvoiceRecord,
   UpdateInvoiceLinePriceRecord,
 } from './types.js';
@@ -193,6 +194,17 @@ export class SalesRepository {
             data: { gross: line.gross, base: line.base, itbis: line.itbis },
           })),
         },
+      },
+      include: invoiceDetailInclude,
+    });
+  }
+
+  recordManualGrossProfit(input: RecordManualGrossProfitRecord): Promise<InvoiceRecord> {
+    return this.database.invoice.update({
+      where: { id: input.id },
+      data: {
+        manualGrossProfitDop: input.profitDop,
+        manualGrossProfitAt: input.recordedAt,
       },
       include: invoiceDetailInclude,
     });

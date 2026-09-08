@@ -73,7 +73,7 @@ Seller and Administrator may view acquisition cost. Only Administrator may view 
 - [x] Implement pending-profitability retry command.
 - [x] Implement protected acquisition-cost correction with history.
 - [x] Enforce Administrator-only profitability projections. *(API R2 M13: GET/confirm/list omiten profit para Seller)*
-- [x] Persist Administrator-recorded DOP gross profit when calculation is unavailable.
+- [x] Persist Administrator-recorded DOP gross profit when calculation is unavailable. *(API R2 M14: COST-005, `POST /api/profitability/:invoiceId/manual-gross-profit`)*
 
 ### Tests
 - [x] Known/estimated/unknown cost cases. *(API R2 M13: unit + HTTP)*
@@ -82,7 +82,7 @@ Seller and Administrator may view acquisition cost. Only Administrator may view 
 - [ ] FX timeout/error still confirms sale.
 - [x] Retry never reruns sale or changes payments.
 - [x] Seller profit endpoint/field denial. *(API R2 M13: omisión de campos en GET/confirm/list)*
-- [x] Administrator-recorded unknown-cost profit; denial for seller, pending FX, and already-calculated invoices.
+- [x] Administrator-recorded unknown-cost profit; denial for seller, pending FX, and already-calculated invoices. *(API R2 M14)*
 
 ## Canonical validated requirements
 

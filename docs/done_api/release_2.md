@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M12 completados)
+**Estado:** en curso (M1–M14 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 2, a medida que se completan.  
 No sustituye a `plan_release_2.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -467,18 +467,38 @@ COST-005 (M14). FX/retry (M15–M16). PDF (M17). Swap web de rentabilidad (M24).
 
 ## Milestone 14 — COST-005 profit juzgado
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-08
 
 ### Objetivo cumplido
 
+Administrator registra un importe DOP de ganancia bruta cuando el profit calculado no existe por costo desconocido.
+
 ### Qué se entregó
+
+- Columnas `Invoice.manualGrossProfitDop` / `manualGrossProfitAt` (CHECK: ambas nulas o ambas en `COMPLETED`).
+- `POST /api/profitability/:invoiceId/manual-gross-profit` (CSRF; solo Administrator).
+- Proyección Admin: `status: MANUAL`, `reason: null`, `profitDop` + `margin` a nivel factura; las líneas UNKNOWN siguen `UNAVAILABLE`.
+- History `INVOICE_GROSS_PROFIT_RECORDED` con before/after en la misma transacción.
+- Totales de list/GET completed incluyen el monto MANUAL.
 
 ### Decisiones técnicas
 
+- El cálculo COST-003 tiene precedencia: ACTUAL/ESTIMATED no se pisan. USD `PENDING_FX_RATE` se rechaza (M15/M16).
+- Cero y negativo permitidos; razón no obligatoria; el costo de adquisición no cambia.
+- El comando vive en el módulo `profitability` y persiste en el agregado `sales` (snapshot de factura).
+- Seller/Mechanic 403 en el comando; Seller sigue sin recibir `profitability` en GET.
+
 ### Validación
 
+- Unit: `apps/api/tests/unit/sales/money.test.ts` (overlay MANUAL)
+- Unit: `apps/api/tests/unit/profitability/validation.test.ts`
+- Unit: `apps/api/tests/unit/sales/history-validation.test.ts`
+- Integration: `apps/api/tests/integration/profitability/http.test.ts`
+
 ### Fuera de alcance (intencional)
+
+FX/retry (M15–M16). Snapshot HTTP de rentabilidad (M24). Swap web (M24).
 
 ---
 

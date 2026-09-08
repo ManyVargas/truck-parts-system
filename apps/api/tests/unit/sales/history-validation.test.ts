@@ -91,4 +91,27 @@ describe('invoice draft history validation', () => {
       }).success,
     ).toBe(false);
   });
+
+  it('accepts INVOICE_GROSS_PROFIT_RECORDED with before/after amounts', () => {
+    const event = {
+      actor: { actorType: 'USER' as const, actorUserId: id },
+      subjectType: 'INVOICE' as const,
+      subjectId: id,
+      eventType: 'INVOICE_GROSS_PROFIT_RECORDED' as const,
+      payload: { before: null, after: '1250.50' },
+    };
+    expect(historyEventSchema.parse(event)).toEqual(event);
+    expect(
+      historyEventSchema.parse({
+        ...event,
+        payload: { before: '1250.50', after: '0.00' },
+      }).payload,
+    ).toEqual({ before: '1250.50', after: '0.00' });
+    expect(
+      historyEventSchema.safeParse({
+        ...event,
+        payload: { ...event.payload, reason: 'optional' },
+      }).success,
+    ).toBe(false);
+  });
 });

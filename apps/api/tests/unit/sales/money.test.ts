@@ -10,7 +10,9 @@ import {
   knownCostAmount,
   normalizeAcquisitionCost,
   parsePositiveDecimal,
+  pendingFxProfitability,
   PROFITABILITY_REASONS,
+  reportedInvoiceProfitability,
   roundMoney,
   sumCalculatedProfit,
   sumInvoiceMoney,
@@ -328,6 +330,56 @@ describe('sumCalculatedProfit', () => {
       reason: PROFITABILITY_REASONS.UNKNOWN_COST,
       profitDop: null,
     });
+  });
+});
+
+describe('reportedInvoiceProfitability', () => {
+  it('uses MANUAL only when calculated profit is unavailable for unknown cost', () => {
+    const calculated = calculateLineProfitDop(
+      {
+        type: 'GENERIC',
+        unitPrice: '100.00',
+        quantity: '1',
+        gross: money('100.00'),
+        acquisitionCostDop: money('40.00'),
+        costProvenance: 'ESTIMATED',
+      },
+      false,
+    );
+    const unknown = calculateLineProfitDop(
+      {
+        type: 'GENERIC',
+        unitPrice: '100.00',
+        quantity: '1',
+        gross: money('100.00'),
+        acquisitionCostDop: null,
+        costProvenance: 'UNKNOWN',
+      },
+      false,
+    );
+    const sellingPrice = money('100.00');
+    const overlay = reportedInvoiceProfitability(unknown, money('20.00'), sellingPrice);
+    const calculatedWins = reportedInvoiceProfitability(calculated, money('20.00'), sellingPrice);
+    const pending = reportedInvoiceProfitability(
+      pendingFxProfitability(),
+      money('20.00'),
+      sellingPrice,
+    );
+    const zero = reportedInvoiceProfitability(unknown, money('0.00'), sellingPrice);
+    const loss = reportedInvoiceProfitability(unknown, money('-10.00'), sellingPrice);
+
+    expect(overlay).toMatchObject({ status: 'MANUAL', reason: null });
+    expectMoney(overlay!.profitDop as Prisma.Decimal, '20.00');
+    expectMoney(overlay!.margin as Prisma.Decimal, '20.00');
+    expect(calculatedWins?.status).toBe('CALCULATED');
+    expectMoney(calculatedWins!.profitDop as Prisma.Decimal, '60.00');
+    expect(pending).toMatchObject({
+      status: 'UNAVAILABLE',
+      reason: PROFITABILITY_REASONS.PENDING_FX_RATE,
+      profitDop: null,
+    });
+    expectMoney(zero!.profitDop as Prisma.Decimal, '0.00');
+    expectMoney(loss!.profitDop as Prisma.Decimal, '-10.00');
   });
 });
 
