@@ -116,6 +116,12 @@ export const serviceDraftLineSchema = z.strictObject({
   description: z.string().trim().min(1).optional(),
 });
 
+export const deliveryDraftLineSchema = z.strictObject({
+  type: z.literal('DELIVERY'),
+  unitPrice: decimal12x2StringSchema,
+  description: z.string().trim().min(1),
+});
+
 export const setLinePriceSchema = z.strictObject({
   unitPrice: decimal12x2StringSchema,
 });

@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M9 completados)
+**Estado:** en curso (M1–M10 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 2, a medida que se completan.  
 No sustituye a `plan_release_2.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -319,18 +319,38 @@ DELIVERY/EXTERNAL (M10–M11). Confirmación / `FAC-` (M12). Swap POS (M21).
 
 ## Milestone 10 — Draft línea DELIVERY
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-07
 
 ### Objetivo cumplido
 
+`addLine` HTTP acepta una línea DELIVERY no gravada: omitida (sin fila), gratis (`0`) o cobrada (positivo).
+
 ### Qué se entregó
+
+- `POST /api/sales/:id/lines` con `type: DELIVERY`, `description` y `unitPrice` (string decimal, incluye `0.00`).
+- Descripción obligatoria y no vacía, conforme a `LINE-006`.
+- Recálculo M5: la línea no extrae ITBIS, incluso en factura fiscal.
+- `PATCH` de precio y `DELETE` reutilizan M8; tras borrar se puede volver a agregar.
+- History `INVOICE_LINE_ADDED` / `INVOICE_LINE_UPDATED` / `INVOICE_LINE_REMOVED` en la misma transacción.
 
 ### Decisiones técnicas
 
+- Contrato: `unitPrice` y `description` obligatorios; `quantity` y costo rechazados (400).
+- Máximo una DELIVERY por factura: segundo POST → 409; unique parcial SQL `InvoiceLine_one_delivery_per_invoice`.
+- Prisma identifica ese unique como `target: ["invoiceId"]` y puede reportar `modelName: "Invoice"` en escrituras anidadas; ambos caminos se traducen al mismo 409 de negocio.
+- El CHECK existente mantiene la descripción no vacía para todos los tipos de línea.
+- Seller escribe la línea. EXTERNAL sigue 409.
+
 ### Validación
 
+- Integration: `apps/api/tests/integration/sales/http.test.ts` (bloque M10)
+- Integration: `apps/api/tests/integration/sales/repository.test.ts` (CHECK de descripción + unique traducido a conflicto)
+- Unit: `apps/api/tests/unit/sales/validation.test.ts` (schema DELIVERY)
+
 ### Fuera de alcance (intencional)
+
+EXTERNAL (M11). Confirmación / `FAC-` (M12). Swap POS (M21).
 
 ---
 

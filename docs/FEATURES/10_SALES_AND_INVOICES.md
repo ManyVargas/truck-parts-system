@@ -79,7 +79,7 @@ Invoice PDF rendering is secondary to sale validity. Preserve all invoice facts 
 - [x] Customer snapshot integration. *(prototipo mock — WM8)*
 - [x] Generic merchandise line. *(prototipo mock — WM8; API draft HTTP — R2 M8)*
 - [x] Mechanical service catalog selection + negotiated price. *(prototipo mock — WM8)*
-- [x] Delivery paid/free/omitted line. *(prototipo mock — WM8)*
+- [x] Delivery paid/free/omitted line. *(prototipo mock — WM8; API draft HTTP — R2 M10)*
 - [x] External resale line if its cost dependency is enabled. *(prototipo mock — WM8)*
 - [x] Tax-inclusive 18% calculation and per-line rounding.
 - [x] Printable/regenerable internal PDF with blank NCF field.
@@ -319,7 +319,7 @@ The blocks below are the final reconciled requirements retained from the previou
 **Requirement:** An invoice may omit delivery, include delivery with a positive charged amount, or include provided no-charge delivery with numeric monetary amount `0`.  
 **Business Reason:** Delivery is sometimes billed and sometimes provided to selected customers.  
 **Main Flow:** If delivery applies, the user adds it, records a description and a nonnegative numeric amount, then confirms.  
-**Business Rules:** Delivery is non-taxable; all displayed delivery amounts use two decimal places; free delivery uses numeric `0`, never textual `N/A` or another nonnumeric monetary placeholder.  
-**Important Exceptions/Edge Cases:** No delivery line is required when delivery is not part of the invoice; charged delivery must use a positive numeric amount.  
+**Business Rules:** A delivery line requires a nonempty description; an invoice has at most one delivery line; delivery is non-taxable; all displayed delivery amounts use two decimal places; free delivery uses numeric `0`, never textual `N/A` or another nonnumeric monetary placeholder.  
+**Important Exceptions/Edge Cases:** No delivery line is required when delivery is not part of the invoice; charged delivery must use a positive numeric amount; concurrent attempts to add a second delivery line safely conflict without creating a duplicate.  
 **Dependencies:** SALE-002, COST-002.  
-**Acceptance Notes:** Charged delivery displays its positive amount; provided free delivery displays `RD$0`; an absent delivery creates no line.
+**Acceptance Notes:** Charged delivery displays its positive amount; provided free delivery displays `RD$0`; an absent delivery creates no line; missing or blank descriptions are rejected; a second delivery line returns a conflict.

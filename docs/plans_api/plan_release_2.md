@@ -1,7 +1,7 @@
 # Plan Release 2 — Billing Core: Customers, Invoices, Cost/Profit, PDF
 
 **Release:** 2 — Billing Core  
-**Estado:** en curso (M1–M9 completados)  
+**Estado:** en curso (M1–M10 completados)  
 **Último milestone planificado:** Milestone 25 — Exit gate Release 2  
 **Registro de implementación:** [`../done_api/release_2.md`](../done_api/release_2.md)
 
@@ -14,7 +14,7 @@
 - **Entorno:** desarrollo y pruebas **únicamente en local** durante este plan. El primer despliegue productivo es un gate operativo **después** de completar Billing Core; no es un milestone de este archivo ([`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) §First production deployment).
 - **Features en alcance:** [`../FEATURES/08_CUSTOMERS.md`](../FEATURES/08_CUSTOMERS.md), slice R2 de [`../FEATURES/10_SALES_AND_INVOICES.md`](../FEATURES/10_SALES_AND_INVOICES.md), slice R2 de [`../FEATURES/11_COST_AND_PROFITABILITY.md`](../FEATURES/11_COST_AND_PROFITABILITY.md), slice de history de [`../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md`](../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md). Permisos: [`../FEATURES/01_ACCESS_AND_USERS.md`](../FEATURES/01_ACCESS_AND_USERS.md) y [`../ROLES_AND_PERMISSIONS.md`](../ROLES_AND_PERMISSIONS.md).
 - **Frontend:** el prototipo mock de [`../plans_web/plan-001.md`](../plans_web/plan-001.md) está cerrado (WM12). Access/Users ya usa HTTP cuando `VITE_USE_MOCK_API=false`. Clientes, POS, facturas, catálogo de servicios y rentabilidad existen como UI mock; los clientes HTTP están en stub.
-- **Estado API de partida:** Auth, `requireAuth`/`requireRole`, usuarios, envelope de history (`HistoryEvent`) y convención `routes → controller → service → repository → validation → types` están listos. M1–M4 cubren clientes y catálogo de servicios (persistencia + HTTP). M5 es el motor decimal de ITBIS. M6 persiste el agregado Invoice/`FAC-`. M7 expone la cáscara HTTP de draft. M8 añade líneas GENERIC y rechaza ITEM/QTY. M9 añade líneas SERVICE de catálogo activo (precio en la línea). DELIVERY/EXTERNAL, confirmación, costos de profit y PDF siguen pendientes.
+- **Estado API de partida:** Auth, `requireAuth`/`requireRole`, usuarios, envelope de history (`HistoryEvent`) y convención `routes → controller → service → repository → validation → types` están listos. M1–M4 cubren clientes y catálogo de servicios (persistencia + HTTP). M5 es el motor decimal de ITBIS. M6 persiste el agregado Invoice/`FAC-`. M7 expone la cáscara HTTP de draft. M8 añade líneas GENERIC y rechaza ITEM/QTY. M9 añade líneas SERVICE de catálogo activo (precio en la línea). M10 añade líneas DELIVERY (descripción obligatoria; máximo una; `0` o positivo; no gravada). EXTERNAL, confirmación, costos de profit y PDF siguen pendientes.
 - **Ciclo por milestone:** plan → implementación → pruebas → revisión → commit. La integración web se hace **solo** cuando la función API cumple el criterio de la sección Integración API → Web.
 
 ## Cómo se cortan los milestones
@@ -257,7 +257,7 @@ Paralelo al inicio: M1 ∥ M3 ∥ M5 ∥ M6. M19 puede seguir a M2 sin esperar e
 | M7 | Draft HTTP cáscara | completado | Swap POS en **M21** (con líneas) |
 | M8 | Draft línea GENERIC + rechazo ITEM/QTY | completado | Swap POS en **M21** |
 | M9 | Draft línea SERVICE | completado | Swap POS en **M21** |
-| M10 | Draft línea DELIVERY | pendiente | Swap POS en **M21** |
+| M10 | Draft línea DELIVERY | completado | Swap POS en **M21** |
 | M11 | Draft línea EXTERNAL + costo | pendiente | **Listo para M21** |
 | M12 | Confirmación + `FAC-` + snapshot | pendiente | **Listo para M22** |
 | M13 | Rentabilidad DOP + frontera Admin | pendiente | Swap profit en **M24** |
@@ -477,15 +477,18 @@ Paralelo al inicio: M1 ∥ M3 ∥ M5 ∥ M6. M19 puede seguir a M2 sin esperar e
 
 **Alcance:**
 - Sin línea si no hay entrega.
+- Si existe, requiere descripción no vacía y solo puede haber una por factura.
 - `0` numérico para gratis; nunca `N/A` textual.
 - Cobrada: importe positivo.
 - Recalcular totales.
+- El unique parcial de PostgreSQL protege el máximo de una línea y cualquier duplicado detectado durante concurrencia se traduce a `409`.
 
 **Pruebas:**
-- omitida / `0` / positivo; rechazo de negativo y de texto
+- omitida / `0` / positivo; rechazo de descripción ausente o vacía, negativo y texto monetario
+- CHECK SQL de descripción; unique parcial y traducción de `P2002` a conflicto
 
 **Definición de terminado:**
-- DELIVERY usable en draft.
+- DELIVERY usable en draft con descripción obligatoria, máximo una línea y conflictos concurrentes controlados.
 
 **Integración web:** No hasta M21.
 
@@ -866,4 +869,4 @@ El prototipo web no es dependencia de M1–M18. M19–M24 son swaps. M25 no impl
 
 ## Próximo paso
 
-**Milestone 10:** Draft línea DELIVERY (LINE-006). Reutilizar `addLine` de M8–M9; omitida / `0` / positivo; no gravada. EXTERNAL espera M11. No cablear POS (M21).
+**Milestone 11:** Draft línea EXTERNAL + costo (LINE-005, COST-001 slice). Reutilizar `addLine` de M8–M10; gravada con costo DOP; sin stock. Confirmación espera M12. No cablear POS (M21).

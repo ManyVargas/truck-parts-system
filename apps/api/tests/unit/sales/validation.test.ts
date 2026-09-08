@@ -7,6 +7,7 @@ import {
 import {
   addInvoiceLineSchema,
   createDraftSchema,
+  deliveryDraftLineSchema,
   genericDraftLineSchema,
   serviceDraftLineSchema,
   setLinePriceSchema,
@@ -163,5 +164,67 @@ describe('draft SERVICE line validation', () => {
         unitPrice: '100.00',
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('draft DELIVERY line validation', () => {
+  it('accepts zero or positive unitPrice with a nonempty description', () => {
+    expect(
+      deliveryDraftLineSchema.parse({
+        type: 'DELIVERY',
+        unitPrice: '0.00',
+        description: 'Entrega incluida',
+      }),
+    ).toEqual({
+      type: 'DELIVERY',
+      unitPrice: '0.00',
+      description: 'Entrega incluida',
+    });
+    expect(
+      deliveryDraftLineSchema.parse({
+        type: 'DELIVERY',
+        unitPrice: '200.00',
+        description: 'Envío',
+      }),
+    ).toEqual({
+      type: 'DELIVERY',
+      unitPrice: '200.00',
+      description: 'Envío',
+    });
+  });
+
+  it('rejects missing or empty description, quantity, cost, numeric money, and extra fields', () => {
+    expect(
+      deliveryDraftLineSchema.safeParse({ type: 'DELIVERY', unitPrice: '10.00' }).success,
+    ).toBe(false);
+    expect(
+      deliveryDraftLineSchema.safeParse({
+        type: 'DELIVERY',
+        unitPrice: '10.00',
+        description: '   ',
+      }).success,
+    ).toBe(false);
+    expect(
+      deliveryDraftLineSchema.safeParse({
+        type: 'DELIVERY',
+        description: 'Envío',
+        unitPrice: '10.00',
+        quantity: '1',
+      }).success,
+    ).toBe(false);
+    expect(
+      deliveryDraftLineSchema.safeParse({
+        type: 'DELIVERY',
+        description: 'Envío',
+        unitPrice: '10.00',
+        costProvenance: 'UNKNOWN',
+      }).success,
+    ).toBe(false);
+    expect(
+      deliveryDraftLineSchema.safeParse({ type: 'DELIVERY', description: 'Envío', unitPrice: 0 })
+        .success,
+    ).toBe(false);
+    expect(deliveryDraftLineSchema.safeParse({ type: 'DELIVERY' }).success).toBe(false);
+    expect(addInvoiceLineSchema.safeParse({ type: 'DELIVERY', extra: true }).success).toBe(false);
   });
 });

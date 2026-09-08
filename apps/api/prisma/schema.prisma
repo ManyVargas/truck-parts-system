@@ -185,6 +185,7 @@ model InvoiceLine {
 
   @@index([invoiceId])
   @@index([serviceId])
+  // Partial unique InvoiceLine_one_delivery_per_invoice is defined in SQL.
 }
 
 model InvoiceSequence {

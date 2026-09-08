@@ -6,6 +6,7 @@ import { CatalogRepository } from '../catalogs/repository.js';
 import { CustomerRepository } from '../customers/repository.js';
 import { HistoryRepository } from '../history/repository.js';
 import { UserRepository } from '../users/repository.js';
+import { DUPLICATE_DELIVERY_LINE_MESSAGE } from './constants.js';
 import { SalesRepository } from './repository.js';
 
 export type SalesRepositories = {
@@ -18,6 +19,18 @@ export type SalesRepositories = {
 export type SalesTransaction = <T>(
   work: (repositories: SalesRepositories) => Promise<T>,
 ) => Promise<T>;
+
+function isDuplicateDeliveryConstraint(error: Prisma.PrismaClientKnownRequestError): boolean {
+  const target = error.meta?.target;
+  // Nested line writes report Invoice as the model; direct line writes report InvoiceLine.
+  const modelName = error.meta?.modelName;
+  return (
+    (modelName === 'Invoice' || modelName === 'InvoiceLine') &&
+    Array.isArray(target) &&
+    target.length === 1 &&
+    target[0] === 'invoiceId'
+  );
+}
 
 export const salesTransaction: SalesTransaction = async (work) => {
   for (let attempt = 0; ; attempt += 1) {
@@ -38,6 +51,9 @@ export const salesTransaction: SalesTransaction = async (work) => {
         if (error.code === 'P2034' && attempt < 3) continue;
         if (error.code === 'P2025') throw AppError.notFound();
         if (error.code === 'P2003') throw AppError.notFound('Customer not found');
+        if (error.code === 'P2002' && isDuplicateDeliveryConstraint(error)) {
+          throw AppError.conflict(DUPLICATE_DELIVERY_LINE_MESSAGE);
+        }
         if (error.code === 'P2034')
           throw AppError.conflict('Concurrent invoice change; retry the request');
       }

@@ -3,7 +3,9 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 import { CatalogRepository } from '../../../src/features/catalogs/repository.js';
 import { CustomerRepository } from '../../../src/features/customers/repository.js';
+import { DUPLICATE_DELIVERY_LINE_MESSAGE } from '../../../src/features/sales/constants.js';
 import { SalesRepository } from '../../../src/features/sales/repository.js';
+import { salesTransaction } from '../../../src/features/sales/transaction.js';
 import { disconnectPrisma, prisma } from '../../../src/infrastructure/database/index.js';
 
 const sales = new SalesRepository();
@@ -107,6 +109,51 @@ describe('SalesRepository (PostgreSQL)', () => {
     });
     expect(Number(withService.lines[1]?.quantity)).toBe(1);
     expect(Number(withService.lines[1]?.unitPrice)).toBe(0);
+  });
+
+  it('requires a DELIVERY description and maps the unique constraint to a conflict', async () => {
+    const customer = await customers.findDefault();
+    const draft = await sales.createDraft({
+      customerId: customer!.id,
+      currency: InvoiceCurrency.DOP,
+      fiscal: false,
+    });
+
+    await expect(
+      sales.addLine({
+        invoiceId: draft.id,
+        type: InvoiceLineType.DELIVERY,
+        description: '',
+        unitPrice: '0',
+      }),
+    ).rejects.toThrow(/InvoiceLine_description_check|check constraint/);
+
+    const withDelivery = await sales.addLine({
+      invoiceId: draft.id,
+      type: InvoiceLineType.DELIVERY,
+      description: 'Entrega incluida',
+      unitPrice: '0',
+    });
+    expect(withDelivery.lines).toHaveLength(1);
+    expect(withDelivery.lines[0]).toMatchObject({
+      type: InvoiceLineType.DELIVERY,
+      description: 'Entrega incluida',
+    });
+    expect(Number(withDelivery.lines[0]?.unitPrice)).toBe(0);
+
+    await expect(
+      salesTransaction(({ sales: transactionalSales }) =>
+        transactionalSales.addLine({
+          invoiceId: draft.id,
+          type: InvoiceLineType.DELIVERY,
+          description: 'Envío',
+          unitPrice: '200',
+        }),
+      ),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: DUPLICATE_DELIVERY_LINE_MESSAGE,
+    });
   });
 
   it('rejects UNKNOWN cost stored as zero at the database', async () => {

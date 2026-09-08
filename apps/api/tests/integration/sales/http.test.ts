@@ -5,12 +5,14 @@ import request from 'supertest';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 
 import { hashPassword } from '../../../src/features/access/password.js';
+import { resetLoginRateLimit } from '../../../src/features/access/login-rate-limit.js';
 import { CustomerRepository } from '../../../src/features/customers/repository.js';
 import { HistoryRepository } from '../../../src/features/history/repository.js';
 import {
   CATALOG_SERVICE_NOT_FOUND_MESSAGE,
   DRAFT_ONLY_DISCARD_MESSAGE,
   DRAFT_ONLY_EDIT_MESSAGE,
+  DUPLICATE_DELIVERY_LINE_MESSAGE,
   FISCAL_IDENTITY_REQUIRED_MESSAGE,
   INACTIVE_SERVICE_LINE_MESSAGE,
   UNSUPPORTED_INVENTORY_LINE_MESSAGE,
@@ -47,6 +49,7 @@ async function fixture(role: Role = 'ADMINISTRATOR') {
 
 async function cleanup() {
   vi.restoreAllMocks();
+  await resetLoginRateLimit();
   await clearTestHistory();
   await prisma.invoice.deleteMany();
   await prisma.mechanicalService.deleteMany();
@@ -77,9 +80,7 @@ describe('M7 draft HTTP shell (SALE-001 draft)', () => {
       lines: [],
       totals: { gross: '0.00', base: '0.00', itbis: '0.00' },
     });
-    expect(
-      await prisma.historyEvent.findMany({ where: { subjectId: created.body.id } }),
-    ).toEqual([
+    expect(await prisma.historyEvent.findMany({ where: { subjectId: created.body.id } })).toEqual([
       expect.objectContaining({
         eventType: 'INVOICE_DRAFT_CREATED',
         actorUserId: seller.user.id,
@@ -212,17 +213,14 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
       .send({ customerId: identified.id, fiscal: true });
     expect(draft.status).toBe(201);
 
-    const added = await seller.agent
-      .post(`${ROOT}/${draft.body.id}/lines`)
-      .set(CSRF)
-      .send({
-        type: 'GENERIC',
-        description: 'Filtro de aceite',
-        quantity: '2',
-        unitPrice: '118.00',
-        costProvenance: 'ACTUAL',
-        acquisitionCostDop: '80.00',
-      });
+    const added = await seller.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'GENERIC',
+      description: 'Filtro de aceite',
+      quantity: '2',
+      unitPrice: '118.00',
+      costProvenance: 'ACTUAL',
+      acquisitionCostDop: '80.00',
+    });
     expect(added.status).toBe(201);
     expect(added.body.lines).toHaveLength(1);
     expect(added.body.lines[0]).toMatchObject({
@@ -273,15 +271,12 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
     const draft = await admin.agent.post(ROOT).set(CSRF).send({});
     expect(draft.status).toBe(201);
 
-    const unknown = await admin.agent
-      .post(`${ROOT}/${draft.body.id}/lines`)
-      .set(CSRF)
-      .send({
-        type: 'GENERIC',
-        description: 'Varilla',
-        unitPrice: '118.00',
-        costProvenance: 'UNKNOWN',
-      });
+    const unknown = await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'GENERIC',
+      description: 'Varilla',
+      unitPrice: '118.00',
+      costProvenance: 'UNKNOWN',
+    });
     expect(unknown.status).toBe(201);
     expect(unknown.body.lines[0]).toMatchObject({
       acquisitionCostDop: null,
@@ -306,13 +301,6 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
     expect(qty.body.error.message).toBe(UNSUPPORTED_INVENTORY_LINE_MESSAGE);
     expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(1);
 
-    const delivery = await admin.agent
-      .post(`${ROOT}/${draft.body.id}/lines`)
-      .set(CSRF)
-      .send({ type: 'DELIVERY', description: 'Envío', unitPrice: '200.00' });
-    expect(delivery.status).toBe(409);
-    expect(delivery.body.error.message).toBe(UNSUPPORTED_LINE_TYPE_MESSAGE);
-
     const external = await admin.agent
       .post(`${ROOT}/${draft.body.id}/lines`)
       .set(CSRF)
@@ -327,41 +315,43 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
     const generic = await customers.findDefault();
     const draft = await admin.agent.post(ROOT).set(CSRF).send({});
 
-    const negative = await admin.agent
-      .post(`${ROOT}/${draft.body.id}/lines`)
-      .set(CSRF)
-      .send({
-        type: 'GENERIC',
-        description: 'Filtro',
-        unitPrice: '-1.00',
-        costProvenance: 'UNKNOWN',
-      });
+    const negative = await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'GENERIC',
+      description: 'Filtro',
+      unitPrice: '-1.00',
+      costProvenance: 'UNKNOWN',
+    });
     expect(negative.status).toBe(400);
 
-    const placeholder = await admin.agent
-      .post(`${ROOT}/${draft.body.id}/lines`)
-      .set(CSRF)
-      .send({
-        type: 'GENERIC',
-        description: 'Filtro',
-        unitPrice: 'N/A',
-        costProvenance: 'UNKNOWN',
-      });
+    const placeholder = await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'GENERIC',
+      description: 'Filtro',
+      unitPrice: 'N/A',
+      costProvenance: 'UNKNOWN',
+    });
     expect(placeholder.status).toBe(400);
     expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(0);
 
-    expect((await mechanic.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
-      type: 'GENERIC',
-      description: 'Filtro',
-      unitPrice: '10.00',
-      costProvenance: 'UNKNOWN',
-    })).status).toBe(403);
-    expect((await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).send({
-      type: 'GENERIC',
-      description: 'Filtro',
-      unitPrice: '10.00',
-      costProvenance: 'UNKNOWN',
-    })).status).toBe(403);
+    expect(
+      (
+        await mechanic.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+          type: 'GENERIC',
+          description: 'Filtro',
+          unitPrice: '10.00',
+          costProvenance: 'UNKNOWN',
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).send({
+          type: 'GENERIC',
+          description: 'Filtro',
+          unitPrice: '10.00',
+          costProvenance: 'UNKNOWN',
+        })
+      ).status,
+    ).toBe(403);
 
     const completed = await prisma.invoice.create({
       data: {
@@ -372,15 +362,12 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
         number: `FAC-${randomUUID().slice(0, 6)}`,
       },
     });
-    const blocked = await admin.agent
-      .post(`${ROOT}/${completed.id}/lines`)
-      .set(CSRF)
-      .send({
-        type: 'GENERIC',
-        description: 'Filtro',
-        unitPrice: '10.00',
-        costProvenance: 'UNKNOWN',
-      });
+    const blocked = await admin.agent.post(`${ROOT}/${completed.id}/lines`).set(CSRF).send({
+      type: 'GENERIC',
+      description: 'Filtro',
+      unitPrice: '10.00',
+      costProvenance: 'UNKNOWN',
+    });
     expect(blocked.status).toBe(409);
     expect(blocked.body.error.message).toBe(DRAFT_ONLY_EDIT_MESSAGE);
   });
@@ -417,7 +404,10 @@ describe('M9 draft SERVICE lines (LINE-004)', () => {
       name: 'Taller Norte',
       rnc: '131123456',
     });
-    const catalog = await admin.agent.post(SERVICES).set(CSRF).send({ name: 'Instalación mecánica' });
+    const catalog = await admin.agent
+      .post(SERVICES)
+      .set(CSRF)
+      .send({ name: 'Instalación mecánica' });
     expect(catalog.status).toBe(201);
 
     const forbiddenCatalog = await seller.agent.post(SERVICES).set(CSRF).send({ name: 'Otro' });
@@ -429,15 +419,12 @@ describe('M9 draft SERVICE lines (LINE-004)', () => {
       .send({ customerId: identified.id, fiscal: true });
     expect(draft.status).toBe(201);
 
-    const generic = await seller.agent
-      .post(`${ROOT}/${draft.body.id}/lines`)
-      .set(CSRF)
-      .send({
-        type: 'GENERIC',
-        description: 'Filtro de aceite',
-        unitPrice: '118.00',
-        costProvenance: 'UNKNOWN',
-      });
+    const generic = await seller.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'GENERIC',
+      description: 'Filtro de aceite',
+      unitPrice: '118.00',
+      costProvenance: 'UNKNOWN',
+    });
     expect(generic.status).toBe(201);
 
     const copiedName = await seller.agent
@@ -469,15 +456,12 @@ describe('M9 draft SERVICE lines (LINE-004)', () => {
     });
     expect(serviceAddedEvent?.payload).toMatchObject({ serviceId: catalog.body.id });
 
-    const overridden = await seller.agent
-      .post(`${ROOT}/${draft.body.id}/lines`)
-      .set(CSRF)
-      .send({
-        type: 'SERVICE',
-        serviceId: catalog.body.id,
-        unitPrice: '0.00',
-        description: 'Instalación expres',
-      });
+    const overridden = await seller.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'SERVICE',
+      serviceId: catalog.body.id,
+      unitPrice: '0.00',
+      description: 'Instalación expres',
+    });
     expect(overridden.status).toBe(201);
     expect(overridden.body.lines[2]).toMatchObject({
       type: 'SERVICE',
@@ -519,14 +503,11 @@ describe('M9 draft SERVICE lines (LINE-004)', () => {
     expect(blocked.body.error.message).toBe(INACTIVE_SERVICE_LINE_MESSAGE);
     expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(0);
 
-    const missing = await admin.agent
-      .post(`${ROOT}/${draft.body.id}/lines`)
-      .set(CSRF)
-      .send({
-        type: 'SERVICE',
-        serviceId: '11111111-1111-4111-8111-111111111111',
-        unitPrice: '200.00',
-      });
+    const missing = await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'SERVICE',
+      serviceId: '11111111-1111-4111-8111-111111111111',
+      unitPrice: '200.00',
+    });
     expect(missing.status).toBe(404);
     expect(missing.body.error.message).toBe(CATALOG_SERVICE_NOT_FOUND_MESSAGE);
     expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(0);
@@ -537,26 +518,165 @@ describe('M9 draft SERVICE lines (LINE-004)', () => {
     const catalog = await admin.agent.post(SERVICES).set(CSRF).send({ name: 'Balanceo' });
     const draft = await admin.agent.post(ROOT).set(CSRF).send({});
 
+    const withQuantity = await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'SERVICE',
+      serviceId: catalog.body.id,
+      unitPrice: '100.00',
+      quantity: '2',
+    });
+    expect(withQuantity.status).toBe(400);
+
+    const withCost = await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'SERVICE',
+      serviceId: catalog.body.id,
+      unitPrice: '100.00',
+      costProvenance: 'UNKNOWN',
+    });
+    expect(withCost.status).toBe(400);
+    expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(0);
+  });
+});
+
+describe('M10 draft DELIVERY lines (LINE-006)', () => {
+  afterEach(cleanup);
+
+  it('adds omitted-as-absent, free zero, and charged delivery without ITBIS', async () => {
+    const seller = await fixture('SELLER');
+    const identified = await customers.create({
+      name: 'Taller Norte',
+      rnc: '131123456',
+    });
+    const draft = await seller.agent
+      .post(ROOT)
+      .set(CSRF)
+      .send({ customerId: identified.id, fiscal: true });
+    expect(draft.status).toBe(201);
+    expect(draft.body.lines).toEqual([]);
+    expect(draft.body.totals).toEqual({ gross: '0.00', base: '0.00', itbis: '0.00' });
+
+    const generic = await seller.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'GENERIC',
+      description: 'Filtro',
+      unitPrice: '118.00',
+      costProvenance: 'UNKNOWN',
+    });
+    expect(generic.status).toBe(201);
+    expect(generic.body.totals).toEqual({ gross: '118.00', base: '100.00', itbis: '18.00' });
+
+    const free = await seller.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({ type: 'DELIVERY', description: 'Entrega incluida', unitPrice: '0.00' });
+    expect(free.status).toBe(201);
+    expect(free.body.lines).toHaveLength(2);
+    expect(free.body.lines[1]).toMatchObject({
+      type: 'DELIVERY',
+      description: 'Entrega incluida',
+      quantity: '1.00',
+      unitPrice: '0.00',
+      taxable: false,
+      gross: '0.00',
+      base: '0.00',
+      itbis: '0.00',
+      acquisitionCostDop: null,
+      costProvenance: null,
+      serviceId: null,
+    });
+    expect(free.body.totals).toEqual({ gross: '118.00', base: '100.00', itbis: '18.00' });
+
+    const duplicate = await seller.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({ type: 'DELIVERY', description: 'Envío', unitPrice: '200.00' });
+    expect(duplicate.status).toBe(409);
+    expect(duplicate.body.error.message).toBe(DUPLICATE_DELIVERY_LINE_MESSAGE);
+    expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(2);
+
+    const charged = await seller.agent
+      .patch(`${ROOT}/${draft.body.id}/lines/${free.body.lines[1].id}`)
+      .set(CSRF)
+      .send({ unitPrice: '200.00' });
+    expect(charged.status).toBe(200);
+    expect(charged.body.lines[1]).toMatchObject({
+      type: 'DELIVERY',
+      unitPrice: '200.00',
+      itbis: '0.00',
+      gross: '200.00',
+    });
+    expect(charged.body.totals).toEqual({ gross: '318.00', base: '300.00', itbis: '18.00' });
+
+    const removed = await seller.agent
+      .delete(`${ROOT}/${draft.body.id}/lines/${free.body.lines[1].id}`)
+      .set(CSRF);
+    expect(removed.status).toBe(200);
+    expect(removed.body.lines).toHaveLength(1);
+    expect(removed.body.totals).toEqual({ gross: '118.00', base: '100.00', itbis: '18.00' });
+
+    const restored = await seller.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({ type: 'DELIVERY', description: 'Envío Santo Domingo', unitPrice: '150.00' });
+    expect(restored.status).toBe(201);
+    expect(restored.body.lines[1]).toMatchObject({
+      type: 'DELIVERY',
+      description: 'Envío Santo Domingo',
+      unitPrice: '150.00',
+      itbis: '0.00',
+      gross: '150.00',
+    });
+    expect(restored.body.totals).toEqual({ gross: '268.00', base: '250.00', itbis: '18.00' });
+
+    const addedEvent = await prisma.historyEvent.findFirst({
+      where: {
+        subjectId: draft.body.id,
+        eventType: 'INVOICE_LINE_ADDED',
+        payload: { path: ['type'], equals: 'DELIVERY' },
+      },
+      orderBy: { occurredAt: 'asc' },
+    });
+    expect(addedEvent?.payload).toMatchObject({ type: 'DELIVERY', unitPrice: '0.00' });
+  });
+
+  it('rejects missing descriptions, negative amounts, textual placeholders, quantity, and cost', async () => {
+    const admin = await fixture();
+    const draft = await admin.agent.post(ROOT).set(CSRF).send({});
+
+    const withoutDescription = await admin.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({ type: 'DELIVERY', unitPrice: '10.00' });
+    expect(withoutDescription.status).toBe(400);
+
+    const withEmptyDescription = await admin.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({ type: 'DELIVERY', description: '   ', unitPrice: '10.00' });
+    expect(withEmptyDescription.status).toBe(400);
+
+    const negative = await admin.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({ type: 'DELIVERY', description: 'Envío', unitPrice: '-1.00' });
+    expect(negative.status).toBe(400);
+
+    const placeholder = await admin.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({ type: 'DELIVERY', description: 'Envío', unitPrice: 'N/A' });
+    expect(placeholder.status).toBe(400);
+
     const withQuantity = await admin.agent
       .post(`${ROOT}/${draft.body.id}/lines`)
       .set(CSRF)
-      .send({
-        type: 'SERVICE',
-        serviceId: catalog.body.id,
-        unitPrice: '100.00',
-        quantity: '2',
-      });
+      .send({ type: 'DELIVERY', description: 'Envío', unitPrice: '10.00', quantity: '2' });
     expect(withQuantity.status).toBe(400);
 
-    const withCost = await admin.agent
-      .post(`${ROOT}/${draft.body.id}/lines`)
-      .set(CSRF)
-      .send({
-        type: 'SERVICE',
-        serviceId: catalog.body.id,
-        unitPrice: '100.00',
-        costProvenance: 'UNKNOWN',
-      });
+    const withCost = await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'DELIVERY',
+      description: 'Envío',
+      unitPrice: '10.00',
+      costProvenance: 'UNKNOWN',
+    });
     expect(withCost.status).toBe(400);
     expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(0);
   });

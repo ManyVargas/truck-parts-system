@@ -5,7 +5,7 @@ import { UNSUPPORTED_INVENTORY_LINE_MESSAGE, UNSUPPORTED_LINE_TYPE_MESSAGE } fro
 
 const INVOICE_MANAGER_ROLES: ReadonlySet<Role> = new Set(['ADMINISTRATOR', 'SELLER']);
 const INVENTORY_LINE_TYPES = new Set<InvoiceLineType>(['ITEM', 'QTY']);
-const ENABLED_DRAFT_LINE_TYPES = new Set<InvoiceLineType>(['GENERIC', 'SERVICE']);
+const ENABLED_DRAFT_LINE_TYPES = new Set<InvoiceLineType>(['GENERIC', 'SERVICE', 'DELIVERY']);
 
 export function assertInvoiceManager(
   user: { active: boolean; role: Role; mustChangePassword: boolean } | null,

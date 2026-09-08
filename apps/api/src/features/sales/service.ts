@@ -1,4 +1,4 @@
-import type { InvoiceLine, InvoiceStatus } from '@prisma/client';
+import type { InvoiceLine, InvoiceLineType, InvoiceStatus } from '@prisma/client';
 
 import { AppError } from '../../infrastructure/errors/app-error.js';
 import { CatalogRepository } from '../catalogs/repository.js';
@@ -8,13 +8,18 @@ import {
   DEFAULT_DRAFT_CURRENCY,
   DRAFT_ONLY_DISCARD_MESSAGE,
   DRAFT_ONLY_EDIT_MESSAGE,
+  DUPLICATE_DELIVERY_LINE_MESSAGE,
   FISCAL_IDENTITY_REQUIRED_MESSAGE,
   INACTIVE_SERVICE_LINE_MESSAGE,
   LINE_NOT_FOUND_MESSAGE,
   MISSING_GENERIC_CUSTOMER_MESSAGE,
 } from './constants.js';
 import { DEFAULT_LINE_QUANTITY } from './money/constants.js';
-import { calculateLineMoney, normalizeAcquisitionCost, parsePositiveDecimal } from './money/index.js';
+import {
+  calculateLineMoney,
+  normalizeAcquisitionCost,
+  parsePositiveDecimal,
+} from './money/index.js';
 import { assertDraftLineTypeEnabled, assertInvoiceManager } from './policies.js';
 import {
   toDraftHistorySnapshot,
@@ -27,6 +32,7 @@ import type { CreateInvoiceLineRecord } from './types.js';
 import {
   addInvoiceLineSchema,
   createDraftSchema,
+  deliveryDraftLineSchema,
   genericDraftLineSchema,
   invoiceIdSchema,
   invoiceLineIdSchema,
@@ -71,6 +77,16 @@ function resolveGenericDraftLine(candidate: unknown): DraftLineWrite {
   };
 }
 
+function resolveDeliveryDraftLine(candidate: unknown): DraftLineWrite {
+  const profile = deliveryDraftLineSchema.parse(candidate);
+  return {
+    type: profile.type,
+    description: profile.description,
+    quantity: DEFAULT_LINE_QUANTITY,
+    unitPrice: profile.unitPrice,
+  };
+}
+
 async function resolveServiceDraftLine(
   catalogs: CatalogRepository,
   candidate: unknown,
@@ -89,6 +105,15 @@ async function resolveServiceDraftLine(
     unitPrice: profile.unitPrice,
     serviceId: profile.serviceId,
   };
+}
+
+async function resolveDraftLineWrite(
+  catalogs: CatalogRepository,
+  candidate: { type: InvoiceLineType },
+): Promise<DraftLineWrite> {
+  if (candidate.type === 'SERVICE') return resolveServiceDraftLine(catalogs, candidate);
+  if (candidate.type === 'DELIVERY') return resolveDeliveryDraftLine(candidate);
+  return resolveGenericDraftLine(candidate);
 }
 
 function addedLine(before: InvoiceLine[], after: InvoiceLine[]): InvoiceLine {
@@ -216,10 +241,13 @@ export class SalesService {
       if (!existing) throw AppError.notFound('Invoice not found');
       assertDraftStatus(existing.status, DRAFT_ONLY_EDIT_MESSAGE);
       assertDraftLineTypeEnabled(candidate.type);
-      const line =
-        candidate.type === 'SERVICE'
-          ? await resolveServiceDraftLine(catalogs, candidate)
-          : resolveGenericDraftLine(candidate);
+      if (
+        candidate.type === 'DELIVERY' &&
+        existing.lines.some((line) => line.type === 'DELIVERY')
+      ) {
+        throw AppError.conflict(DUPLICATE_DELIVERY_LINE_MESSAGE);
+      }
+      const line = await resolveDraftLineWrite(catalogs, candidate);
 
       calculateLineMoney({
         type: line.type,
