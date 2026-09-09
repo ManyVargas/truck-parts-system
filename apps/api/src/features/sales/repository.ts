@@ -239,7 +239,7 @@ export class SalesRepository {
       where: {
         id: input.id,
         status: 'COMPLETED',
-        pdfStatus: null,
+        pdfStatus: input.currentPdfStatus,
       },
       data: {
         pdfStatus: input.status,

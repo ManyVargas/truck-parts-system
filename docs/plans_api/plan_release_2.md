@@ -1,7 +1,7 @@
 # Plan Release 2 — Billing Core: Customers, Invoices, Cost/Profit, PDF
 
 **Release:** 2 — Billing Core  
-**Estado:** en curso (M1–M17 completados)  
+**Estado:** en curso (M1–M18 completados)  
 **Último milestone planificado:** Milestone 25 — Exit gate Release 2  
 **Registro de implementación:** [`../done_api/release_2.md`](../done_api/release_2.md)
 
@@ -14,7 +14,7 @@
 - **Entorno:** desarrollo y pruebas **únicamente en local** durante este plan. El primer despliegue productivo es un gate operativo **después** de completar Billing Core; no es un milestone de este archivo ([`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) §First production deployment).
 - **Features en alcance:** [`../FEATURES/08_CUSTOMERS.md`](../FEATURES/08_CUSTOMERS.md), slice R2 de [`../FEATURES/10_SALES_AND_INVOICES.md`](../FEATURES/10_SALES_AND_INVOICES.md), slice R2 de [`../FEATURES/11_COST_AND_PROFITABILITY.md`](../FEATURES/11_COST_AND_PROFITABILITY.md), slice de history de [`../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md`](../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md). Permisos: [`../FEATURES/01_ACCESS_AND_USERS.md`](../FEATURES/01_ACCESS_AND_USERS.md) y [`../ROLES_AND_PERMISSIONS.md`](../ROLES_AND_PERMISSIONS.md).
 - **Frontend:** el prototipo mock de [`../plans_web/plan-001.md`](../plans_web/plan-001.md) está cerrado (WM12). Access/Users ya usa HTTP cuando `VITE_USE_MOCK_API=false`. Clientes, POS, facturas, catálogo de servicios y rentabilidad existen como UI mock; los clientes HTTP están en stub.
-- **Estado API de partida:** Auth, `requireAuth`/`requireRole`, usuarios, envelope de history (`HistoryEvent`) y convención `routes → controller → service → repository → validation → types` están listos. M1–M4 cubren clientes y catálogo de servicios (persistencia + HTTP). M5 es el motor decimal de ITBIS. M6 persiste el agregado Invoice/`FAC-`. M7 expone la cáscara HTTP de draft. M8 añade líneas GENERIC y rechaza ITEM/QTY. M9 añade líneas SERVICE de catálogo activo (precio en la línea). M10 añade líneas DELIVERY (descripción obligatoria; máximo una; `0` o positivo; no gravada). M11 añade líneas EXTERNAL gravadas con costo DOP. M12 confirma el draft: `FAC-`, snapshot de cliente y dinero congelado. M13 deriva profit DOP sobre ese snapshot y lo proyecta solo a Administrator. M14 registra profit DOP juzgado (COST-005) cuando el costo es desconocido. M15 enriquece USD con ExchangeRate-API o deja `PENDING_FX_RATE` sin abortar la venta. M16 reintenta la tasa histórica del día de confirmación. M17 genera el PDF interno tras confirmar (sin bytes persistidos) o deja `FAILED` + `errorId`. Regeneración es M18.
+- **Estado API de partida:** Auth, `requireAuth`/`requireRole`, usuarios, envelope de history (`HistoryEvent`) y convención `routes → controller → service → repository → validation → types` están listos. M1–M4 cubren clientes y catálogo de servicios (persistencia + HTTP). M5 es el motor decimal de ITBIS. M6 persiste el agregado Invoice/`FAC-`. M7 expone la cáscara HTTP de draft. M8 añade líneas GENERIC y rechaza ITEM/QTY. M9 añade líneas SERVICE de catálogo activo (precio en la línea). M10 añade líneas DELIVERY (descripción obligatoria; máximo una; `0` o positivo; no gravada). M11 añade líneas EXTERNAL gravadas con costo DOP. M12 confirma el draft: `FAC-`, snapshot de cliente y dinero congelado. M13 deriva profit DOP sobre ese snapshot y lo proyecta solo a Administrator. M14 registra profit DOP juzgado (COST-005) cuando el costo es desconocido. M15 enriquece USD con ExchangeRate-API o deja `PENDING_FX_RATE` sin abortar la venta. M16 reintenta la tasa histórica del día de confirmación. M17 genera el PDF interno tras confirmar (sin bytes persistidos) o deja `FAILED` + `errorId`. M18 regenera un PDF `FAILED` (solo Administrator) sin reabrir la venta.
 - **Ciclo por milestone:** plan → implementación → pruebas → revisión → commit. La integración web se hace **solo** cuando la función API cumple el criterio de la sección Integración API → Web.
 
 ## Cómo se cortan los milestones
@@ -265,7 +265,7 @@ Paralelo al inicio: M1 ∥ M3 ∥ M5 ∥ M6. M19 puede seguir a M2 sin esperar e
 | M15 | Adaptador FX ExchangeRate-API + pending | completado | Swap profit en **M24** |
 | M16 | Retry FX Administrator | completado | **Listo para M24** |
 | M17 | PDF generar + estado de fallo | completado | Swap PDF en **M23** |
-| M18 | PDF regenerar Administrator | pendiente | **Listo para M23** |
+| M18 | PDF regenerar Administrator | completado | **Listo para M23** |
 | M19 | Web: customers HTTP | pendiente | Swap `CustomerRepository` |
 | M20 | Web: catálogo de servicios HTTP | pendiente | Swap `ServiceRepository` |
 | M21 | Web: POS draft + líneas soportadas | pendiente | Swap subset draft de sales |

@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { validate } from '../../infrastructure/http/validate.js';
 import { requireAuth } from '../access/require-auth.js';
 import { requireCsrfHeader } from '../access/require-csrf.js';
-import { requireRole } from '../access/require-role.js';
+import { requireAdministrator, requireRole } from '../access/require-role.js';
 import {
   deleteDraft,
   deleteDraftLine,
@@ -15,6 +15,7 @@ import {
   postConfirmInvoice,
   postDraft,
   postDraftLine,
+  postRegenerateInvoicePdf,
 } from './controller.js';
 import {
   addInvoiceLineSchema,
@@ -35,6 +36,13 @@ salesRouter.use((_req, res, next) => {
 });
 salesRouter.get('/', validate({ query: listInvoicesSchema }), getInvoices);
 salesRouter.get('/:id/pdf', validate({ params: invoiceIdSchema }), getInvoicePdf);
+salesRouter.post(
+  '/:id/pdf/regenerate',
+  requireCsrfHeader,
+  requireAdministrator,
+  validate({ params: invoiceIdSchema }),
+  postRegenerateInvoicePdf,
+);
 salesRouter.get('/:id', validate({ params: invoiceIdSchema }), getInvoice);
 salesRouter.post('/', requireCsrfHeader, validate({ body: createDraftSchema }), postDraft);
 salesRouter.patch(

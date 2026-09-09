@@ -140,6 +140,7 @@ export type RecordInvoicePdfStatusRecord = {
   errorId: string | null;
   generatedAt: Date;
   templateVersion: string;
+  currentPdfStatus: 'FAILED' | null;
 };
 
 export type InvoicePdfHistorySnapshot = {

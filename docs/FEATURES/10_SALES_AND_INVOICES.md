@@ -101,7 +101,7 @@ Invoice PDF rendering is secondary to sale validity. Preserve all invoice facts 
 - [x] Decimal-safe invoice calculations.
 - [x] FAC uniqueness/non-reuse under concurrency/retry. *(prototipo mock — idempotencia de `confirmInvoice`; API R2 M12: HTTP concurrente + retry idempotente)*
 - [x] Mixed-currency rejection. *(una moneda por factura; el draft no mezcla líneas)*
-- [ ] PDF failure/regeneration without sale rerun. *(API R2 M17: fallo simulado no revierte la venta; regeneración M18)*
+- [x] PDF failure/regeneration without sale rerun. *(API R2 M17: fallo simulado no revierte la venta; M18: `POST /api/sales/:id/pdf/regenerate` Administrator, solo `FAILED`)*
 - [x] Forced transaction failure leaves no partial sale/inventory/WO state. *(prototipo mock — validar todo antes de mutar; API R2 M12: fallo de history no consume `FAC-`)*
 - [x] Duplicate confirmation is idempotent or safely conflicts. *(API R2 M12: segundo POST → 200 y el mismo número)*
 

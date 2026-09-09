@@ -435,6 +435,11 @@ export class SalesService {
     return this.invoiceDocuments.download(actorId, id);
   }
 
+  async regeneratePdf(actorId: string, id: string) {
+    const { invoice, actor } = await this.invoiceDocuments.regenerate(actorId, id);
+    return toPublicInvoice(invoice, actor);
+  }
+
   /**
    * PDF is outside the commercial transaction. Failure leaves the sale committed
    * and document FAILED. Idempotent confirm does not retry.

@@ -55,6 +55,10 @@ export async function getInvoicePdf(req: Request, res: Response) {
   res.send(file.body);
 }
 
+export async function postRegenerateInvoicePdf(req: Request, res: Response) {
+  res.json(await salesServiceOf(req).regeneratePdf(actor(req), id(req)));
+}
+
 export async function postDraftLine(req: Request, res: Response) {
   res.status(201).json(await salesServiceOf(req).addLine(actor(req), id(req), req.validated?.body));
 }

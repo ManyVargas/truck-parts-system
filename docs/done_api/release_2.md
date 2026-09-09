@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M17 completados)
+**Estado:** en curso (M1–M18 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 2, a medida que se completan.  
 No sustituye a `plan_release_2.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -615,18 +615,40 @@ Regeneración Administrator (M18). Swap web (M23). S3 / DGII / NCF real.
 
 ## Milestone 18 — PDF regenerar Administrator
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-08
 
 ### Objetivo cumplido
 
+Regenerar un PDF `FAILED` desde el snapshot completed, sin reabrir la venta ni asignar otro `FAC-`. Solo Administrator (ADMIN-002 slice).
+
 ### Qué se entregó
+
+- `POST /api/sales/:id/pdf/regenerate` (CSRF; solo Administrator).
+- Elegible únicamente con factura `COMPLETED` y `pdfStatus FAILED`.
+- Render pdfkit (o double) fuera de la transacción comercial; persistencia de `pdfStatus` + history en una transacción corta.
+- Si el render vuelve a fallar: HTTP 200, factura `COMPLETED`, `document.status FAILED` y nuevo `errorId`.
+- Seller reimprime `READY` con `GET /pdf`; no regenera `FAILED` (403).
 
 ### Decisiones técnicas
 
+- No hay `reason` en el body (igual que el retry FX de M16).
+- `GET` de un PDF `READY` ya vuelve a pintar el snapshot; no se regenera `READY` por POST.
+- `recordPdfStatus` solo actualiza filas con el `pdfStatus` esperado (`null` en M17, `FAILED` en M18).
+- La autorización Administrator se revalida después del render, dentro de la misma transacción que persiste `pdfStatus` y history, para que una revocación concurrente no complete la recuperación.
+- El manejo del fallo de render termina antes de persistir; los errores de autorización o persistencia no se reclasifican como fallos del renderer.
+
 ### Validación
 
+- `npm run typecheck -w @truck-parts/api` — aprobado.
+- `npm exec -w @truck-parts/api -- vitest run tests/unit/infrastructure/invoice-pdf.test.ts tests/unit/sales/history-validation.test.ts` — 2 archivos, 8 pruebas aprobadas.
+- `npm run test:integration -w @truck-parts/api -- tests/integration/sales/pdf-http.test.ts` — 1 archivo, 9 pruebas aprobadas.
+- `npm run test:integration -w @truck-parts/api -- tests/integration/sales` — 4 archivos, 47 pruebas aprobadas.
+- La integración cubre éxito, nuevo fallo, autorización/CSRF/estados no elegibles y revocación concurrente del rol durante el render.
+
 ### Fuera de alcance (intencional)
+
+Swap web (M23). S3 / DGII / NCF real. Resto de ADMIN-002 (reservas, OT, evidencia, diagnósticos).
 
 ---
 

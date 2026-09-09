@@ -2,9 +2,9 @@
 
 ## Estado del inventario
 
-Inventario actual: **8 de septiembre de 2026**, tras Release 2 Milestone 17 (PDF interno y estado operativo). Los conteos salen de Vitest e incluyen cada caso expandido de `it.each`. Las rutas son relativas a `apps/web/tests` o `apps/api/tests`.
+Inventario actual: **8 de septiembre de 2026**, tras Release 2 Milestone 18 (regeneración administrativa de PDF). Los conteos salen de Vitest e incluyen cada caso expandido de `it.each`. Las rutas son relativas a `apps/web/tests` o `apps/api/tests`.
 
-Se ejecutaron las cinco suites registradas: unitarias, integración y componentes de frontend; unitarias e integración de backend. La integración backend reinició únicamente `DATABASE_URL_TEST` y aplicó las migraciones del proyecto mediante su setup normal. No se tocó `truck_parts_dev` ni producción.
+El cierre global de M17 ejecutó las cinco suites registradas: unitarias, integración y componentes de frontend; unitarias e integración de backend. M18 añadió una integración y ejecutó typecheck, las unitarias relacionadas y `integration/sales/pdf-http.test.ts`. La integración backend reinició únicamente `DATABASE_URL_TEST` y aplicó las migraciones del proyecto mediante su setup normal. No se tocó `truck_parts_dev` ni producción.
 
 | Aplicación            | Tipo        | Archivos | Pruebas | Resultado obtenido |
 | --------------------- | ----------- | -------: | ------: | ------------------ |
@@ -13,11 +13,11 @@ Se ejecutaron las cinco suites registradas: unitarias, integración y componente
 | Frontend              | Componentes |       31 |     143 | 143 aprobadas      |
 | **Subtotal frontend** |             |   **73** | **499** | **499 aprobadas**  |
 | Backend               | Unitarias   |       31 |     202 | 202 aprobadas       |
-| Backend               | Integración |       20 |     166 | 166 aprobadas       |
-| **Subtotal backend**  |             |   **51** | **368** | **368 aprobadas**   |
-| **Total**             |             |  **124** | **867** | **867 aprobadas**   |
+| Backend               | Integración |       20 |     167 | 167 aprobadas       |
+| **Subtotal backend**  |             |   **51** | **369** | **369 aprobadas**   |
+| **Total**             |             |  **124** | **868** | **868 aprobadas**   |
 
-Todas las pruebas registradas aprobaron en esta ejecución. Cierre funcional de API R2: [`done_api/release_2.md`](done_api/release_2.md). Cierre de Access/Users HTTP: [`done_api/release-1.md`](done_api/release-1.md).
+Las 867 pruebas del cierre global M17 aprobaron; la prueba añadida en M18 y sus verificaciones focalizadas también aprobaron. Cierre funcional de API R2: [`done_api/release_2.md`](done_api/release_2.md). Cierre de Access/Users HTTP: [`done_api/release-1.md`](done_api/release-1.md).
 
 El inventario de **679 pruebas / 97 archivos** (5 de septiembre de 2026) es el cierre de Milestone 9; ya no describe la rama. Evidencia de ese cierre: [`plans_api/milestone-9-verification.md`](plans_api/milestone-9-verification.md).
 
@@ -191,7 +191,7 @@ Ejercitan persistencia y transacciones contra PostgreSQL y rutas HTTP con Supert
 | `integration/sales/repository.test.ts`          |        7 | Draft sin `FAC-` DOP/USD; secuencia seed y lock sin consumir; allocate `FAC-000001` + dinero persistido; líneas GENERIC+SERVICE+EXTERNAL; UNKNOWN=0 rechazado por check; DELIVERY unique; SERVICE exige catálogo. | `number` null en draft; `nextValue` 1 hasta confirmar; costo desconocido no persiste como cero. |
 | `integration/sales/http.test.ts`                |       27 | Draft; GENERIC/SERVICE/DELIVERY/EXTERNAL; confirmación DOP/USD; idempotencia, concurrencia y snapshot; autorización/CSRF/rollback; rentabilidad DOP y costo UNKNOWN. | `/api/sales` asigna un único `FAC-`, congela los hechos completed y expone profit solo al Administrator cuando puede derivarse. |
 | `integration/sales/fx-http.test.ts`             |        4 | Confirmación USD con tasa válida, timeout/cuota, DOP sin consulta FX y margen manual USD. | La venta nunca depende del proveedor FX; una tasa válida conserva provenance y Seller no recibe rentabilidad. |
-| `integration/sales/pdf-http.test.ts`            |        5 | Fallo PDF sin rollback/retry; descarga READY; metadata al cancelar; versión persistida; rechazo de Mechanic y draft. | El PDF usa hechos y plantilla preservados; el fallo no invalida la venta y su metadata sigue válida al cancelar. |
+| `integration/sales/pdf-http.test.ts`            |        9 | Fallo PDF sin rollback/retry; descarga READY; metadata al cancelar; versión persistida; rechazo de Mechanic y draft; regeneración Admin; fallo de regeneración; revocación de rol durante render; rechazo Seller/READY/CSRF. | El PDF usa hechos y plantilla preservados; el fallo no invalida la venta; Administrator regenera `FAILED` sin segundo `FAC-`; la persistencia revalida el rol después del render. |
 | `integration/profitability/http.test.ts`        |        2 | Registro Administrator de ganancia DOP con costo desconocido; rechazos por costo estimado, FX pending, draft y rol. | COST-005 no altera costo ni venta y solo permite el juicio manual en su estado y rol válidos. |
 | `integration/profitability/fx-retry-http.test.ts` |      3 | Retry histórico exitoso o no disponible; rechazo de DOP, draft, Seller y Mechanic. | El retry Administrator no reejecuta ni muta la venta y registra el resultado con historial. |
 
@@ -240,8 +240,14 @@ Ejercitan persistencia y transacciones contra PostgreSQL y rutas HTTP con Supert
 ### Cobertura añadida en Release 2 M17
 
 - **3 unitarias nuevas:** renderer pdfkit con `FAC-` y `NCF: ______________________`; rechazo de versiones de plantilla desconocidas; envelopes `INVOICE_PDF_GENERATED` / `INVOICE_PDF_FAILED`.
-- **5 integraciones nuevas:** confirm + PDF fail deja la venta y 409 al descargar; Seller descarga PDF READY; metadata PDF sobrevive la transición a `CANCELLED`; descarga usa la versión de plantilla persistida; Mechanic/draft 403/409. Regeneración es M18; swap web M23.
+- **5 integraciones nuevas:** confirm + PDF fail deja la venta y 409 al descargar; Seller descarga PDF READY; metadata PDF sobrevive la transición a `CANCELLED`; descarga usa la versión de plantilla persistida; Mechanic/draft 403/409.
 - Migración `20260908210000_invoice_pdf_status`.
+
+### Cobertura añadida en Release 2 M18
+
+- **4 integraciones nuevas:** Administrator regenera `FAILED` al mismo `FAC-`/snapshot; regeneración que vuelve a fallar deja 200 + nuevo `errorId`; revocación del rol durante el render impide persistir estado o history; Seller/READY/draft/Mechanic/CSRF rechazados.
+- **Verificación ejecutada:** `npm run typecheck -w @truck-parts/api`; 8 pruebas unitarias de PDF/history; 9 integraciones focalizadas de `tests/integration/sales/pdf-http.test.ts`; suite completa de integración de sales con 47 pruebas.
+- No hay swap web (M23) ni S3/DGII.
 
 Los archivos y conteos completos de M13–M16 también están registrados en las tablas anteriores: `unit/sales/money.test.ts`, `unit/profitability/validation.test.ts`, `unit/infrastructure/fx.test.ts`, `unit/sales/history-validation.test.ts`, `integration/sales/http.test.ts`, `integration/sales/fx-http.test.ts`, `integration/profitability/http.test.ts` e `integration/profitability/fx-retry-http.test.ts`.
 
@@ -284,7 +290,7 @@ npm run typecheck:test -w @truck-parts/web
 npm exec -w @truck-parts/api -- vitest run tests/unit/users/history-validation.test.ts
 npm run test:integration -w @truck-parts/api -- tests/integration/users/history.test.ts
 
-# Casos específicos de Release 2 M1–M17
+# Casos específicos de Release 2 M1–M18
 npm exec -w @truck-parts/api -- vitest run tests/unit/customers tests/unit/catalogs tests/unit/sales tests/unit/profitability tests/unit/infrastructure/fx.test.ts tests/unit/infrastructure/invoice-pdf.test.ts
 npm run test:integration -w @truck-parts/api -- tests/integration/customers tests/integration/catalogs tests/integration/sales tests/integration/profitability
 ```
@@ -293,6 +299,6 @@ npm run test:integration -w @truck-parts/api -- tests/integration/customers test
 
 - No hay pruebas E2E de navegador; las pruebas React actuales son de componentes en jsdom.
 - La integración del frontend usa repositorios mock y memoria; no sustituye pruebas transaccionales contra PostgreSQL.
-- El backend cubre salud, acceso/sesiones, perfil propio, autorización, bootstrap, administración de usuarios, recuperación de contraseñas, historial append-only de cuentas, **clientes (persistencia + HTTP CUST-001/002)**, **catálogo de servicios mecánicos (persistencia + HTTP LINE-004/ADMIN-001)**, **motor ITBIS (SALE-003)**, **persistencia Invoice/`FAC-`**, **cáscara HTTP de draft (M7)**, **líneas GENERIC/SERVICE/DELIVERY/EXTERNAL HTTP (M8–M11)**, **confirmación HTTP con `FAC-` y snapshot (M12)** y **PDF interno generar + estado de fallo (M17)**. El contrato transversal de errores se prueba con un router de tests. El historial de clientes, servicios, drafts, líneas, confirmación y PDF se verifica en la misma transacción que la escritura correspondiente. Estos resultados no implican regeneración PDF (M18), rentabilidad swap web ni el swap de clientes/POS/confirmación (`HttpCustomerRepository` M19, `HttpServiceRepository` M20, POS M21, confirmación M22, PDF UI M23).
+- El backend cubre salud, acceso/sesiones, perfil propio, autorización, bootstrap, administración de usuarios, recuperación de contraseñas, historial append-only de cuentas, **clientes (persistencia + HTTP CUST-001/002)**, **catálogo de servicios mecánicos (persistencia + HTTP LINE-004/ADMIN-001)**, **motor ITBIS (SALE-003)**, **persistencia Invoice/`FAC-`**, **cáscara HTTP de draft (M7)**, **líneas GENERIC/SERVICE/DELIVERY/EXTERNAL HTTP (M8–M11)**, **confirmación HTTP con `FAC-` y snapshot (M12)** y **PDF interno generar + fallo + regeneración Administrator (M17–M18)**. El contrato transversal de errores se prueba con un router de tests. El historial de clientes, servicios, drafts, líneas, confirmación y PDF se verifica en la misma transacción que la escritura correspondiente. Estos resultados no implican rentabilidad swap web ni el swap de clientes/POS/confirmación/PDF UI (`HttpCustomerRepository` M19, `HttpServiceRepository` M20, POS M21, confirmación M22, PDF UI M23).
 - Ventas (listado, detalle, pagos, cancelación, PDF), POS (borrador, ITBIS fiscal, confirmación `FAC-`, pago inicial, undo de líneas), OT de escritorio (WM9), app Mecánico (WM10) y catálogos/usuarios admin (WM11) tienen suites unitarias, de repositorio y de componente. Un esperado nuevo en categoría de ensamblaje rellena NA provisional en unidades no vendidas y avisa al administrador. Los atributos de categoría se definen en catálogo y se capturan como campos generados en el alta y la edición. Rentabilidad incluye reintento FX y registro admin de ganancia bruta cuando el costo es desconocido. Las capabilities de UX-0 siguen los releases del Development Plan (`release-1` … `release-8` y `prototype`). Las pruebas de componente usan el preset `prototype` por defecto para no heredar `VITE_CAPABILITIES_PRESET` del `.env` local. UX-1 cubre Modal/Field/Tabs con teclado, Button `busy` y Skeleton anunciado. UX-2 agrupa el sidebar comercial por intención de trabajo y compacta/overlay según breakpoint. UX-3 aplica progressive disclosure al registro de inventario (INV-002). UX-4 jerarquiza estados de inventario y unifica tablas (click de fila al detalle más enlace para teclado; columnas operativas separadas). UX-5 endurece el POS. UX-6 endurece la app del mecánico (targets, evidencia con progreso/reintento, historial completado, copy de red). El listado de inventario y ventas lee filtros operativos desde la URL (p. ej. KPIs del escritorio). Siguen fuera: carga real de fotos.
 - Cada cambio de negocio debe agregar una prueba en el nivel más bajo que demuestre la regla y una integración cuando intervengan autorización o estado compartido.

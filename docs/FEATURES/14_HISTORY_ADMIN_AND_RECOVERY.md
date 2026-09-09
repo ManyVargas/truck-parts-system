@@ -92,14 +92,15 @@ Release 1 automated closure coverage revalidates user creation, deactivation and
 ### Recovery
 - [ ] Abandoned reservation release.
 - [ ] Work-Order release/reassign/cancel.
-- [ ] PDF regeneration.
+- [x] PDF regeneration. *(API R2 M18: `POST /api/sales/:id/pdf/regenerate` solo Administrator y `pdfStatus FAILED`; el resto de ADMIN-002 sigue Release 8)*
 - [ ] Evidence recovery where safe.
 - [ ] Pending USD profitability retry.
 
 The abandoned-reservation, Work-Order and profitability items previously marked as
 complete are available only in the mock prototype. Their HTTP repositories remain
-explicitly unimplemented; mock behavior does not complete ADMIN-002. The production
-API, authorization, audit history and tests remain Release 8 scope.
+explicitly unimplemented; mock behavior does not complete ADMIN-002. Failed invoice
+PDF regeneration is implemented in the production API as Release 2 M18; the rest of
+ADMIN-002 remains Release 8.
 
 ### Diagnostics
 - [ ] Negative/invalid quantity states.

@@ -9,6 +9,7 @@ import { resetLoginRateLimit } from '../../../src/features/access/login-rate-lim
 import {
   PDF_COMPLETED_ONLY_MESSAGE,
   PDF_FAILED_MESSAGE,
+  PDF_REGENERATE_FAILED_ONLY_MESSAGE,
 } from '../../../src/features/invoice-documents/constants.js';
 import { UserRepository } from '../../../src/features/users/repository.js';
 import {
@@ -193,5 +194,195 @@ describe('M17 PDF generate + failed status (SALE-004)', () => {
     const invoice = await confirmGeneric(admin.agent);
     const denied = await mechanic.agent.get(`${SALES}/${invoice.id}/pdf`);
     expect(denied.status).toBe(403);
+  });
+});
+
+describe('M18 PDF regenerate Administrator (SALE-004 / ADMIN-002)', () => {
+  afterEach(cleanup);
+
+  it('regenerates a failed PDF from the snapshot without a second FAC-', async () => {
+    const render = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('simulated-pdf-failure'))
+      .mockResolvedValue(Buffer.from('%PDF-regenerated'));
+    const app = createTestApp({ invoicePdfRenderer: { render } });
+    const admin = await fixture(request.agent(app));
+    const invoice = await confirmGeneric(admin.agent);
+    expect(invoice).toMatchObject({
+      status: 'COMPLETED',
+      number: 'FAC-000001',
+      document: { status: 'FAILED' },
+    });
+    const failedErrorId = invoice.document.errorId;
+
+    const regenerated = await admin.agent
+      .post(`${SALES}/${invoice.id}/pdf/regenerate`)
+      .set(CSRF)
+      .send({});
+    expect(regenerated.status).toBe(200);
+    expect(regenerated.body).toMatchObject({
+      id: invoice.id,
+      status: 'COMPLETED',
+      number: 'FAC-000001',
+      document: { status: 'READY' },
+      customerSnapshot: invoice.customerSnapshot,
+      lines: invoice.lines,
+      totals: invoice.totals,
+    });
+    expect(regenerated.body.document.errorId).toBeUndefined();
+
+    const stored = await prisma.invoice.findUnique({ where: { id: invoice.id } });
+    expect(stored).toMatchObject({
+      status: 'COMPLETED',
+      number: 'FAC-000001',
+      pdfStatus: 'READY',
+      pdfErrorId: null,
+    });
+    expect(stored?.pdfErrorId).not.toBe(failedErrorId);
+
+    const pdf = await admin.agent.get(`${SALES}/${invoice.id}/pdf`).buffer(true);
+    expect(pdf.status).toBe(200);
+    expect(Buffer.from(pdf.body).toString('latin1').slice(0, 5)).toBe('%PDF-');
+
+    expect(
+      await prisma.historyEvent.count({
+        where: { subjectId: invoice.id, eventType: 'INVOICE_CONFIRMED' },
+      }),
+    ).toBe(1);
+    expect(
+      await prisma.historyEvent.count({
+        where: { subjectId: invoice.id, eventType: 'INVOICE_PDF_FAILED' },
+      }),
+    ).toBe(1);
+    expect(
+      await prisma.historyEvent.count({
+        where: { subjectId: invoice.id, eventType: 'INVOICE_PDF_GENERATED' },
+      }),
+    ).toBe(1);
+  });
+
+  it('keeps the sale and returns FAILED when regeneration render fails again', async () => {
+    const app = createTestApp({ invoicePdfRenderer: failingInvoicePdfRenderer });
+    const admin = await fixture(request.agent(app));
+    const invoice = await confirmGeneric(admin.agent);
+    const firstErrorId = invoice.document.errorId;
+
+    const regenerated = await admin.agent
+      .post(`${SALES}/${invoice.id}/pdf/regenerate`)
+      .set(CSRF)
+      .send({});
+    expect(regenerated.status).toBe(200);
+    expect(regenerated.body).toMatchObject({
+      status: 'COMPLETED',
+      number: 'FAC-000001',
+      document: { status: 'FAILED' },
+    });
+    expect(regenerated.body.document.errorId).toEqual(expect.any(String));
+    expect(regenerated.body.document.errorId).not.toBe(firstErrorId);
+    expect(regenerated.body.customerSnapshot).toEqual(invoice.customerSnapshot);
+    expect(regenerated.body.lines).toEqual(invoice.lines);
+
+    expect(
+      await prisma.historyEvent.count({
+        where: { subjectId: invoice.id, eventType: 'INVOICE_PDF_FAILED' },
+      }),
+    ).toBe(2);
+    expect(
+      await prisma.historyEvent.count({
+        where: { subjectId: invoice.id, eventType: 'INVOICE_CONFIRMED' },
+      }),
+    ).toBe(1);
+  });
+
+  it('rejects persistence when Administrator authorization is revoked during rendering', async () => {
+    let signalRenderStarted!: () => void;
+    let releaseRender!: () => void;
+    const renderStarted = new Promise<void>((resolve) => {
+      signalRenderStarted = resolve;
+    });
+    const renderReleased = new Promise<void>((resolve) => {
+      releaseRender = resolve;
+    });
+    const render = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('simulated-pdf-failure'))
+      .mockImplementationOnce(async () => {
+        signalRenderStarted();
+        await renderReleased;
+        return Buffer.from('%PDF-regenerated');
+      });
+    const app = createTestApp({ invoicePdfRenderer: { render } });
+    const admin = await fixture(request.agent(app));
+    const invoice = await confirmGeneric(admin.agent);
+    const failedErrorId = invoice.document.errorId;
+
+    const pendingRegeneration = admin.agent
+      .post(`${SALES}/${invoice.id}/pdf/regenerate`)
+      .set(CSRF)
+      .send({})
+      .then((response) => response);
+    await renderStarted;
+    await prisma.user.update({ where: { id: admin.user.id }, data: { role: 'SELLER' } });
+    releaseRender();
+
+    const denied = await pendingRegeneration;
+    expect(denied.status).toBe(403);
+    expect(await prisma.invoice.findUnique({ where: { id: invoice.id } })).toMatchObject({
+      pdfStatus: 'FAILED',
+      pdfErrorId: failedErrorId,
+    });
+    expect(
+      await prisma.historyEvent.count({
+        where: { subjectId: invoice.id, eventType: 'INVOICE_PDF_GENERATED' },
+      }),
+    ).toBe(0);
+    expect(
+      await prisma.historyEvent.count({
+        where: { subjectId: invoice.id, eventType: 'INVOICE_PDF_FAILED' },
+      }),
+    ).toBe(1);
+  });
+
+  it('rejects Seller, READY, draft, Mechanic and missing CSRF', async () => {
+    const failing = createTestApp({ invoicePdfRenderer: failingInvoicePdfRenderer });
+    const admin = await fixture(request.agent(failing));
+    const seller = await fixture(request.agent(failing), 'SELLER');
+    const mechanic = await fixture(request.agent(failing), 'MECHANIC');
+    const failed = await confirmGeneric(admin.agent);
+
+    const sellerDenied = await seller.agent
+      .post(`${SALES}/${failed.id}/pdf/regenerate`)
+      .set(CSRF)
+      .send({});
+    expect(sellerDenied.status).toBe(403);
+
+    const csrfDenied = await admin.agent.post(`${SALES}/${failed.id}/pdf/regenerate`).send({});
+    expect(csrfDenied.status).toBe(403);
+
+    const mechanicDenied = await mechanic.agent
+      .post(`${SALES}/${failed.id}/pdf/regenerate`)
+      .set(CSRF)
+      .send({});
+    expect(mechanicDenied.status).toBe(403);
+
+    const readyApp = createTestApp();
+    const readyAdmin = await fixture(request.agent(readyApp));
+    const ready = await confirmGeneric(readyAdmin.agent);
+    expect(ready.document).toEqual({ status: 'READY' });
+    const readyDenied = await readyAdmin.agent
+      .post(`${SALES}/${ready.id}/pdf/regenerate`)
+      .set(CSRF)
+      .send({});
+    expect(readyDenied.status).toBe(409);
+    expect(readyDenied.body.error.message).toBe(PDF_REGENERATE_FAILED_ONLY_MESSAGE);
+
+    const draft = await readyAdmin.agent.post(SALES).set(CSRF).send({});
+    expect(draft.status).toBe(201);
+    const draftDenied = await readyAdmin.agent
+      .post(`${SALES}/${draft.body.id}/pdf/regenerate`)
+      .set(CSRF)
+      .send({});
+    expect(draftDenied.status).toBe(409);
+    expect(draftDenied.body.error.message).toBe(PDF_COMPLETED_ONLY_MESSAGE);
   });
 });
