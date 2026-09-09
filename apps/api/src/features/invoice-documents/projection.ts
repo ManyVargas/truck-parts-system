@@ -35,6 +35,7 @@ export function toInvoicePdfFacts(invoice: InvoiceRecord): InvoicePdfFacts | nul
     if (money == null) return null;
     lines.push({
       description: line.description,
+      notes: line.notes,
       quantity: moneyString(line.quantity),
       unitPrice: moneyString(line.unitPrice),
       gross: moneyString(money.gross),

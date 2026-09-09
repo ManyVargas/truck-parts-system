@@ -15,6 +15,7 @@ import {
   DUPLICATE_DELIVERY_LINE_MESSAGE,
   EMPTY_DRAFT_CONFIRM_MESSAGE,
   FISCAL_IDENTITY_REQUIRED_MESSAGE,
+  FIXED_LINE_QUANTITY_MESSAGE,
   INACTIVE_SERVICE_LINE_MESSAGE,
   UNSUPPORTED_INVENTORY_LINE_MESSAGE,
 } from '../../../src/features/sales/constants.js';
@@ -171,15 +172,32 @@ describe('M7 draft HTTP shell (SALE-001 draft)', () => {
     const second = await admin.agent.post(ROOT).set(CSRF).send({ currency: 'USD' });
     expect(first.status).toBe(201);
     expect(second.status).toBe(201);
+    expect(
+      (
+        await admin.agent.post(`${ROOT}/${first.body.id}/lines`).set(CSRF).send({
+          type: 'GENERIC',
+          description: 'Filtro',
+          unitPrice: '118.00',
+          costProvenance: 'UNKNOWN',
+        })
+      ).status,
+    ).toBe(201);
 
-    const page = await admin.agent.get(`${ROOT}?page=1&pageSize=1&status=DRAFT`);
+    const page = await admin.agent.get(`${ROOT}?page=1&pageSize=2&status=DRAFT`);
     expect(page.status).toBe(200);
     expect(page.body.total).toBe(2);
     expect(page.body.page).toBe(1);
-    expect(page.body.pageSize).toBe(1);
-    expect(page.body.items).toHaveLength(1);
+    expect(page.body.pageSize).toBe(2);
+    expect(page.body.items).toHaveLength(2);
     expect(page.body.items[0]).toMatchObject({ status: 'DRAFT', number: null });
     expect(page.body.items[0]).not.toHaveProperty('lines');
+    expect(
+      page.body.items.find((item: { id: string }) => item.id === first.body.id).totals,
+    ).toEqual({
+      gross: '118.00',
+      base: '118.00',
+      itbis: '0.00',
+    });
   });
 
   it('returns 403 for Mechanic and 400 for unknown fields', async () => {
@@ -267,6 +285,31 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
     });
     expect(priced.body.totals).toEqual({ gross: '118.00', base: '100.00', itbis: '18.00' });
 
+    const counted = await seller.agent
+      .patch(`${ROOT}/${draft.body.id}/lines/${added.body.lines[0].id}`)
+      .set(CSRF)
+      .send({ quantity: '3.00' });
+    expect(counted.status).toBe(200);
+    expect(counted.body.lines[0]).toMatchObject({
+      quantity: '3.00',
+      unitPrice: '59.00',
+      gross: '177.00',
+      base: '150.00',
+      itbis: '27.00',
+    });
+    expect(counted.body.totals).toEqual({ gross: '177.00', base: '150.00', itbis: '27.00' });
+
+    const renamed = await seller.agent
+      .patch(`${ROOT}/${draft.body.id}/lines/${added.body.lines[0].id}`)
+      .set(CSRF)
+      .send({ description: 'Filtro de aire' });
+    expect(renamed.status).toBe(200);
+    expect(renamed.body.lines[0]).toMatchObject({
+      description: 'Filtro de aire',
+      quantity: '3.00',
+      unitPrice: '59.00',
+    });
+
     const removed = await seller.agent
       .delete(`${ROOT}/${draft.body.id}/lines/${added.body.lines[0].id}`)
       .set(CSRF);
@@ -274,6 +317,67 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
     expect(removed.body.lines).toEqual([]);
     expect(removed.body.totals).toEqual({ gross: '0.00', base: '0.00', itbis: '0.00' });
     expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(0);
+  });
+
+  it('stores optional line notes independently of description and freezes them on confirm', async () => {
+    const seller = await fixture('SELLER');
+    const draft = await seller.agent.post(ROOT).set(CSRF).send({});
+    expect(draft.status).toBe(201);
+
+    const added = await seller.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'GENERIC',
+      description: 'Filtro',
+      notes: '  Se instaló en bahía 1  ',
+      unitPrice: '118.00',
+      costProvenance: 'UNKNOWN',
+    });
+    expect(added.status).toBe(201);
+    expect(added.body.lines[0]).toMatchObject({
+      description: 'Filtro',
+      notes: 'Se instaló en bahía 1',
+    });
+
+    const updated = await seller.agent
+      .patch(`${ROOT}/${draft.body.id}/lines/${added.body.lines[0].id}`)
+      .set(CSRF)
+      .send({ notes: 'Cambio de junta\ny filtro' });
+    expect(updated.status).toBe(200);
+    expect(updated.body.lines[0].notes).toBe('Cambio de junta\ny filtro');
+
+    const cleared = await seller.agent
+      .patch(`${ROOT}/${draft.body.id}/lines/${added.body.lines[0].id}`)
+      .set(CSRF)
+      .send({ notes: '   ' });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.lines[0].notes).toBeNull();
+
+    const tooLong = await seller.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'GENERIC',
+      description: 'Otro',
+      notes: 'x'.repeat(101),
+      unitPrice: '10.00',
+      costProvenance: 'UNKNOWN',
+    });
+    expect(tooLong.status).toBe(400);
+
+    const restored = await seller.agent
+      .patch(`${ROOT}/${draft.body.id}/lines/${added.body.lines[0].id}`)
+      .set(CSRF)
+      .send({ notes: 'Nota final' });
+    expect(restored.status).toBe(200);
+
+    const confirmed = await seller.agent
+      .post(`${ROOT}/${draft.body.id}/confirm`)
+      .set(CSRF)
+      .send({});
+    expect(confirmed.status).toBe(200);
+    expect(confirmed.body.lines[0].notes).toBe('Nota final');
+
+    const frozen = await seller.agent
+      .patch(`${ROOT}/${draft.body.id}/lines/${added.body.lines[0].id}`)
+      .set(CSRF)
+      .send({ notes: 'No debe guardar' });
+    expect(frozen.status).toBe(409);
   });
 
   it('stores UNKNOWN cost as null, not zero, and rejects ITEM/QTY without inventory effects', async () => {
@@ -493,6 +597,13 @@ describe('M9 draft SERVICE lines (LINE-004)', () => {
       gross: '250.00',
     });
     expect(priced.body.totals).toEqual({ gross: '368.00', base: '350.00', itbis: '18.00' });
+
+    const quantityBlocked = await seller.agent
+      .patch(`${ROOT}/${draft.body.id}/lines/${copiedName.body.lines[1].id}`)
+      .set(CSRF)
+      .send({ quantity: '2.00' });
+    expect(quantityBlocked.status).toBe(409);
+    expect(quantityBlocked.body.error.message).toBe(FIXED_LINE_QUANTITY_MESSAGE);
   });
 
   it('rejects inactive and missing catalog services without inserting a line', async () => {
@@ -849,7 +960,10 @@ describe('M11 draft EXTERNAL lines (LINE-005)', () => {
 describe('M12 confirmation FAC- snapshot (SALE-001, CUST-003)', () => {
   afterEach(cleanup);
 
-  async function addGenericLine(agent: Awaited<ReturnType<typeof fixture>>['agent'], invoiceId: string) {
+  async function addGenericLine(
+    agent: Awaited<ReturnType<typeof fixture>>['agent'],
+    invoiceId: string,
+  ) {
     const added = await agent.post(`${ROOT}/${invoiceId}/lines`).set(CSRF).send({
       type: 'GENERIC',
       description: 'Filtro',
@@ -970,10 +1084,7 @@ describe('M12 confirmation FAC- snapshot (SALE-001, CUST-003)', () => {
       .set(CSRF)
       .send({ customerId: identified.id, fiscal: true });
     await addGenericLine(admin.agent, draft.body.id);
-    const confirmed = await admin.agent
-      .post(`${ROOT}/${draft.body.id}/confirm`)
-      .set(CSRF)
-      .send({});
+    const confirmed = await admin.agent.post(`${ROOT}/${draft.body.id}/confirm`).set(CSRF).send({});
     expect(confirmed.status).toBe(200);
     expect(confirmed.body.customerSnapshot).toEqual({ name: 'Taller Norte', rnc: '131123456' });
 
@@ -1144,10 +1255,7 @@ describe('M13 DOP profitability Administrator boundary (COST-001..004)', () => {
       ).status,
     ).toBe(201);
 
-    const confirmed = await admin.agent
-      .post(`${ROOT}/${draft.body.id}/confirm`)
-      .set(CSRF)
-      .send({});
+    const confirmed = await admin.agent.post(`${ROOT}/${draft.body.id}/confirm`).set(CSRF).send({});
     expect(confirmed.status).toBe(200);
     expect(confirmed.body.profitability).toEqual({
       status: 'UNAVAILABLE',
@@ -1261,10 +1369,7 @@ describe('M13 DOP profitability Administrator boundary (COST-001..004)', () => {
         })
       ).status,
     ).toBe(201);
-    const confirmed = await admin.agent
-      .post(`${ROOT}/${draft.body.id}/confirm`)
-      .set(CSRF)
-      .send({});
+    const confirmed = await admin.agent.post(`${ROOT}/${draft.body.id}/confirm`).set(CSRF).send({});
     expect(confirmed.status).toBe(200);
     expect(confirmed.body.profitability).toEqual({
       status: 'UNAVAILABLE',

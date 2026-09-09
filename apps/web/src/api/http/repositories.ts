@@ -33,6 +33,22 @@ import {
   searchCustomersWithHttp,
 } from '../client/customers-api';
 import {
+  addDraftLineWithHttp,
+  addPaymentWithHttp,
+  cancelInvoiceWithHttp,
+  confirmInvoiceWithHttp,
+  correctCurrencyWithHttp,
+  createDraftWithHttp,
+  discardDraftWithHttp,
+  getDraftWithHttp,
+  getInvoiceWithHttp,
+  listInvoicesWithHttp,
+  removeDraftLineWithHttp,
+  setDraftLinePriceWithHttp,
+  setDraftLineQuantityWithHttp,
+  setDraftMetaWithHttp,
+} from '../client/sales-api';
+import {
   listRecoveryRequestsWithHttp,
   listUsersWithHttp,
   resolveRecoveryWithHttp,
@@ -41,9 +57,9 @@ import {
 import { httpNotImplemented } from '../client/http-not-implemented';
 
 /**
- * Access/profile (R1), customers (M19) and mechanical services (M20) use the real API.
- * Other repositories remain unavailable until their integration milestone;
- * capability guards keep their screens out of HTTP mode.
+ * Access/profile (R1), customers (M19), services (M20) and POS drafts (M21) use the real API.
+ * Confirm/PDF/profit and later-release repositories stay stubbed;
+ * capability guards keep those screens out of HTTP mode.
  */
 export class HttpAuthRepository implements AuthRepository {
   async login(username: string, password: string) {
@@ -186,56 +202,60 @@ export class HttpCustomerRepository implements CustomerRepository {
 }
 
 export class HttpSalesRepository implements SalesRepository {
-  async listInvoices() {
-    return httpNotImplemented('HttpSalesRepository', 'listInvoices');
+  async listInvoices(tab?: Parameters<SalesRepository['listInvoices']>[0]) {
+    return listInvoicesWithHttp(tab);
   }
 
-  async getInvoice() {
-    return httpNotImplemented('HttpSalesRepository', 'getInvoice');
+  async getInvoice(id: string) {
+    return getInvoiceWithHttp(id);
   }
 
-  async addPayment() {
-    return httpNotImplemented('HttpSalesRepository', 'addPayment');
+  async addPayment(input: Parameters<SalesRepository['addPayment']>[0]) {
+    return addPaymentWithHttp(input);
   }
 
-  async cancelInvoice() {
-    return httpNotImplemented('HttpSalesRepository', 'cancelInvoice');
+  async cancelInvoice(input: Parameters<SalesRepository['cancelInvoice']>[0]) {
+    return cancelInvoiceWithHttp(input);
   }
 
-  async correctCurrency() {
-    return httpNotImplemented('HttpSalesRepository', 'correctCurrency');
+  async correctCurrency(input: Parameters<SalesRepository['correctCurrency']>[0]) {
+    return correctCurrencyWithHttp(input);
   }
 
   async createDraft() {
-    return httpNotImplemented('HttpSalesRepository', 'createDraft');
+    return createDraftWithHttp();
   }
 
-  async getDraft() {
-    return httpNotImplemented('HttpSalesRepository', 'getDraft');
+  async getDraft(id: string) {
+    return getDraftWithHttp(id);
   }
 
-  async addLine() {
-    return httpNotImplemented('HttpSalesRepository', 'addLine');
+  async addLine(input: Parameters<SalesRepository['addLine']>[0]) {
+    return addDraftLineWithHttp(input);
   }
 
-  async removeLine() {
-    return httpNotImplemented('HttpSalesRepository', 'removeLine');
+  async removeLine(input: Parameters<SalesRepository['removeLine']>[0]) {
+    return removeDraftLineWithHttp(input);
   }
 
-  async setLinePrice() {
-    return httpNotImplemented('HttpSalesRepository', 'setLinePrice');
+  async setLinePrice(input: Parameters<SalesRepository['setLinePrice']>[0]) {
+    return setDraftLinePriceWithHttp(input);
   }
 
-  async setDraftMeta() {
-    return httpNotImplemented('HttpSalesRepository', 'setDraftMeta');
+  async setLineQuantity(input: Parameters<SalesRepository['setLineQuantity']>[0]) {
+    return setDraftLineQuantityWithHttp(input);
   }
 
-  async confirmInvoice(_draftId: string, _payment?: ConfirmInvoicePayment) {
-    return httpNotImplemented('HttpSalesRepository', 'confirmInvoice');
+  async setDraftMeta(input: Parameters<SalesRepository['setDraftMeta']>[0]) {
+    return setDraftMetaWithHttp(input);
   }
 
-  async discardDraft() {
-    return httpNotImplemented('HttpSalesRepository', 'discardDraft');
+  async confirmInvoice(draftId: string, payment?: ConfirmInvoicePayment) {
+    return confirmInvoiceWithHttp(draftId, payment);
+  }
+
+  async discardDraft(draftId: string) {
+    return discardDraftWithHttp(draftId);
   }
 }
 

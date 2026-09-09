@@ -29,7 +29,7 @@ import {
   parsePositiveDecimal,
   sumInvoiceMoney,
 } from './money/index.js';
-import { assertDraftLineTypeEnabled, requireInvoiceManager } from './policies.js';
+import { assertDraftLineCostEditable, assertDraftLineDescriptionEditable, assertDraftLineQuantityEditable, assertDraftLineTypeEnabled, requireInvoiceManager } from './policies.js';
 import {
   toConfirmedHistorySnapshot,
   toDraftHistorySnapshot,
@@ -73,6 +73,7 @@ function assertFiscalCustomer(
 function toMerchandiseDraftLine(profile: {
   type: 'GENERIC' | 'EXTERNAL';
   description: string;
+  notes?: string | null;
   quantity?: string;
   unitPrice: string;
   costProvenance: 'ACTUAL' | 'ESTIMATED' | 'UNKNOWN';
@@ -90,6 +91,7 @@ function toMerchandiseDraftLine(profile: {
   return {
     type: profile.type,
     description: profile.description,
+    notes: profile.notes ?? null,
     quantity,
     unitPrice: profile.unitPrice,
     acquisitionCostDop: cost.amount,
@@ -102,6 +104,7 @@ function resolveDeliveryDraftLine(candidate: unknown): DraftLineWrite {
   return {
     type: profile.type,
     description: profile.description,
+    notes: profile.notes ?? null,
     quantity: DEFAULT_LINE_QUANTITY,
     unitPrice: profile.unitPrice,
   };
@@ -121,6 +124,7 @@ async function resolveServiceDraftLine(
   return {
     type: profile.type,
     description: profile.description ?? catalogService.name,
+    notes: profile.notes ?? null,
     quantity: DEFAULT_LINE_QUANTITY,
     unitPrice: profile.unitPrice,
     serviceId: profile.serviceId,
@@ -312,18 +316,40 @@ export class SalesService {
       const line = existing.lines.find((entry) => entry.id === lineId);
       if (!line) throw AppError.notFound(LINE_NOT_FOUND_MESSAGE);
       assertDraftLineTypeEnabled(line.type);
+      if (patch.quantity !== undefined) {
+        assertDraftLineQuantityEditable(line.type);
+      }
+      if (patch.description !== undefined) {
+        assertDraftLineDescriptionEditable(line.type);
+      }
+      if (patch.acquisitionCostDop !== undefined) {
+        assertDraftLineCostEditable(line.type);
+      }
 
+      const unitPrice = patch.unitPrice ?? line.unitPrice;
+      const quantity = patch.quantity ?? line.quantity;
       calculateLineMoney({
         type: line.type,
-        unitPrice: patch.unitPrice,
-        quantity: line.quantity,
+        unitPrice,
+        quantity,
         fiscal: existing.fiscal,
       });
 
-      const updated = await sales.updateLinePrice({
+      const costPatch =
+        patch.acquisitionCostDop === undefined
+          ? {}
+          : patch.acquisitionCostDop == null
+            ? { acquisitionCostDop: null, costProvenance: 'UNKNOWN' as const }
+            : { acquisitionCostDop: patch.acquisitionCostDop, costProvenance: 'ACTUAL' as const };
+
+      const updated = await sales.updateLine({
         invoiceId,
         lineId,
-        unitPrice: patch.unitPrice,
+        ...(patch.unitPrice !== undefined ? { unitPrice: patch.unitPrice } : {}),
+        ...(patch.quantity !== undefined ? { quantity: patch.quantity } : {}),
+        ...(patch.description !== undefined ? { description: patch.description } : {}),
+        ...(patch.notes !== undefined ? { notes: patch.notes } : {}),
+        ...costPatch,
       });
       const next = updated.lines.find((entry) => entry.id === lineId);
       if (!next) throw AppError.internal(LINE_NOT_FOUND_MESSAGE);

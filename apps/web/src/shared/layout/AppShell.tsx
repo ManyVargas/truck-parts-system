@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 
 import { useAuth } from '../../features/auth/useAuth';
-import { APP_NAME } from '../config/brand';
 import { useAppCapabilities } from '../config/CapabilitiesProvider';
-import { Button } from '../ui';
+import { BrandMark, Button } from '../ui';
 import { COMMERCIAL_SIDEBAR_ID } from './breakpoints';
 import { CommercialSidebar } from './CommercialSidebar';
 import { DemoControls } from './DemoControls';
@@ -125,9 +124,11 @@ export function AppShell() {
             </Button>
           ) : null}
 
-          <p className="min-w-0 flex-1 truncate text-sm text-navy-400">
-            {capabilities.prototypeControls ? `Prototipo ${APP_NAME}` : APP_NAME}
-          </p>
+          <BrandMark
+            className="min-w-0 flex-1"
+            showLogo={showMenuButton}
+            eyebrow={capabilities.prototypeControls ? 'Prototipo' : undefined}
+          />
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {!user.mustChangePassword && <DemoControls />}
             <UserMenu user={user} onLogout={logout} />

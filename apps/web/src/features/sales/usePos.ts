@@ -20,6 +20,7 @@ export type PosLineSnapshot = Pick<
   | 'qtyProductId'
   | 'serviceId'
   | 'description'
+  | 'notes'
   | 'quantity'
   | 'unitPrice'
   | 'acquisitionCostDop'
@@ -40,6 +41,7 @@ export function snapshotPosLine(line: PosLineView): PosLineSnapshot {
     qtyProductId: line.qtyProductId,
     serviceId: line.serviceId,
     description: line.description,
+    notes: line.notes,
     quantity: line.quantity,
     unitPrice: line.unitPrice,
     acquisitionCostDop: line.acquisitionCostDop,
@@ -63,6 +65,7 @@ export function toPosAddLineInput(line: PosLineSnapshot): Omit<AddDraftLineInput
     qtyProductId: line.qtyProductId,
     serviceId: line.serviceId,
     description: line.description,
+    notes: line.notes,
     quantity: line.quantity,
     unitPrice: line.unitPrice,
     acquisitionCostDop: line.acquisitionCostDop,
@@ -265,6 +268,49 @@ export function usePos(draftId: string | undefined) {
     [applyDraftResult, draftId, runExclusive],
   );
 
+  const setLineQuantity = useCallback(
+    async (lineId: string, quantity: number): Promise<Result<void>> => {
+      if (!draftId || draftId === 'new') {
+        return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
+      }
+      return runExclusive(async () =>
+        applyDraftResult(await salesRepository.setLineQuantity({ draftId, lineId, quantity })),
+      );
+    },
+    [applyDraftResult, draftId, runExclusive],
+  );
+
+  const updateLine = useCallback(
+    async (
+      lineId: string,
+      patch: {
+        unitPrice: number;
+        quantity?: number;
+        description?: string;
+        notes?: string | null;
+        acquisitionCostDop?: number | null;
+      },
+    ): Promise<Result<void>> => {
+      if (!draftId || draftId === 'new') {
+        return { ok: false, error: { code: 'VALIDATION', message: 'Borrador no listo' } };
+      }
+      return runExclusive(async () =>
+        applyDraftResult(
+          await salesRepository.setLinePrice({
+            draftId,
+            lineId,
+            unitPrice: patch.unitPrice,
+            quantity: patch.quantity,
+            description: patch.description,
+            notes: patch.notes,
+            acquisitionCostDop: patch.acquisitionCostDop,
+          }),
+        ),
+      );
+    },
+    [applyDraftResult, draftId, runExclusive],
+  );
+
   const setMeta = useCallback(
     async (input: Omit<SetDraftMetaInput, 'draftId'>): Promise<Result<void>> => {
       if (!draftId || draftId === 'new') {
@@ -324,6 +370,8 @@ export function usePos(draftId: string | undefined) {
     addLine,
     removeLine,
     setLinePrice,
+    setLineQuantity,
+    updateLine,
     setMeta,
     confirm,
     discard,

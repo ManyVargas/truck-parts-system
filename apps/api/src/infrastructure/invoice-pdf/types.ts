@@ -1,5 +1,6 @@
 export type InvoicePdfLineFacts = {
   description: string;
+  notes: string | null;
   quantity: string;
   unitPrice: string;
   gross: string;

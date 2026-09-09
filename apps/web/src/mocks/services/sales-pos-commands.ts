@@ -4,6 +4,7 @@ import type {
   CreateDraftResult,
   RemoveDraftLineInput,
   SetDraftLinePriceInput,
+  SetDraftLineQuantityInput,
   SetDraftMetaInput,
 } from '../../api/contracts/sales';
 import type {
@@ -99,6 +100,11 @@ function nextLineId(draft: Invoice): string {
 
 function isTaxableLineType(type: LineType): boolean {
   return type !== 'SERVICE' && type !== 'DELIVERY';
+}
+
+function optionalLineNotes(notes?: string | null): string | undefined {
+  const trimmed = notes?.trim() ?? '';
+  return trimmed === '' ? undefined : trimmed;
 }
 
 function parseNonNegativeMoney(value: number | undefined): Result<number> {
@@ -257,6 +263,7 @@ export function addDraftLine(
       id: nextLineId(draft),
       type: 'ITEM',
       description: item.name,
+      notes: optionalLineNotes(input.notes),
       itemId: item.id,
       quantity: 1,
       unitPrice: 0,
@@ -305,6 +312,7 @@ export function addDraftLine(
         id: nextLineId(draft),
         type: 'QTY',
         description: product.name,
+        notes: optionalLineNotes(input.notes),
         qtyProductId: product.id,
         quantity: quantity.value,
         unitPrice,
@@ -343,6 +351,7 @@ export function addDraftLine(
       id: nextLineId(draft),
       type: 'SERVICE',
       description: service.name,
+      notes: optionalLineNotes(input.notes),
       serviceId: service.id,
       quantity: 1,
       unitPrice: unitPrice.value,
@@ -378,6 +387,7 @@ export function addDraftLine(
     id: nextLineId(draft),
     type: input.type,
     description,
+    notes: optionalLineNotes(input.notes),
     quantity: quantity.value,
     unitPrice: unitPrice.value,
     taxable: isTaxableLineType(input.type),
@@ -434,9 +444,160 @@ export function setDraftLinePrice(
   if (!unitPrice.ok) {
     return unitPrice;
   }
+
+  const descriptionEditable =
+    line.type === 'GENERIC' || line.type === 'EXTERNAL' || line.type === 'DELIVERY';
+  let description: string | undefined;
+  if (input.description !== undefined && descriptionEditable) {
+    description = input.description.trim() || (line.type === 'DELIVERY' ? 'Entrega' : '');
+    if (!description) {
+      return err({ code: 'VALIDATION', message: 'La descripción es obligatoria' });
+    }
+  }
+
+  let acquisitionCostDop: number | null | undefined;
+  if (
+    input.acquisitionCostDop !== undefined &&
+    (line.type === 'GENERIC' || line.type === 'EXTERNAL')
+  ) {
+    if (input.acquisitionCostDop == null) {
+      acquisitionCostDop = null;
+    } else {
+      const cost = parseNonNegativeMoney(input.acquisitionCostDop);
+      if (!cost.ok) {
+        return cost;
+      }
+      acquisitionCostDop = cost.value;
+    }
+  }
+
+  let quantity: number | undefined;
+  if (input.quantity !== undefined) {
+    if (!QUANTITY_EDITABLE_LINE_TYPES.has(line.type)) {
+      return err({
+        code: 'VALIDATION',
+        message: 'Este tipo de línea no permite cambiar la cantidad',
+      });
+    }
+    const parsedQuantity = parsePositiveInteger(input.quantity);
+    if (!parsedQuantity.ok) {
+      return parsedQuantity;
+    }
+    quantity = parsedQuantity.value;
+    if (line.type === 'QTY' && quantity !== line.quantity) {
+      const adjusted = adjustQtyReservation(
+        state,
+        _actor,
+        draftResult.value.id,
+        line,
+        quantity,
+      );
+      if (!adjusted.ok) {
+        return adjusted;
+      }
+    }
+  }
+
   line.unitPrice = unitPrice.value;
   line.pricePending = false;
+  if (quantity !== undefined) line.quantity = quantity;
+  if (description !== undefined) line.description = description;
+  if (input.notes !== undefined) {
+    const notes = optionalLineNotes(input.notes);
+    if (notes) {
+      line.notes = notes;
+    } else {
+      delete line.notes;
+    }
+  }
+  if (acquisitionCostDop === null) {
+    delete line.acquisitionCostDop;
+  } else if (acquisitionCostDop !== undefined) {
+    line.acquisitionCostDop = acquisitionCostDop;
+  }
+
   return ok(draftResult.value);
+}
+
+const QUANTITY_EDITABLE_LINE_TYPES: ReadonlySet<LineType> = new Set(['QTY', 'GENERIC', 'EXTERNAL']);
+
+export function setDraftLineQuantity(
+  state: AppState,
+  actor: User,
+  input: SetDraftLineQuantityInput,
+): Result<Invoice> {
+  const found = findInvoice(state, input.draftId);
+  if (!found.ok) {
+    return found;
+  }
+  const draftResult = requireDraft(found.value);
+  if (!draftResult.ok) {
+    return draftResult;
+  }
+  const line = draftResult.value.lines.find((entry) => entry.id === input.lineId);
+  if (!line) {
+    return err({ code: 'NOT_FOUND', message: 'Línea no encontrada' });
+  }
+  if (!QUANTITY_EDITABLE_LINE_TYPES.has(line.type)) {
+    return err({
+      code: 'VALIDATION',
+      message: 'Este tipo de línea no permite cambiar la cantidad',
+    });
+  }
+
+  const quantity = parsePositiveInteger(input.quantity);
+  if (!quantity.ok) {
+    return quantity;
+  }
+  if (quantity.value === line.quantity) {
+    return ok(draftResult.value);
+  }
+
+  if (line.type === 'QTY') {
+    const adjusted = adjustQtyReservation(state, actor, draftResult.value.id, line, quantity.value);
+    if (!adjusted.ok) {
+      return adjusted;
+    }
+  }
+
+  line.quantity = quantity.value;
+  return ok(draftResult.value);
+}
+
+function adjustQtyReservation(
+  state: AppState,
+  actor: User,
+  draftId: string,
+  line: InvoiceLine,
+  nextQuantity: number,
+): Result<void> {
+  const product = state.qtyProducts.find((entry) => entry.id === line.qtyProductId);
+  if (!product) {
+    return err({ code: 'NOT_FOUND', message: 'Producto no encontrado' });
+  }
+
+  const delta = nextQuantity - line.quantity;
+  if (delta > 0) {
+    const available = availableToReserve(product.onHand, product.reserved);
+    if (delta > available) {
+      return err({
+        code: 'VALIDATION',
+        message: `Solo hay ${available} unidad(es) disponible(s)`,
+      });
+    }
+    product.reserved += delta;
+    appendEvent(
+      state,
+      'QTY_RESERVED',
+      `${delta} × ${product.id} reservado en borrador ${draftId}`,
+      actor,
+      { qtyProductId: product.id, draftId, quantity: delta },
+    );
+    return ok(undefined);
+  }
+
+  product.reserved = Math.max(0, product.reserved + delta);
+  return ok(undefined);
 }
 
 export function setDraftMeta(

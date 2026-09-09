@@ -406,5 +406,6 @@ export {
   discardDraft,
   removeDraftLine,
   setDraftLinePrice,
+  setDraftLineQuantity,
   setDraftMeta,
 } from './sales-pos-commands';

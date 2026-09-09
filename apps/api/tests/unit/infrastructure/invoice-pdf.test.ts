@@ -12,9 +12,10 @@ const facts = {
   customerName: 'Cliente contado',
   customerRnc: null,
   confirmedAt: new Date('2026-09-08T18:00:00.000Z'),
-  lines: [
+    lines: [
     {
       description: 'Filtro',
+      notes: null,
       quantity: '1.00',
       unitPrice: '118.00',
       gross: '118.00',
@@ -35,6 +36,22 @@ describe('invoice PDF renderer (SALE-004)', () => {
     expect(text).toContain('444f50');
     expect(text).toContain('3131382e3030');
     expect(text).not.toContain('e-CF');
+  });
+
+  it('prints optional line notes below the description on internal-v2', async () => {
+    const pdf = await pdfkitInvoicePdfRenderer.render({
+      ...facts,
+      lines: [
+        {
+          ...facts.lines[0],
+          notes: 'Installed water pump',
+        },
+      ],
+      templateVersion: 'internal-v2',
+    });
+    const text = pdf.toString('latin1');
+    expect(text).toContain('46696c74726f');
+    expect(text).toContain('496e7374616c6c6564');
   });
 
   it('rejects an unsupported persisted template version instead of changing the document', async () => {

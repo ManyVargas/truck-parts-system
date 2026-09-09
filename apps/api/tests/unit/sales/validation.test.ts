@@ -13,6 +13,7 @@ import {
   externalDraftLineSchema,
   genericDraftLineSchema,
   serviceDraftLineSchema,
+  lineNotesSchema,
   setLinePriceSchema,
   updateDraftMetaSchema,
 } from '../../../src/features/sales/validation.js';
@@ -65,6 +66,19 @@ describe('draft GENERIC line validation', () => {
     });
     expect(addInvoiceLineSchema.parse({ type: 'ITEM' })).toEqual({ type: 'ITEM' });
     expect(setLinePriceSchema.parse({ unitPrice: '50.00' })).toEqual({ unitPrice: '50.00' });
+    expect(setLinePriceSchema.parse({ quantity: '3.00' })).toEqual({ quantity: '3.00' });
+    expect(setLinePriceSchema.parse({ description: 'Filtro de aire' })).toEqual({
+      description: 'Filtro de aire',
+    });
+    expect(setLinePriceSchema.parse({ notes: '  Se instaló bomba  ' })).toEqual({
+      notes: 'Se instaló bomba',
+    });
+    expect(setLinePriceSchema.parse({ notes: '   ' })).toEqual({ notes: null });
+    expect(setLinePriceSchema.parse({ notes: null })).toEqual({ notes: null });
+    expect(setLinePriceSchema.parse({ unitPrice: '50.00', quantity: '2.00' })).toEqual({
+      unitPrice: '50.00',
+      quantity: '2.00',
+    });
   });
 
   it('rejects numeric money, UNKNOWN with amount, missing actual cost, and extra fields', () => {
@@ -95,6 +109,11 @@ describe('draft GENERIC line validation', () => {
     ).toBe(COST_AMOUNT_REQUIRED_MESSAGE);
     expect(addInvoiceLineSchema.safeParse({ type: 'GENERIC', itemId: 'x' }).success).toBe(false);
     expect(setLinePriceSchema.safeParse({ unitPrice: '10', extra: true }).success).toBe(false);
+    expect(setLinePriceSchema.safeParse({}).success).toBe(false);
+    expect(setLinePriceSchema.safeParse({ quantity: '0.00' }).success).toBe(false);
+    expect(lineNotesSchema.safeParse('x'.repeat(101)).success).toBe(false);
+    expect(lineNotesSchema.parse('a\nb')).toBe('a\nb');
+    expect(lineNotesSchema.parse('  \n  ')).toBe(null);
   });
 
   it('rejects values that cannot be stored as DECIMAL(12,2)', () => {

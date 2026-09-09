@@ -55,6 +55,7 @@ import type {
   SalesListRow,
   SalesListTab,
   SetDraftLinePriceInput,
+  SetDraftLineQuantityInput,
   SetDraftMetaInput,
 } from './sales';
 import type {
@@ -135,6 +136,7 @@ export type SalesRepository = {
   addLine(input: AddDraftLineInput): Promise<Result<PosDraftView>>;
   removeLine(input: RemoveDraftLineInput): Promise<Result<PosDraftView>>;
   setLinePrice(input: SetDraftLinePriceInput): Promise<Result<PosDraftView>>;
+  setLineQuantity(input: SetDraftLineQuantityInput): Promise<Result<PosDraftView>>;
   setDraftMeta(input: SetDraftMetaInput): Promise<Result<PosDraftView>>;
   confirmInvoice(draftId: string, payment?: ConfirmInvoicePayment): Promise<Result<PosDraftView>>;
   discardDraft(draftId: string): Promise<Result<void>>;

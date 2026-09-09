@@ -13,6 +13,12 @@ export const DUPLICATE_DELIVERY_LINE_MESSAGE = 'A draft can have at most one DEL
 export const INACTIVE_SERVICE_LINE_MESSAGE = 'Inactive catalog services cannot be added to a draft';
 export const CATALOG_SERVICE_NOT_FOUND_MESSAGE = 'Catalog service not found';
 export const LINE_NOT_FOUND_MESSAGE = 'Invoice line not found';
+export const FIXED_LINE_QUANTITY_MESSAGE = 'This line type has a fixed quantity of 1';
+export const LINE_DESCRIPTION_NOT_EDITABLE_MESSAGE =
+  'This line type does not allow editing the description';
+export const LINE_COST_NOT_EDITABLE_MESSAGE =
+  'This line type does not allow editing the acquisition cost';
+export const LINE_NOTE_MAX_LENGTH = 100;
 export const UNKNOWN_COST_AMOUNT_MESSAGE = 'UNKNOWN cost must not include an amount';
 export const COST_AMOUNT_REQUIRED_MESSAGE =
   'Acquisition cost amount is required when provenance is not UNKNOWN';

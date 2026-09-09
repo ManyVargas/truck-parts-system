@@ -4,6 +4,7 @@ import { z } from 'zod';
 import {
   COST_AMOUNT_REQUIRED_MESSAGE,
   DRAFT_META_REQUIRED_MESSAGE,
+  LINE_NOTE_MAX_LENGTH,
   UNKNOWN_COST_AMOUNT_MESSAGE,
 } from './constants.js';
 import { COST_PROVENANCES, INVOICE_LINE_TYPES } from './money/types.js';
@@ -70,9 +71,22 @@ const positiveDecimal12x2StringSchema = decimal12x2StringSchema.superRefine((val
   }
 });
 
+function normalizeLineNotes(value: unknown): unknown {
+  if (value === undefined || value === null) return value;
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
+export const lineNotesSchema = z.preprocess(
+  normalizeLineNotes,
+  z.string().max(LINE_NOTE_MAX_LENGTH).nullable().optional(),
+);
+
 export const addInvoiceLineSchema = z.strictObject({
   type: invoiceLineTypeSchema,
   description: z.string().trim().min(1).optional(),
+  notes: lineNotesSchema,
   quantity: moneyStringSchema.optional(),
   unitPrice: moneyStringSchema.optional(),
   costProvenance: costProvenanceSchema.optional(),
@@ -85,6 +99,7 @@ function merchandiseDraftLineSchema<T extends 'GENERIC' | 'EXTERNAL'>(type: T) {
     .strictObject({
       type: z.literal(type),
       description: z.string().trim().min(1),
+      notes: lineNotesSchema,
       quantity: positiveDecimal12x2StringSchema.optional(),
       unitPrice: decimal12x2StringSchema,
       costProvenance: costProvenanceSchema,
@@ -119,16 +134,32 @@ export const serviceDraftLineSchema = z.strictObject({
   serviceId: z.uuid(),
   unitPrice: decimal12x2StringSchema,
   description: z.string().trim().min(1).optional(),
+  notes: lineNotesSchema,
 });
 
 export const deliveryDraftLineSchema = z.strictObject({
   type: z.literal('DELIVERY'),
   unitPrice: decimal12x2StringSchema,
   description: z.string().trim().min(1),
+  notes: lineNotesSchema,
 });
 
-export const setLinePriceSchema = z.strictObject({
-  unitPrice: decimal12x2StringSchema,
-});
+export const setLinePriceSchema = z
+  .strictObject({
+    unitPrice: decimal12x2StringSchema.optional(),
+    quantity: positiveDecimal12x2StringSchema.optional(),
+    description: z.string().trim().min(1).optional(),
+    notes: lineNotesSchema,
+    acquisitionCostDop: decimal12x2StringSchema.nullable().optional(),
+  })
+  .refine(
+    (value) =>
+      value.unitPrice !== undefined ||
+      value.quantity !== undefined ||
+      value.description !== undefined ||
+      value.notes !== undefined ||
+      value.acquisitionCostDop !== undefined,
+    DRAFT_META_REQUIRED_MESSAGE,
+  );
 
 export const confirmInvoiceSchema = z.strictObject({});

@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { APP_NAME } from '../../../src/shared/config/brand';
 import { CAPABILITY_PRESETS } from '../../../src/shared/config/capabilities';
 import { AppShell } from '../../../src/shared/layout/AppShell';
 import { RoleNav } from '../../../src/shared/layout/RoleNav';
@@ -93,6 +94,7 @@ describe('AppShell sidebar', () => {
     renderShell();
 
     expect(screen.queryByText(/sección/i)).not.toBeInTheDocument();
+    expect(screen.getByText(APP_NAME)).toBeVisible();
     expect(screen.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Abrir menú' })).not.toBeInTheDocument();
   });

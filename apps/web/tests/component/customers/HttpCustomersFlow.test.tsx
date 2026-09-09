@@ -141,13 +141,13 @@ function mount(path = '/customers') {
 }
 
 describe('M19 HTTP customer directory UI', () => {
-  it('lets a seller search and create without exposing invoice counts or POS', async () => {
+  it('lets a seller search and create without exposing invoice counts', async () => {
     const user = userEvent.setup();
     mount();
 
     expect(await screen.findByText('Cliente contado')).toBeVisible();
     expect(screen.queryByRole('columnheader', { name: 'Facturas' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Ventas y Facturas' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ventas y Facturas' })).toBeVisible();
 
     const cashRow = screen.getByText('Cliente contado').closest('tr');
     expect(cashRow).not.toBeNull();

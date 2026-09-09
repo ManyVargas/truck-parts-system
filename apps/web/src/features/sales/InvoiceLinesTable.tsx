@@ -2,6 +2,7 @@ import type { InvoiceLineView } from '../../api/contracts/sales';
 import type { Currency } from '../../api/contracts/entities';
 import { HoverRow, money, Mono, TableShell } from '../../shared/ui';
 import { LINE_TYPE_LABELS } from './labels';
+import { InvoiceLineNoteText } from './InvoiceLineNoteText';
 
 export type InvoiceLinesTableProps = {
   lines: InvoiceLineView[];
@@ -19,14 +20,17 @@ export function InvoiceLinesTable({ lines, currency, fiscal }: InvoiceLinesTable
           <th className="px-4 py-3 font-medium text-right">Cantidad</th>
           <th className="px-4 py-3 font-medium text-right">Precio final</th>
           <th className="px-4 py-3 font-medium text-right">Base</th>
-          <th className="px-4 py-3 font-medium text-right">Impuesto ITBIS</th>
+          <th className="px-4 py-3 font-medium text-right">ITBIS</th>
           <th className="px-4 py-3 font-medium text-right">Total</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-navy-100">
         {lines.map((line) => (
           <HoverRow key={line.id}>
-            <td className="px-4 py-3">{line.description}</td>
+            <td className="px-4 py-3">
+              <div>{line.description}</div>
+              <InvoiceLineNoteText notes={line.notes} />
+            </td>
             <td className="px-4 py-3 text-navy-400">{LINE_TYPE_LABELS[line.type]}</td>
             <td className="px-4 py-3 text-right font-mono">{line.quantity}</td>
             <td className="px-4 py-3 text-right font-mono">{money(line.unitPrice, currency)}</td>

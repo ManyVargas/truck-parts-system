@@ -149,6 +149,7 @@ export type InvoiceLine = {
   id: string;
   type: LineType;
   description: string;
+  notes?: string;
   itemId?: string;
   qtyProductId?: string;
   serviceId?: string;

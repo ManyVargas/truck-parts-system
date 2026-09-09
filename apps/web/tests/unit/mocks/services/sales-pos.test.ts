@@ -376,6 +376,47 @@ describe('POS draft commands', () => {
     expect(line.acquisitionCostDop).toBe(unitCostDop);
   });
 
+  it('does not partially edit a line when a later field is invalid', () => {
+    const state = createInitialState();
+    const created = createDraft(state, seller);
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const draftId = created.value.draftId;
+    expect(
+      addDraftLine(state, seller, {
+        draftId,
+        type: 'GENERIC',
+        description: 'Filtro',
+        notes: 'Original',
+        quantity: 1,
+        unitPrice: 100,
+      }).ok,
+    ).toBe(true);
+    const line = state.invoices.find((entry) => entry.id === draftId)!.lines[0]!;
+
+    const result = setDraftLinePrice(state, seller, {
+      draftId,
+      lineId: line.id,
+      unitPrice: 125,
+      quantity: 3,
+      description: 'Filtro de aire',
+      notes: 'Modificada',
+      acquisitionCostDop: Number.NaN,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(line).toMatchObject({
+      description: 'Filtro',
+      notes: 'Original',
+      quantity: 1,
+      unitPrice: 100,
+    });
+    expect(line.acquisitionCostDop).toBeUndefined();
+  });
+
   it('freezes line acquisitionCostDop on confirm so later live cost edits do not change profit', () => {
     const state = createInitialState();
     expect(confirmInvoice(state, seller, 'INV-DRAFT-01').ok).toBe(true);

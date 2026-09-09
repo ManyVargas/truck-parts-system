@@ -32,7 +32,9 @@ function moneyString(value: { toFixed(places: number): string }): string {
   return value.toFixed(MONEY_DECIMAL_PLACES);
 }
 
-function toPublicFxProvenance(invoice: InvoiceRecord | InvoiceListRecord): PublicFxProvenance | undefined {
+function toPublicFxProvenance(
+  invoice: InvoiceRecord | InvoiceListRecord,
+): PublicFxProvenance | undefined {
   if (
     invoice.exchangeRateDopPerUsd == null ||
     invoice.fxRateSource == null ||
@@ -49,10 +51,7 @@ function toPublicFxProvenance(invoice: InvoiceRecord | InvoiceListRecord): Publi
   };
 }
 
-function toPublicProfitability(
-  value: Profitability,
-  fx?: PublicFxProvenance,
-): PublicProfitability {
+function toPublicProfitability(value: Profitability, fx?: PublicFxProvenance): PublicProfitability {
   return {
     status: value.status,
     reason: value.reason,
@@ -219,13 +218,15 @@ function toPublicLine(
     id: line.id,
     type: line.type,
     description: line.description,
+    notes: line.notes,
     quantity: moneyString(line.quantity),
     unitPrice: moneyString(line.unitPrice),
     taxable: isTaxableLineType(line.type),
     gross: moneyString(money.gross),
     base: moneyString(money.base),
     itbis: moneyString(money.itbis),
-    acquisitionCostDop: line.acquisitionCostDop == null ? null : moneyString(line.acquisitionCostDop),
+    acquisitionCostDop:
+      line.acquisitionCostDop == null ? null : moneyString(line.acquisitionCostDop),
     costProvenance: line.costProvenance,
     serviceId: line.serviceId,
     ...(profitability ? { profitability } : {}),
@@ -294,6 +295,7 @@ export function toPublicInvoiceListItem(
     customer: toCustomerView(invoice),
     customerSnapshot: customerSnapshotOf(invoice),
     confirmedAt: invoice.confirmedAt?.toISOString() ?? null,
+    totals: invoiceTotals(invoice),
     ...(profitability ? { profitability: profitability.invoice } : {}),
     createdAt: invoice.createdAt.toISOString(),
     updatedAt: invoice.updatedAt.toISOString(),
@@ -314,7 +316,9 @@ export function toDraftHistorySnapshot(invoice: {
   };
 }
 
-export function toConfirmedHistorySnapshot(invoice: InvoiceRecord): InvoiceConfirmedHistorySnapshot {
+export function toConfirmedHistorySnapshot(
+  invoice: InvoiceRecord,
+): InvoiceConfirmedHistorySnapshot {
   const snapshot = customerSnapshotOf(invoice);
   if (invoice.number == null || invoice.confirmedAt == null || snapshot == null) {
     throw new Error('Confirmed invoice is missing snapshot fields');
@@ -336,9 +340,11 @@ export function toLineHistorySnapshot(line: InvoiceLine): InvoiceLineHistorySnap
     id: line.id,
     type: line.type,
     description: line.description,
+    notes: line.notes ?? null,
     quantity: moneyString(line.quantity),
     unitPrice: moneyString(line.unitPrice),
-    acquisitionCostDop: line.acquisitionCostDop == null ? null : moneyString(line.acquisitionCostDop),
+    acquisitionCostDop:
+      line.acquisitionCostDop == null ? null : moneyString(line.acquisitionCostDop),
     costProvenance: line.costProvenance,
     serviceId: line.serviceId,
   };

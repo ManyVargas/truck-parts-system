@@ -1,6 +1,8 @@
+import { Prisma, type InvoiceLine } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
 
 import { historyEventSchema } from '../../../src/features/history/validation.js';
+import { toLineHistorySnapshot } from '../../../src/features/sales/projection.js';
 
 const id = '11111111-1111-4111-8111-111111111111';
 const snapshot = {
@@ -45,6 +47,7 @@ describe('invoice draft history validation', () => {
         id,
         type: 'GENERIC' as const,
         description: 'Filtro',
+        notes: null,
         quantity: '1.00',
         unitPrice: '118.00',
         acquisitionCostDop: null,
@@ -64,6 +67,78 @@ describe('invoice draft history validation', () => {
         payload: { ...event.payload, passwordHash: 'secret' },
       }).success,
     ).toBe(false);
+  });
+
+  it('treats omitted invoice line notes as null on add and update events', () => {
+    const line = {
+      id,
+      type: 'GENERIC' as const,
+      description: 'Filtro',
+      quantity: '1.00',
+      unitPrice: '118.00',
+      acquisitionCostDop: null,
+      costProvenance: 'UNKNOWN' as const,
+      serviceId: null,
+    };
+    const actor = { actorType: 'USER' as const, actorUserId: id };
+    const added = historyEventSchema.parse({
+      actor,
+      subjectType: 'INVOICE',
+      subjectId: id,
+      eventType: 'INVOICE_LINE_ADDED',
+      payload: line,
+    });
+    expect(added.eventType).toBe('INVOICE_LINE_ADDED');
+    if (added.eventType === 'INVOICE_LINE_ADDED') {
+      expect(added.payload.notes).toBeNull();
+    }
+
+    const updated = historyEventSchema.parse({
+      actor,
+      subjectType: 'INVOICE',
+      subjectId: id,
+      eventType: 'INVOICE_LINE_UPDATED',
+      payload: { before: line, after: line },
+    });
+    expect(updated.eventType).toBe('INVOICE_LINE_UPDATED');
+    if (updated.eventType === 'INVOICE_LINE_UPDATED') {
+      expect(updated.payload.before.notes).toBeNull();
+      expect(updated.payload.after.notes).toBeNull();
+    }
+  });
+
+  it('snapshots a persisted line without notes as null for INVOICE_LINE_UPDATED', () => {
+    const line = {
+      id,
+      invoiceId: id,
+      type: 'GENERIC',
+      description: 'Filtro',
+      quantity: new Prisma.Decimal('1.00'),
+      unitPrice: new Prisma.Decimal('118.00'),
+      acquisitionCostDop: null,
+      costProvenance: 'UNKNOWN',
+      serviceId: null,
+      gross: null,
+      base: null,
+      itbis: null,
+      createdAt: new Date(),
+    } as InvoiceLine;
+
+    const payload = {
+      before: toLineHistorySnapshot(line),
+      after: toLineHistorySnapshot(line),
+    };
+    expect(payload.before.notes).toBeNull();
+    expect(payload.after.notes).toBeNull();
+
+    const parsed = historyEventSchema.parse({
+      actor: { actorType: 'USER', actorUserId: id },
+      subjectType: 'INVOICE',
+      subjectId: id,
+      eventType: 'INVOICE_LINE_UPDATED',
+      payload,
+    });
+    expect(parsed.eventType).toBe('INVOICE_LINE_UPDATED');
   });
 
   it('accepts INVOICE_CONFIRMED with FAC- number and customer snapshot', () => {

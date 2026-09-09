@@ -72,16 +72,30 @@ describe('PosPage', () => {
     expect(discardDraft.className).toEqual(expect.stringContaining('bg-transparent'));
     expect(confirmSale.className).toEqual(expect.stringContaining('bg-brand'));
     expect(screen.getByTestId('pos-total')).toBeVisible();
+
+    const backToSales = screen.getByRole('link', { name: 'Volver a Ventas y Facturas' });
+    expect(backToSales).toHaveAttribute('href', '/sales');
+    expect(backToSales).toHaveTextContent('');
   });
 
-  it('discards a draft with lines via undo toast instead of a confirm dialog', async () => {
+  it('asks before discarding a draft and restores it from the undo toast', async () => {
     const user = userEvent.setup();
     renderPos();
     await screen.findByText('Alternador 24V');
 
     await user.click(screen.getByRole('button', { name: 'Descartar borrador' }));
+    expect(await screen.findByRole('dialog', { name: 'Descartar borrador' })).toBeVisible();
+    expect(screen.getByRole('dialog', { name: 'Descartar borrador' })).toHaveTextContent(
+      'Se eliminará este borrador y todas sus líneas',
+    );
 
+    await user.click(screen.getByRole('button', { name: 'Seguir editando' }));
     expect(screen.queryByRole('dialog', { name: 'Descartar borrador' })).not.toBeInTheDocument();
+    expect(screen.getByText('Alternador 24V')).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Descartar borrador' }));
+    await user.click(screen.getByRole('button', { name: 'Sí, descartar' }));
+
     expect(await screen.findByText('Borrador descartado.')).toBeVisible();
     expect(screen.queryByText('Alternador 24V')).not.toBeInTheDocument();
 
@@ -144,6 +158,27 @@ describe('PosPage', () => {
     renderPos();
 
     expect(await screen.findByRole('option', { name: /Flota Este/ })).toBeVisible();
+  });
+
+  it('resets the add-line form when the modal is reopened', async () => {
+    const user = userEvent.setup();
+    renderPos('INV-DRAFT-01', CAPABILITY_PRESETS['release-2']);
+    await screen.findByText('Alternador 24V');
+
+    await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
+    await user.type(screen.getByLabelText('Descripción'), 'Filtro de aceite');
+    await user.clear(screen.getByLabelText('Precio'));
+    await user.type(screen.getByLabelText('Precio'), '100');
+    await user.type(screen.getByLabelText('Nota'), 'Nota de la línea anterior');
+    await user.click(screen.getByRole('button', { name: 'Agregar' }));
+    expect(await screen.findByText('Filtro de aceite')).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
+    expect(screen.getByLabelText('Tipo de línea')).toHaveValue('GENERIC');
+    expect(screen.getByLabelText('Descripción')).toHaveValue('');
+    expect(screen.getByLabelText('Cantidad')).toHaveValue(1);
+    expect(screen.getByLabelText('Precio')).toHaveValue(0);
+    expect(screen.getByLabelText('Nota')).toHaveValue('');
   });
 
   it('does not offer inactive seed services when adding a line', async () => {
@@ -215,18 +250,30 @@ describe('PosPage', () => {
       await screen.findByText('Hay precios pendientes', { selector: '#pos-confirm-block-reason' }),
     ).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Ver requisitos' }));
+    expect(await screen.findByRole('dialog', { name: 'Editar línea' })).toBeVisible();
     expect(document.activeElement).toHaveAttribute(
       'aria-label',
       expect.stringMatching(/^Precio de /),
     );
   });
 
-  it('removes a line immediately and restores it from the undo toast', async () => {
+  it('asks before removing a line and restores it from the undo toast', async () => {
     const user = userEvent.setup();
     renderPos();
     await screen.findByText('Alternador 24V');
 
-    await user.click(screen.getAllByRole('button', { name: 'Quitar' })[0]!);
+    await user.click(screen.getByRole('button', { name: 'Quitar Alternador 24V' }));
+    expect(await screen.findByRole('dialog', { name: 'Quitar línea' })).toBeVisible();
+    expect(screen.getByRole('dialog', { name: 'Quitar línea' })).toHaveTextContent(
+      'Alternador 24V',
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(screen.queryByRole('dialog', { name: 'Quitar línea' })).not.toBeInTheDocument();
+    expect(screen.getByText('Alternador 24V')).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Quitar Alternador 24V' }));
+    await user.click(screen.getByRole('button', { name: 'Quitar' }));
 
     expect(await screen.findByText('Producto eliminado.')).toBeVisible();
     expect(screen.queryByText('Alternador 24V')).not.toBeInTheDocument();
@@ -238,6 +285,47 @@ describe('PosPage', () => {
     expect(screen.queryByText('Precio pendiente')).not.toBeInTheDocument();
   });
 
+  it('edits free-form line fields from the icon without changing the type', async () => {
+    const created = await mockSalesRepository.createDraft();
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    await mockSalesRepository.addLine({
+      draftId: created.value.draftId,
+      type: 'GENERIC',
+      description: 'Tornillo suelto',
+      notes: 'Caja suelta',
+      quantity: 2,
+      unitPrice: 10,
+    });
+
+    const user = userEvent.setup();
+    renderPos(created.value.draftId);
+    await screen.findByText('Tornillo suelto');
+    expect(screen.getByText('Caja suelta')).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Editar Tornillo suelto' }));
+    const type = screen.getByLabelText('Tipo de línea');
+    expect(type).toBeDisabled();
+    expect(type).toHaveValue('Línea genérica');
+
+    await user.clear(screen.getByLabelText('Descripción'));
+    await user.type(screen.getByLabelText('Descripción'), 'Tornillo de motor');
+    await user.clear(screen.getByLabelText('Cantidad'));
+    await user.type(screen.getByLabelText('Cantidad'), '4');
+    await user.clear(screen.getByLabelText('Nota'));
+    await user.type(screen.getByLabelText('Nota'), 'Para motor');
+    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    expect(await screen.findByText('Tornillo de motor')).toBeVisible();
+    expect(screen.getByText('Para motor')).toBeVisible();
+    expect(screen.queryByText('Caja suelta')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tornillo suelto')).not.toBeInTheDocument();
+    expect(screen.getByText('4')).toBeVisible();
+  });
+
   it('renders line cards below the lg breakpoint', async () => {
     stubViewportWidth(768);
     renderPos();
@@ -246,6 +334,6 @@ describe('PosPage', () => {
     expect(screen.queryByRole('columnheader', { name: 'Descripción' })).not.toBeInTheDocument();
     expect(screen.getByText('Pieza · ALT-004')).toBeVisible();
     expect(screen.getAllByText('Cantidad')).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'Quitar' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /^Quitar / })).toHaveLength(2);
   });
 });

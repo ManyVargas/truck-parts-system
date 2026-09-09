@@ -34,6 +34,7 @@ export type InvoiceLineView = {
   id: string;
   type: LineType;
   description: string;
+  notes?: string;
   quantity: number;
   unitPrice: number;
   taxable: boolean;
@@ -160,6 +161,7 @@ export type PosLineView = {
   id: string;
   type: LineType;
   description: string;
+  notes?: string;
   quantity: number;
   unitPrice: number;
   taxable: boolean;
@@ -209,6 +211,7 @@ export type AddDraftLineInput = {
   qtyProductId?: string;
   serviceId?: string;
   description?: string;
+  notes?: string;
   quantity?: number;
   unitPrice?: number;
   acquisitionCostDop?: number;
@@ -223,6 +226,18 @@ export type SetDraftLinePriceInput = {
   draftId: string;
   lineId: string;
   unitPrice: number;
+  quantity?: number;
+  /** Free-form types only. */
+  description?: string;
+  notes?: string | null;
+  /** GENERIC / EXTERNAL only. */
+  acquisitionCostDop?: number | null;
+};
+
+export type SetDraftLineQuantityInput = {
+  draftId: string;
+  lineId: string;
+  quantity: number;
 };
 
 export type SetDraftMetaInput = {

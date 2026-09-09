@@ -108,14 +108,14 @@ function mount(path = '/catalogs') {
 }
 
 describe('M20 HTTP mechanical service catalog UI', () => {
-  it('lets an administrator maintain services without opening inventory categories or POS', async () => {
+  it('lets an administrator maintain services without opening inventory categories', async () => {
     const user = userEvent.setup();
     mount();
 
     expect(await screen.findByText('Instalación mecánica')).toBeVisible();
     expect(screen.queryByRole('tab', { name: 'Categorías' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Nueva categoría' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Ventas y Facturas' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ventas y Facturas' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Catálogos' })).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Nuevo servicio' }));

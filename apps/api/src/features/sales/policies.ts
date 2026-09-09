@@ -1,7 +1,13 @@
 import type { InvoiceLineType, Role } from '@prisma/client';
 
 import { AppError } from '../../infrastructure/errors/app-error.js';
-import { UNSUPPORTED_INVENTORY_LINE_MESSAGE, UNSUPPORTED_LINE_TYPE_MESSAGE } from './constants.js';
+import {
+  FIXED_LINE_QUANTITY_MESSAGE,
+  LINE_COST_NOT_EDITABLE_MESSAGE,
+  LINE_DESCRIPTION_NOT_EDITABLE_MESSAGE,
+  UNSUPPORTED_INVENTORY_LINE_MESSAGE,
+  UNSUPPORTED_LINE_TYPE_MESSAGE,
+} from './constants.js';
 
 const INVOICE_MANAGER_ROLES: ReadonlySet<Role> = new Set(['ADMINISTRATOR', 'SELLER']);
 const INVENTORY_LINE_TYPES = new Set<InvoiceLineType>(['ITEM', 'QTY']);
@@ -11,6 +17,13 @@ const ENABLED_DRAFT_LINE_TYPES = new Set<InvoiceLineType>([
   'DELIVERY',
   'EXTERNAL',
 ]);
+const QUANTITY_EDITABLE_DRAFT_LINE_TYPES = new Set<InvoiceLineType>(['GENERIC', 'EXTERNAL']);
+const DESCRIPTION_EDITABLE_DRAFT_LINE_TYPES = new Set<InvoiceLineType>([
+  'GENERIC',
+  'EXTERNAL',
+  'DELIVERY',
+]);
+const COST_EDITABLE_DRAFT_LINE_TYPES = new Set<InvoiceLineType>(['GENERIC', 'EXTERNAL']);
 
 type InvoiceManager = { active: boolean; role: Role; mustChangePassword: boolean };
 
@@ -35,5 +48,23 @@ export function assertDraftLineTypeEnabled(type: InvoiceLineType): void {
   }
   if (!ENABLED_DRAFT_LINE_TYPES.has(type)) {
     throw AppError.conflict(UNSUPPORTED_LINE_TYPE_MESSAGE, { type });
+  }
+}
+
+export function assertDraftLineQuantityEditable(type: InvoiceLineType): void {
+  if (!QUANTITY_EDITABLE_DRAFT_LINE_TYPES.has(type)) {
+    throw AppError.conflict(FIXED_LINE_QUANTITY_MESSAGE, { type });
+  }
+}
+
+export function assertDraftLineDescriptionEditable(type: InvoiceLineType): void {
+  if (!DESCRIPTION_EDITABLE_DRAFT_LINE_TYPES.has(type)) {
+    throw AppError.conflict(LINE_DESCRIPTION_NOT_EDITABLE_MESSAGE, { type });
+  }
+}
+
+export function assertDraftLineCostEditable(type: InvoiceLineType): void {
+  if (!COST_EDITABLE_DRAFT_LINE_TYPES.has(type)) {
+    throw AppError.conflict(LINE_COST_NOT_EDITABLE_MESSAGE, { type });
   }
 }

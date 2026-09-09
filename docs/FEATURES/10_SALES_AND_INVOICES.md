@@ -51,6 +51,8 @@ For fast financial delivery, the first production slice may enable non-inventory
 
 Each invoice uses exactly one currency (`DOP` or `USD`). Line amounts, invoice totals, payments, balances, and refunds use that currency. There is no operational currency conversion.
 
+Every line may include optional `notes`, independent of `description`. Notes are at most 100 characters, allow internal line breaks, treat blank/whitespace as absent, can be set when adding a line or edited in Draft (Seller and Administrator), freeze on Completed, and display below the description as secondary text on POS, invoice detail, and the internal PDF. Notes never change tax, inventory, or money.
+
 Taxable merchandise/product line prices are entered **tax-inclusive**. Derive taxable base and included 18% ITBIS; do not add 18% on top. Mechanical service and delivery are non-taxable. Calculate/round every line to two decimals first, then sum the already-rounded lines.
 
 Confirmation is a coordinating service/transaction. For inventory-backed paths it revalidates reservation, stock, hierarchy, `No desarmar`, and active physical operations before atomically committing sale state. Installed-item confirmation marks the piece `Sold` but keeps it `Installed` and creates/reuses a Dismantling Work Order; physical relation changes later at Work-Order completion.
@@ -78,12 +80,13 @@ Invoice PDF rendering is secondary to sale validity. Preserve all invoice facts 
 - [x] Shared transactional `FAC-` sequence. *(prototipo mock — `facSeq`; API R2 M12: lock + `FAC-000001`, DOP/USD compartida)*
 - [x] Customer snapshot integration. *(prototipo mock — WM8; API R2 M12: `name` + `rnc`)*
 - [x] Generic merchandise line. *(prototipo mock — WM8; API draft HTTP — R2 M8)*
-- [x] Mechanical service catalog selection + negotiated price. *(prototipo mock — WM8; catálogo HTTP Admin — R2 M4/M20; selección POS HTTP — M21)*
+- [x] Mechanical service catalog selection + negotiated price. *(prototipo mock — WM8; catálogo HTTP Admin — R2 M4/M20; selección POS HTTP — R2 M21)*
 - [x] Delivery paid/free/omitted line. *(prototipo mock — WM8; API draft HTTP — R2 M10)*
+- [x] Optional per-line notes (independent of description; Draft edit; frozen on confirm; POS, detail, PDF).
 - [x] External resale line if its cost dependency is enabled. *(prototipo mock — WM8; API draft HTTP — R2 M11)*
 - [x] Tax-inclusive 18% calculation and per-line rounding.
 - [x] Printable/regenerable internal PDF with blank NCF field.
-- [x] Explicitly reject unavailable inventory-backed line actions until their feature release. *(API R2 M8: ITEM/QTY 409; el mock POS aún vende inventario hasta M21)*
+- [x] Explicitly reject unavailable inventory-backed line actions until their feature release. *(API R2 M8: ITEM/QTY 409; POS HTTP M21: capabilities apagan ITEM/QTY)*
 
 ### Release 5 — Inventory-backed sales
 - [x] Individual inventory line. *(prototipo mock — WM8)*
@@ -117,7 +120,7 @@ The blocks below are the final reconciled requirements retained from the previou
 **Requirement:** Internal invoices must have Draft, Completed, and Cancelled states and exactly one currency, `DOP` or `USD`. A unique automatic number using `FAC-` plus an initially six-digit zero-padded sequence is assigned only when a valid Draft is successfully confirmed.  
 **Business Reason:** Sales need an editable preparation stage and immutable completed history.  
 **Main Flow:** Seller or Administrator creates a Draft, selects and may edit its currency, then confirms it or Administrator later cancels it through the cancellation flow. Successful confirmation atomically assigns the next number, such as `FAC-000001`.  
-**Business Rules:** Users never type the internal number; DOP and USD share one sequence; numbers are unique and never reused; cancelled invoices keep their original number; Completed invoices are not edited as drafts or physically deleted.  
+**Business Rules:** Users never type the internal number; DOP and USD share one sequence; numbers are unique and never reused; cancelled invoices keep their original number; Completed invoices are not edited as drafts or physically deleted. Optional line `notes` may be added or edited only while Draft and become immutable with the completed document.  
 **Important Exceptions/Edge Cases:** Failed confirmation consumes no number. Draft currency is normally editable; completed currency follows INV-006 correction rules.  
 **Dependencies:** AUTH-001, HIST-001.  
 **Acceptance Notes:** Allowed state transitions preserve the original document and reject direct deletion.
@@ -164,7 +167,7 @@ The blocks below are the final reconciled requirements retained from the previou
 **Requirement:** The MVP must produce a printable internal PDF invoice with its `FAC-` internal number and the visibly blank field `NCF: ______________________`, and must not communicate with DGII or generate, validate, or assign NCF/e-CF.  
 **Business Reason:** The owner needs internal fiscal/nonfiscal handling without expanding the MVP into government integration.  
 **Main Flow:** Confirmation preserves the invoice; the system renders its printable PDF for the external manual NCF process.  
-**Business Rules:** The internal invoice number is not the NCF. DGII integration, NCF generation/validation/assignment, e-CF, fiscal XML, and fiscal credit notes are outside MVP; thermal printing is not assumed.  
+**Business Rules:** The internal invoice number is not the NCF. DGII integration, NCF generation/validation/assignment, e-CF, fiscal XML, and fiscal credit notes are outside MVP; thermal printing is not assumed. When a line has `notes`, the PDF shows them below that line's `description` as secondary text.  
 **Important Exceptions/Edge Cases:** Document wording must not imply legal capabilities the system lacks; template design remains a later output decision.  
 **Dependencies:** SALE-003.  
 **Acceptance Notes:** A PDF can be produced without external fiscal services and always shows the intentionally blank NCF field.

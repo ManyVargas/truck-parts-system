@@ -78,6 +78,7 @@ function toLineView(line: Invoice['lines'][number], fiscal: boolean): InvoiceLin
     id: line.id,
     type: line.type,
     description: line.description,
+    notes: line.notes,
     quantity: line.quantity,
     unitPrice: line.unitPrice,
     taxable: line.taxable,

@@ -1,4 +1,5 @@
 import type { Role } from '../../api/contracts/entities';
+import { useMockApi } from '../../api/client/http-client';
 import {
   getAppCapabilities,
   type AppCapabilities,
@@ -107,6 +108,10 @@ export const DESKTOP_NAV_ITEMS: NavItem[] = [
 ];
 
 function isNavItemEnabled(item: NavItem, capabilities: AppCapabilities): boolean {
+  // Inicio is keyed off `sales`, but dashboard HTTP is not part of M21.
+  if (item.id === 'dashboard' && !useMockApi) {
+    return false;
+  }
   return !item.capability || capabilities[item.capability];
 }
 
@@ -272,9 +277,15 @@ export function defaultPathForRole(
     case 'MECHANIC':
       return capabilities.workOrders ? '/mechanic' : '/mechanic/profile';
     case 'ADMINISTRATOR':
-      return capabilities.sales ? '/dashboard' : capabilities.users ? '/users' : '/profile';
+      if (capabilities.sales) {
+        return useMockApi ? '/dashboard' : '/sales';
+      }
+      return capabilities.users ? '/users' : '/profile';
     case 'SELLER':
-      return capabilities.sales ? '/dashboard' : '/profile';
+      if (capabilities.sales) {
+        return useMockApi ? '/dashboard' : '/sales';
+      }
+      return '/profile';
   }
 }
 

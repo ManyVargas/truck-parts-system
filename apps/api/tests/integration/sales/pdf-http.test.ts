@@ -158,7 +158,7 @@ describe('M17 PDF generate + failed status (SALE-004)', () => {
     ).resolves.toMatchObject({
       status: 'CANCELLED',
       pdfStatus: 'READY',
-      pdfTemplateVersion: 'internal-v1',
+      pdfTemplateVersion: 'internal-v2',
     });
   });
 

@@ -17,7 +17,7 @@ export function PdfPreviewModal({ open, detail, onClose }: PdfPreviewModalProps)
       <div className="space-y-6 print:text-black" id="invoice-pdf-preview">
         <header className="flex items-start justify-between gap-4 border-b border-navy-100 pb-4">
           <div>
-            <p className="text-lg font-bold text-navy">{APP_NAME}</p>
+            <p className="text-lg font-bold tracking-[0.16em] text-navy">{APP_NAME}</p>
             <p className="text-xs text-navy-400">Documento interno · no es un comprobante fiscal DGII</p>
           </div>
           <div className="text-right">

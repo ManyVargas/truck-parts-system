@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M20 completados)
+**Estado:** en curso (M1–M21 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 2, a medida que se completan.  
 No sustituye a `plan_release_2.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -734,18 +734,42 @@ POS/líneas SERVICE HTTP (M21). Categorías de inventario (R4). Campo descriptio
 
 ## Milestone 21 — Web: POS draft + líneas soportadas
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-09
 
 ### Objetivo cumplido
 
+Cablear el subset draft de sales a HTTP con las cuatro líneas R2. POS usable con `VITE_USE_MOCK_API=false`. Confirmación, PDF y profit siguen stub.
+
 ### Qué se entregó
+
+- `sales-api.ts` y `HttpSalesRepository`: `createDraft`, `getDraft`, `addLine`, `removeLine`, `setLinePrice`, `setDraftMeta`, `discardDraft` y listado de drafts.
+- Cookie same-origin y CSRF `X-Requested-With` en POST/PATCH/DELETE.
+- `VITE_USE_MOCK_API=false` activa capability `sales` además de `users`, `customers` y `catalogs`. Payments, cancelación, inventario, PDF y profit siguen apagados.
+- POS solo GENERIC / SERVICE / DELIVERY / EXTERNAL. ITEM/QTY no aparecen.
+- Listado HTTP: solo drafts (`ALL`/`DRAFT`). Tabs COMPLETED/CANCELLED vacíos sin llamar completed.
+- GENERIC y EXTERNAL envían `costProvenance` (`UNKNOWN` sin monto; `ACTUAL` con monto). El POS pide costo opcional también en GENERIC.
+- Botón Confirmar visible; en HTTP no abre el modal ni llama `confirmInvoice`.
 
 ### Decisiones técnicas
 
+- Descarte = `DELETE /api/sales/:id` (el mapa del prototipo decía POST `/discard`).
+- `PosDraftView` se compone: factura HTTP + listado de clientes (M19) + servicios activos (M20). `items`/`qtyProducts` vacíos.
+- Dinero HTTP en string decimal; la UI sigue usando `number` en el borde.
+- Inicio/`/dashboard` no entra en HTTP: el snapshot de dashboard no está swapado. Admin/Seller aterrizan en `/sales`.
+- Mechanic: sin nav de ventas; `/sales` es acceso no autorizado y no llama a la API.
+- Fiscal con `Cliente contado` queda bloqueado en el checkbox (sin RNC) y el API sigue respondiendo 409 si se intenta.
+
 ### Validación
 
+- Unit: `apps/web/tests/unit/api/http-sales.test.ts`
+- Unit: `apps/web/tests/unit/shared/config/capabilities.test.ts` (modo HTTP)
+- Unit: `apps/web/tests/unit/shared/errors/present-app-error.test.ts` (fiscal de factura)
+- Component: `apps/web/tests/component/sales/HttpSalesFlow.test.tsx`
+
 ### Fuera de alcance (intencional)
+
+Confirmación / `FAC-` (M22). PDF (M23). Rentabilidad (M24). Pagos, cancelar, corregir moneda. Líneas ITEM/QTY.
 
 ---
 

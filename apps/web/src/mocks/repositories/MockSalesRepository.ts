@@ -8,6 +8,7 @@ import type {
   RemoveDraftLineInput,
   SalesListTab,
   SetDraftLinePriceInput,
+  SetDraftLineQuantityInput,
   SetDraftMetaInput,
 } from '../../api/contracts/sales';
 import { err, ok } from '../../shared/auth/types';
@@ -21,6 +22,7 @@ import {
   discardDraft,
   removeDraftLine,
   setDraftLinePrice,
+  setDraftLineQuantity,
   setDraftMeta,
 } from '../services/sales-commands';
 import { buildInvoiceDetail, buildSalesList } from '../services/sales-catalog';
@@ -157,6 +159,20 @@ export class MockSalesRepository implements SalesRepository {
     }
 
     const result = setDraftLinePrice(getMockState(), permission.value, input);
+    if (!result.ok) {
+      return result;
+    }
+
+    return ok(cloneForRead(buildPosDraftView(getMockState(), result.value)));
+  }
+
+  async setLineQuantity(input: SetDraftLineQuantityInput) {
+    const permission = requirePermission('sales.manage');
+    if (!permission.ok) {
+      return permission;
+    }
+
+    const result = setDraftLineQuantity(getMockState(), permission.value, input);
     if (!result.ok) {
       return result;
     }

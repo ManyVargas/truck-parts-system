@@ -163,10 +163,11 @@ export function resolveCapabilities(
     DEV?: boolean;
   } = import.meta.env,
 ): AppCapabilities {
-  // HTTP mode exposes only modules whose API swap has landed. Sales stays off until M21.
+  // HTTP mode exposes only modules whose API swap has landed.
   // `catalogs` is on for mechanical services; `/catalogs` hides inventory categories until R4.
+  // Confirm/PDF/profit stay off until M22–M24. Dashboard KPIs are not swapped in R2.
   if (env.VITE_USE_MOCK_API !== 'true') {
-    return { ...DISABLED, users: true, customers: true, catalogs: true };
+    return { ...DISABLED, users: true, customers: true, catalogs: true, sales: true };
   }
   const presetName = parseCapabilityPreset(env.VITE_CAPABILITIES_PRESET);
   const preset = CAPABILITY_PRESETS[presetName];

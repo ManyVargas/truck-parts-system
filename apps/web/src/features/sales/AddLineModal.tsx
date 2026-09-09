@@ -6,7 +6,20 @@ import { enabledPosLineTypes } from '../../shared/config/capabilities';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
 import { UX_TERMS } from '../../shared/copy/glossary';
 import { Button, Field, GuardedModal, Info, Input, Select, isFormDirty } from '../../shared/ui';
+import { LineNotesField } from './LineNotesField';
 import { posAddLineReservationHint } from './pos-copy';
+
+type AddLineFormFields = {
+  type: LineType;
+  itemId: string;
+  qtyProductId: string;
+  serviceId: string;
+  description: string;
+  notes: string;
+  quantity: string;
+  unitPrice: string;
+  cost: string;
+};
 
 type AddLineModalProps = {
   open: boolean;
@@ -20,11 +33,29 @@ type AddLineModalProps = {
     qtyProductId?: string;
     serviceId?: string;
     description?: string;
+    notes?: string;
     quantity?: number;
     unitPrice?: number;
     acquisitionCostDop?: number;
   }) => Promise<void>;
 };
+
+function emptyAddLineFields(
+  lineTypes: { value: LineType }[],
+  draft: PosDraftView,
+): AddLineFormFields {
+  return {
+    type: lineTypes[0]?.value ?? 'GENERIC',
+    itemId: draft.items[0]?.id ?? '',
+    qtyProductId: draft.qtyProducts[0]?.id ?? '',
+    serviceId: draft.services[0]?.id ?? '',
+    description: '',
+    notes: '',
+    quantity: '1',
+    unitPrice: '0',
+    cost: '',
+  };
+}
 
 export function AddLineModal({
   open,
@@ -40,27 +71,40 @@ export function AddLineModal({
   const [qtyProductId, setQtyProductId] = useState(draft.qtyProducts[0]?.id ?? '');
   const [serviceId, setServiceId] = useState(draft.services[0]?.id ?? '');
   const [description, setDescription] = useState('');
+  const [notes, setNotes] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [unitPrice, setUnitPrice] = useState('0');
   const [cost, setCost] = useState('');
-  const fields = { type, itemId, qtyProductId, serviceId, description, quantity, unitPrice, cost };
+  const fields: AddLineFormFields = {
+    type,
+    itemId,
+    qtyProductId,
+    serviceId,
+    description,
+    notes,
+    quantity,
+    unitPrice,
+    cost,
+  };
   const [baseline, setBaseline] = useState(fields);
 
   useEffect(() => {
-    if (open) {
-      setBaseline({
-        type,
-        itemId,
-        qtyProductId,
-        serviceId,
-        description,
-        quantity,
-        unitPrice,
-        cost,
-      });
+    if (!open) {
+      return;
     }
-    // Snapshot only when the dialog opens so later typing is treated as unsaved.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- capture values at open
+    const next = emptyAddLineFields(lineTypes, draft);
+    setType(next.type);
+    setItemId(next.itemId);
+    setQtyProductId(next.qtyProductId);
+    setServiceId(next.serviceId);
+    setDescription(next.description);
+    setNotes(next.notes);
+    setQuantity(next.quantity);
+    setUnitPrice(next.unitPrice);
+    setCost(next.cost);
+    setBaseline(next);
+    // Reset only when the dialog opens so each add starts blank; later typing is unsaved.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- capture catalog defaults at open
   }, [open]);
 
   useEffect(() => {
@@ -89,10 +133,12 @@ export function AddLineModal({
       serviceId: type === 'SERVICE' ? serviceId : undefined,
       description:
         type === 'GENERIC' || type === 'EXTERNAL' || type === 'DELIVERY' ? description : undefined,
+      notes: notes.trim() === '' ? undefined : notes,
       quantity:
         type === 'QTY' || type === 'GENERIC' || type === 'EXTERNAL' ? Number(quantity) : undefined,
       unitPrice: type === 'ITEM' ? undefined : Number(unitPrice),
-      acquisitionCostDop: type === 'EXTERNAL' && cost !== '' ? Number(cost) : undefined,
+      acquisitionCostDop:
+        (type === 'GENERIC' || type === 'EXTERNAL') && cost !== '' ? Number(cost) : undefined,
     });
   }
 
@@ -213,7 +259,7 @@ export function AddLineModal({
           </Field>
         )}
 
-        {type === 'EXTERNAL' && (
+        {(type === 'GENERIC' || type === 'EXTERNAL') && (
           <Field htmlFor="line-cost" label="Costo de adquisición en pesos (opcional)">
             <Input
               id="line-cost"
@@ -241,6 +287,8 @@ export function AddLineModal({
             />
           </Field>
         )}
+
+        <LineNotesField id="line-notes" value={notes} onChange={setNotes} />
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={requestClose} disabled={isSaving}>

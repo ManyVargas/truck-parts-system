@@ -14,7 +14,7 @@ import type {
   RecordManualGrossProfitRecord,
   RecordUsdFxRateRecord,
   UpdateDraftInvoiceRecord,
-  UpdateInvoiceLinePriceRecord,
+  UpdateInvoiceLineRecord,
 } from './types.js';
 
 export const INVOICE_SEQUENCE_NAME = 'FAC';
@@ -100,6 +100,7 @@ export class SalesRepository {
           create: {
             type: input.type,
             description: input.description,
+            notes: input.notes ?? null,
             ...(input.quantity !== undefined ? { quantity: input.quantity } : {}),
             unitPrice: input.unitPrice,
             acquisitionCostDop: input.acquisitionCostDop ?? null,
@@ -112,14 +113,23 @@ export class SalesRepository {
     });
   }
 
-  updateLinePrice(input: UpdateInvoiceLinePriceRecord): Promise<InvoiceRecord> {
+  updateLine(input: UpdateInvoiceLineRecord): Promise<InvoiceRecord> {
     return this.database.invoice.update({
       where: { id: input.invoiceId },
       data: {
         lines: {
           update: {
             where: { id: input.lineId },
-            data: { unitPrice: input.unitPrice },
+            data: {
+              ...(input.unitPrice !== undefined ? { unitPrice: input.unitPrice } : {}),
+              ...(input.quantity !== undefined ? { quantity: input.quantity } : {}),
+              ...(input.description !== undefined ? { description: input.description } : {}),
+              ...(input.notes !== undefined ? { notes: input.notes } : {}),
+              ...(input.acquisitionCostDop !== undefined
+                ? { acquisitionCostDop: input.acquisitionCostDop }
+                : {}),
+              ...(input.costProvenance !== undefined ? { costProvenance: input.costProvenance } : {}),
+            },
           },
         },
       },

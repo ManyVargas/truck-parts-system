@@ -39,6 +39,7 @@ export type CreateInvoiceLineRecord = {
   invoiceId: string;
   type: InvoiceLineType;
   description: string;
+  notes?: string | null;
   quantity?: Prisma.Decimal | string;
   unitPrice: Prisma.Decimal | string;
   acquisitionCostDop?: Prisma.Decimal | string | null;
@@ -46,10 +47,15 @@ export type CreateInvoiceLineRecord = {
   serviceId?: string | null;
 };
 
-export type UpdateInvoiceLinePriceRecord = {
+export type UpdateInvoiceLineRecord = {
   invoiceId: string;
   lineId: string;
-  unitPrice: Prisma.Decimal | string;
+  unitPrice?: Prisma.Decimal | string;
+  quantity?: Prisma.Decimal | string;
+  description?: string;
+  notes?: string | null;
+  acquisitionCostDop?: Prisma.Decimal | string | null;
+  costProvenance?: CostProvenance | null;
 };
 
 export type CompleteInvoiceLineMoneyRecord = {
@@ -118,6 +124,7 @@ export type PublicInvoiceLine = {
   id: string;
   type: InvoiceLineType;
   description: string;
+  notes: string | null;
   quantity: string;
   unitPrice: string;
   taxable: boolean;
@@ -130,9 +137,7 @@ export type PublicInvoiceLine = {
   profitability?: PublicProfitability;
 };
 
-export type PublicInvoiceDocument =
-  | { status: 'READY' }
-  | { status: 'FAILED'; errorId: string };
+export type PublicInvoiceDocument = { status: 'READY' } | { status: 'FAILED'; errorId: string };
 
 export type RecordInvoicePdfStatusRecord = {
   id: string;
@@ -175,6 +180,7 @@ export type PublicInvoiceListItem = {
   customer: InvoiceCustomerView;
   customerSnapshot: InvoiceCustomerSnapshot | null;
   confirmedAt: string | null;
+  totals: { gross: string; base: string; itbis: string };
   profitability?: PublicProfitability;
   createdAt: string;
   updatedAt: string;
@@ -210,6 +216,7 @@ export type InvoiceLineHistorySnapshot = {
   id: string;
   type: InvoiceLineType;
   description: string;
+  notes: string | null;
   quantity: string;
   unitPrice: string;
   acquisitionCostDop: string | null;

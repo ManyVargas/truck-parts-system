@@ -27,6 +27,7 @@ function toLineView(state: AppState, invoice: Invoice, line: InvoiceLine): PosLi
     id: line.id,
     type: line.type,
     description: line.description,
+    notes: line.notes,
     quantity: line.quantity,
     unitPrice: line.unitPrice,
     taxable: line.taxable,

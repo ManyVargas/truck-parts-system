@@ -13,6 +13,12 @@ const COPY = {
   contactPrimary: 'Solo un contacto puede ser principal.',
   emailInvalid: 'El correo no es válido.',
   genericLocked: 'Cliente Contado es el predeterminado y no se puede editar.',
+  fiscalInvoiceIdentity: 'Una factura fiscal requiere un cliente con RNC o cédula.',
+  inventoryLinesUnavailable:
+    'Las líneas de inventario no están disponibles. Esta factura no puede crear, reservar ni consumir stock.',
+  fixedLineQuantity: 'Este tipo de línea no permite cambiar la cantidad.',
+  duplicateDelivery: 'El borrador ya tiene una línea de entrega.',
+  inactiveService: 'Ese servicio está inactivo y no se puede agregar al borrador.',
   atLeastOneField: 'Indique al menos un dato para actualizar.',
   currentPassword: 'La contraseña actual es incorrecta.',
   passwordMustDiffer: 'La nueva contraseña debe ser diferente de la actual.',
@@ -44,6 +50,16 @@ const KNOWN_TEXT: Record<string, { text: string; field?: string }> = {
   'Cada contacto debe tener teléfono o correo': { text: COPY.contactPhoneOrEmail },
   'Solo un contacto puede ser principal': { text: COPY.contactPrimary, field: 'contacts' },
   'Cliente Contado es el predeterminado y no se puede editar': { text: COPY.genericLocked },
+  'A fiscal invoice requires a customer with RNC or Cédula': {
+    text: COPY.fiscalInvoiceIdentity,
+    field: 'fiscal',
+  },
+  'Inventory-backed lines are not available; this invoice cannot create, reserve, or consume stock': {
+    text: COPY.inventoryLinesUnavailable,
+  },
+  'This line type has a fixed quantity of 1': { text: COPY.fixedLineQuantity },
+  'A draft can have at most one DELIVERY line': { text: COPY.duplicateDelivery },
+  'Inactive catalog services cannot be added to a draft': { text: COPY.inactiveService },
 };
 
 const FIELD_LABELS: Array<{ pattern: RegExp; label: string }> = [

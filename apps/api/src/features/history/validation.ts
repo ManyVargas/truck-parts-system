@@ -56,6 +56,7 @@ const invoiceLineSnapshot = z
     id: z.uuid(),
     type: z.enum(['GENERIC', 'SERVICE', 'DELIVERY', 'EXTERNAL', 'ITEM', 'QTY']),
     description: z.string(),
+    notes: z.preprocess((value) => (value === undefined ? null : value), z.string().nullable()),
     quantity: z.string(),
     unitPrice: z.string(),
     acquisitionCostDop: z.string().nullable(),

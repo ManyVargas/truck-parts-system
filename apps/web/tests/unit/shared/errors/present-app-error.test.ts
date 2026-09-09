@@ -38,6 +38,17 @@ describe('presentError', () => {
     expect(presented).toEqual({ summary: GENERIC_VALIDATION, fields: {} });
   });
 
+  it('maps a fiscal invoice customer conflict without exposing English', () => {
+    const presented = presentError({
+      fallbackMessage: 'Los datos cambiaron. Actualice e intente nuevamente.',
+      serverMessage: 'A fiscal invoice requires a customer with RNC or Cédula',
+    });
+
+    expect(presented.summary).toBe('Una factura fiscal requiere un cliente con RNC o cédula.');
+    expect(presented.fields.fiscal).toBe(presented.summary);
+    expect(presented.summary).not.toMatch(/RNC or Cédula/i);
+  });
+
   it('maps a duplicate fiscal identifier conflict onto the RNC field', () => {
     const presented = presentError({
       fallbackMessage: 'Los datos cambiaron. Actualice e intente nuevamente.',
