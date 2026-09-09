@@ -78,7 +78,7 @@ Invoice PDF rendering is secondary to sale validity. Preserve all invoice facts 
 - [x] Shared transactional `FAC-` sequence. *(prototipo mock — `facSeq`; API R2 M12: lock + `FAC-000001`, DOP/USD compartida)*
 - [x] Customer snapshot integration. *(prototipo mock — WM8; API R2 M12: `name` + `rnc`)*
 - [x] Generic merchandise line. *(prototipo mock — WM8; API draft HTTP — R2 M8)*
-- [x] Mechanical service catalog selection + negotiated price. *(prototipo mock — WM8)*
+- [x] Mechanical service catalog selection + negotiated price. *(prototipo mock — WM8; catálogo HTTP Admin — R2 M4/M20; selección POS HTTP — M21)*
 - [x] Delivery paid/free/omitted line. *(prototipo mock — WM8; API draft HTTP — R2 M10)*
 - [x] External resale line if its cost dependency is enabled. *(prototipo mock — WM8; API draft HTTP — R2 M11)*
 - [x] Tax-inclusive 18% calculation and per-line rounding.

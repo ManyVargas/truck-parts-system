@@ -15,7 +15,7 @@ import { UX_TERMS } from '../copy/glossary';
  * | payments              | Registrar pago, CxC en factura/dashboard            | 3 Payments/CxC  |
  * | invoiceCancellation   | Cancelar factura / reembolso de cancelación         | 3 Payments/CxC  |
  * | inventory             | `/inventory` piezas independientes y por cantidad   | 4 Base stock    |
- * | catalogs              | `/catalogs` categorías y servicios                  | 4 Base stock    |
+ * | catalogs              | `/catalogs` servicios (R2 HTTP); categorías en R4   | 2 services / 4 categories |
  * | inventorySales        | Líneas ITEM independientes, agregar a borrador      | 5 Reservations  |
  * | quantitySales         | Líneas QTY, agregar producto por cantidad           | 5 Reservations  |
  * | hierarchy             | Baseline, ensamblajes, No desarmar, árbol recepción | 6 Hierarchy     |
@@ -164,7 +164,10 @@ export function resolveCapabilities(
   } = import.meta.env,
 ): AppCapabilities {
   // HTTP mode exposes only modules whose API swap has landed. Sales stays off until M21.
-  if (env.VITE_USE_MOCK_API !== 'true') return { ...DISABLED, users: true, customers: true };
+  // `catalogs` is on for mechanical services; `/catalogs` hides inventory categories until R4.
+  if (env.VITE_USE_MOCK_API !== 'true') {
+    return { ...DISABLED, users: true, customers: true, catalogs: true };
+  }
   const presetName = parseCapabilityPreset(env.VITE_CAPABILITIES_PRESET);
   const preset = CAPABILITY_PRESETS[presetName];
   const forceDemo = env.VITE_ENABLE_DEMO_CONTROLS === 'true';

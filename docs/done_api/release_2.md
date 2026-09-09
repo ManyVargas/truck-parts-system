@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M19 completados)
+**Estado:** en curso (M1–M20 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 2, a medida que se completan.  
 No sustituye a `plan_release_2.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -696,18 +696,39 @@ POS/pagos/OT (siguen stub). Snapshot CUST-003 en UI (M22). Swap de servicios (M2
 
 ## Milestone 20 — Web: catálogo de servicios HTTP
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-09
 
 ### Objetivo cumplido
 
+Sustituir el mock de `ServiceRepository` por la API de M4. El Administrator mantiene servicios en `/catalogs` con `VITE_USE_MOCK_API=false`, sin abrir categorías de inventario ni el POS.
+
 ### Qué se entregó
+
+- `catalogs-api.ts` y `HttpServiceRepository`: list/save.
+- Cookie same-origin y CSRF `X-Requested-With` en POST/PATCH, igual que clientes (M19).
+- `VITE_USE_MOCK_API=false` activa capability `catalogs` además de `users` y `customers`. Inventario, POS, PDF y profit siguen apagados.
+- En HTTP, `/catalogs` muestra solo servicios (sin pestaña ni llamadas de categorías).
+- Seller y Mechanic no entran a `/catalogs` (sin nav; pantalla de acceso no autorizado; no llaman a la API). El Seller usará el catálogo en el POS (M21).
 
 ### Decisiones técnicas
 
+- Alta = `POST /api/catalogs/services`; edición/activar-desactivar = `PATCH /api/catalogs/services/:id`. El mapa HTTP del prototipo decía PUT y se alineó a M4.
+- Los PATCH son parciales: editar el nombre no reescribe `active` y activar/desactivar no reenvía un nombre potencialmente obsoleto.
+- No se envía ni se muestra `description` del catálogo. La nota opcional de una línea SERVICE en factura queda para M21.
+- Las categorías de inventario siguen en `HttpCategoryRepository` stub. La pestaña Categorías solo aparece cuando `inventory` está activo (mock R4/prototipo).
+- Precio sigue fuera del catálogo.
+
 ### Validación
 
+- Unit: `apps/web/tests/unit/api/http-services.test.ts`
+- Unit: `apps/web/tests/unit/shared/config/capabilities.test.ts` (modo HTTP)
+- Component: `apps/web/tests/component/catalogs/HttpCatalogsFlow.test.tsx`
+- Component: `apps/web/tests/component/catalogs/CatalogsPage.test.tsx` (mock con categorías intacto)
+
 ### Fuera de alcance (intencional)
+
+POS/líneas SERVICE HTTP (M21). Categorías de inventario (R4). Campo description del catálogo en UI. Nota de línea en factura.
 
 ---
 

@@ -23,6 +23,10 @@ import {
   requestRecoveryWithHttp,
 } from '../client/auth-api';
 import {
+  listServicesWithHttp,
+  saveServiceWithHttp,
+} from '../client/catalogs-api';
+import {
   getCustomerByIdWithHttp,
   listCustomersWithHttp,
   saveCustomerWithHttp,
@@ -37,7 +41,7 @@ import {
 import { httpNotImplemented } from '../client/http-not-implemented';
 
 /**
- * Access/profile (R1) and customers (R2 M19) use the real API.
+ * Access/profile (R1), customers (M19) and mechanical services (M20) use the real API.
  * Other repositories remain unavailable until their integration milestone;
  * capability guards keep their screens out of HTTP mode.
  */
@@ -297,11 +301,11 @@ export class HttpCategoryRepository implements CategoryRepository {
 
 export class HttpServiceRepository implements ServiceRepository {
   async list() {
-    return httpNotImplemented('HttpServiceRepository', 'list');
+    return listServicesWithHttp();
   }
 
-  async save() {
-    return httpNotImplemented('HttpServiceRepository', 'save');
+  async save(input: Parameters<ServiceRepository['save']>[0]) {
+    return saveServiceWithHttp(input);
   }
 }
 

@@ -17,7 +17,16 @@ const TABS: { id: CatalogTab; label: string }[] = [
 ];
 
 export function CatalogsPage() {
-  const { tab, setTab, categories, services, isSaving, saveCategory, saveService } = useCatalogs();
+  const {
+    tab,
+    setTab,
+    showCategories,
+    categories,
+    services,
+    isSaving,
+    saveCategory,
+    saveService,
+  } = useCatalogs();
   const { pushToast } = useToast();
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
@@ -77,7 +86,7 @@ export function CatalogsPage() {
       return;
     }
 
-    pushToast(input.id ? 'Servicio actualizado' : 'Servicio creado', 'success');
+    pushToast('id' in input ? 'Servicio actualizado' : 'Servicio creado', 'success');
     setServiceModalOpen(false);
     setEditingService(null);
   }
@@ -86,7 +95,6 @@ export function CatalogsPage() {
     setTogglingServiceId(row.id);
     const response = await saveService({
       id: row.id,
-      name: row.name,
       active: !row.active,
     });
     setTogglingServiceId(null);
@@ -114,15 +122,36 @@ export function CatalogsPage() {
     );
   }
 
-  const isLoading = categories.status === 'loading' || services.status === 'loading';
+  const isLoading =
+    services.status === 'loading' || (showCategories && categories.status === 'loading');
+  const servicePanel = isLoading ? (
+    <Skeleton label="Cargando catálogos" />
+  ) : services.status === 'ready' ? (
+    <ServiceList
+      rows={services.rows}
+      togglingId={togglingServiceId}
+      onEdit={(row) => {
+        setEditingService(row);
+        setFormError(null);
+        setServiceModalOpen(true);
+      }}
+      onToggleActive={(row) => {
+        void handleToggleService(row);
+      }}
+    />
+  ) : null;
 
   return (
     <>
       <PageHeader
         title="Catálogos"
-        description="Categorías de inventario y servicios mecánicos. El vendedor usa estas definiciones; no puede cambiarlas."
+        description={
+          showCategories
+            ? 'Categorías de inventario y servicios mecánicos. El vendedor usa estas definiciones; no puede cambiarlas.'
+            : 'Servicios mecánicos. El vendedor los usa al facturar; no puede cambiarlos.'
+        }
         actions={
-          tab === 'categories' ? (
+          showCategories && tab === 'categories' ? (
             <Button onClick={openCreateCategory} disabled={isLoading}>
               Nueva categoría
             </Button>
@@ -134,53 +163,44 @@ export function CatalogsPage() {
         }
       />
 
-      <Tabs
-        aria-label="Tipo de catálogo"
-        tabs={TABS}
-        value={tab}
-        onChange={setTab}
-        panels={{
-          categories: isLoading ? (
-            <Skeleton label="Cargando catálogos" />
-          ) : categories.status === 'ready' ? (
-            <CategoryList
-              rows={categories.rows}
-              onEdit={(row) => {
-                setEditingCategory(row);
-                setFormError(null);
-                setCategoryModalOpen(true);
-              }}
-            />
-          ) : null,
-          services: isLoading ? (
-            <Skeleton label="Cargando catálogos" />
-          ) : services.status === 'ready' ? (
-            <ServiceList
-              rows={services.rows}
-              togglingId={togglingServiceId}
-              onEdit={(row) => {
-                setEditingService(row);
-                setFormError(null);
-                setServiceModalOpen(true);
-              }}
-              onToggleActive={(row) => {
-                void handleToggleService(row);
-              }}
-            />
-          ) : null,
-        }}
-      />
+      {showCategories ? (
+        <Tabs
+          aria-label="Tipo de catálogo"
+          tabs={TABS}
+          value={tab}
+          onChange={setTab}
+          panels={{
+            categories: isLoading ? (
+              <Skeleton label="Cargando catálogos" />
+            ) : categories.status === 'ready' ? (
+              <CategoryList
+                rows={categories.rows}
+                onEdit={(row) => {
+                  setEditingCategory(row);
+                  setFormError(null);
+                  setCategoryModalOpen(true);
+                }}
+              />
+            ) : null,
+            services: servicePanel,
+          }}
+        />
+      ) : (
+        servicePanel
+      )}
 
-      <CategoryFormModal
-        open={categoryModalOpen}
-        category={editingCategory}
-        isSaving={isSaving}
-        error={formError}
-        onClose={closeCategoryModal}
-        onSubmit={(input) => {
-          void handleCategorySubmit(input);
-        }}
-      />
+      {showCategories ? (
+        <CategoryFormModal
+          open={categoryModalOpen}
+          category={editingCategory}
+          isSaving={isSaving}
+          error={formError}
+          onClose={closeCategoryModal}
+          onSubmit={(input) => {
+            void handleCategorySubmit(input);
+          }}
+        />
+      ) : null}
 
       <ServiceFormModal
         open={serviceModalOpen}

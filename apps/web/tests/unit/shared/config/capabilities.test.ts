@@ -14,7 +14,7 @@ import {
 } from '../../../../src/shared/layout/navigation';
 
 describe('capability presets follow the Development Plan', () => {
-  it('exposes users and customers in HTTP mode even with prototype flags', () => {
+  it('exposes users, customers and service catalogs in HTTP mode even with prototype flags', () => {
     const capabilities = resolveCapabilities({
       VITE_USE_MOCK_API: 'false',
       VITE_CAPABILITIES_PRESET: 'prototype',
@@ -23,21 +23,29 @@ describe('capability presets follow the Development Plan', () => {
     });
     expect(capabilities.users).toBe(true);
     expect(capabilities.customers).toBe(true);
+    expect(capabilities.catalogs).toBe(true);
     expect(
       Object.entries(capabilities)
-        .filter(([key]) => key !== 'users' && key !== 'customers')
+        .filter(([key]) => key !== 'users' && key !== 'customers' && key !== 'catalogs')
         .every(([, enabled]) => !enabled),
     ).toBe(true);
     expect(isRouteAllowedForRole('/users', 'ADMINISTRATOR', capabilities)).toBe(true);
+    expect(isRouteAllowedForRole('/catalogs', 'ADMINISTRATOR', capabilities)).toBe(true);
+    expect(isRouteAllowedForRole('/catalogs', 'SELLER', capabilities)).toBe(false);
     expect(isRouteAllowedForRole('/customers', 'SELLER', capabilities)).toBe(true);
     expect(isRouteAllowedForRole('/customers', 'MECHANIC', capabilities)).toBe(false);
     expect(navItemsForRole('MECHANIC', capabilities)).toEqual([]);
     expect(navItemsForRole('SELLER', capabilities).map((item) => item.id)).toEqual(['customers']);
+    expect(navItemsForRole('ADMINISTRATOR', capabilities).map((item) => item.id)).toEqual([
+      'customers',
+      'catalogs',
+      'users',
+    ]);
     expect(isMechanicPathAllowed('/mechanic/pending', capabilities)).toBe(false);
     expect(isMechanicPathAllowed('/mechanic/profile', capabilities)).toBe(true);
   });
 
-  it('treats an unset mock flag as HTTP Access/Users plus customers, not the in-memory prototype', () => {
+  it('treats an unset mock flag as HTTP Access/Users plus customers and services, not the in-memory prototype', () => {
     const capabilities = resolveCapabilities({
       VITE_CAPABILITIES_PRESET: 'prototype',
       VITE_ENABLE_DEMO_CONTROLS: 'true',
@@ -45,7 +53,9 @@ describe('capability presets follow the Development Plan', () => {
     });
     expect(capabilities.users).toBe(true);
     expect(capabilities.customers).toBe(true);
+    expect(capabilities.catalogs).toBe(true);
     expect(capabilities.sales).toBe(false);
+    expect(capabilities.inventory).toBe(false);
     expect(capabilities.prototypeControls).toBe(false);
   });
 

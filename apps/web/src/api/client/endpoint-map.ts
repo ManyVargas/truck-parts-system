@@ -58,7 +58,7 @@ export const REPOSITORY_ENDPOINT_MAP = {
   },
   ServiceRepository: {
     list: 'GET /api/catalogs/services',
-    save: 'PUT /api/catalogs/services/:id',
+    save: 'POST /api/catalogs/services | PATCH /api/catalogs/services/:id',
   },
   ProfitabilityRepository: {
     getSnapshot: 'GET /api/profitability',
