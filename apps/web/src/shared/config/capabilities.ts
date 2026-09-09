@@ -163,8 +163,8 @@ export function resolveCapabilities(
     DEV?: boolean;
   } = import.meta.env,
 ): AppCapabilities {
-  // Release 1 HTTP (default) exposes only Access/Users. Later screens stay unavailable.
-  if (env.VITE_USE_MOCK_API !== 'true') return { ...DISABLED, users: true };
+  // HTTP mode exposes only modules whose API swap has landed. Sales stays off until M21.
+  if (env.VITE_USE_MOCK_API !== 'true') return { ...DISABLED, users: true, customers: true };
   const presetName = parseCapabilityPreset(env.VITE_CAPABILITIES_PRESET);
   const preset = CAPABILITY_PRESETS[presetName];
   const forceDemo = env.VITE_ENABLE_DEMO_CONTROLS === 'true';

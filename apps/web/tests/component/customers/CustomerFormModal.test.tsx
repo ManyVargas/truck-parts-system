@@ -104,7 +104,10 @@ describe('CustomerFormModal', () => {
         open
         customer={{ id: 'C1', name: 'Transportes del Caribe', contacts: [] }}
         isSaving={false}
-        error="El RNC ya existe"
+        error="Ya existe un cliente con esta identificación fiscal / cédula."
+        fieldErrors={{
+          rnc: 'Ya existe un cliente con esta identificación fiscal / cédula.',
+        }}
         onClose={vi.fn()}
         onSubmit={vi.fn()}
       />,
@@ -112,7 +115,44 @@ describe('CustomerFormModal', () => {
 
     expect(screen.getByRole('dialog', { name: 'Editar cliente' })).toBeVisible();
     expect(screen.getByLabelText('Nombre')).toHaveValue('Transportes del Caribe');
-    expect(screen.getByText('El RNC ya existe')).toBeVisible();
+    expect(
+      screen.getAllByText('Ya existe un cliente con esta identificación fiscal / cédula.').length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Identificación fiscal / cédula')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+  });
+
+  it('clears indexed contact errors when removing a contact', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <CustomerFormModal
+        open
+        customer={{
+          id: 'C1',
+          name: 'Transportes del Caribe',
+          contacts: [
+            { id: 'CT1', phone: '', email: '' },
+            { id: 'CT2', phone: '809-555-0100' },
+          ],
+        }}
+        isSaving={false}
+        error="Cada contacto debe tener teléfono o correo."
+        fieldErrors={{
+          'contacts.0': 'Cada contacto debe tener teléfono o correo.',
+        }}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByText('Cada contacto debe tener teléfono o correo.')).not.toHaveLength(0);
+
+    await user.click(screen.getAllByRole('button', { name: 'Quitar' })[0]!);
+
+    expect(screen.getAllByText('Cada contacto debe tener teléfono o correo.')).toHaveLength(1);
+    expect(screen.getByLabelText('Teléfono')).not.toHaveAttribute('aria-invalid', 'true');
   });
 
   it('asks before discarding typed customer data', async () => {

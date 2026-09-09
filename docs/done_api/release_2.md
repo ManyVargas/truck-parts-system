@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M18 completados)
+**Estado:** en curso (M1–M19 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 2, a medida que se completan.  
 No sustituye a `plan_release_2.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -654,18 +654,43 @@ Swap web (M23). S3 / DGII / NCF real. Resto de ADMIN-002 (reservas, OT, evidenci
 
 ## Milestone 19 — Web: customers HTTP
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-08
 
 ### Objetivo cumplido
 
+Sustituir el mock de `CustomerRepository` por la API de M2. CUST-001/002 funcionan en `/customers` con `VITE_USE_MOCK_API=false`.
+
 ### Qué se entregó
+
+- `customers-api.ts` y `HttpCustomerRepository`: list, search, getById, save.
+- Cookie same-origin y CSRF `X-Requested-With` en POST/PATCH, igual que usuarios (R1 M11).
+- Paginación completa (`page` / `pageSize` 100) para conservar el directorio de una sola lista.
+- `VITE_USE_MOCK_API=false` activa capability `customers` además de `users`. POS, PDF y profit siguen apagados.
+- Columna Facturas eliminada del directorio (el conteo era mock; CxC/deuda no es alcance de R2).
+- Errores conocidos de validación se presentan en español y se asocian al campo correspondiente sin exponer mensajes internos del API.
 
 ### Decisiones técnicas
 
+- Alta = `POST /api/customers`; edición = `PATCH /api/customers/:id`. El mapa HTTP del prototipo decía PUT y se alineó a M2.
+- `Cliente contado` se reconoce por `isDefault` (UUID de API), no por el id mock `C0`.
+- `invoiceCount` se retiró del contrato de filas. Un módulo de saldo y facturas pendientes queda para CxC (Release 3), no se aproxima aquí.
+- Mechanic: sin nav; `/customers` es acceso no autorizado y no llama a la API.
+- Al eliminar un contacto después de una validación fallida se descartan los errores indexados `contacts.*`; así no se reasignan a otra fila cuando cambian los índices del formulario.
+
 ### Validación
 
+- Unit: `apps/web/tests/unit/api/http-customers.test.ts`
+- Unit: `apps/web/tests/unit/shared/errors/present-app-error.test.ts`
+- Unit: `apps/web/tests/unit/shared/config/capabilities.test.ts` (modo HTTP)
+- Component: `apps/web/tests/component/customers/HttpCustomersFlow.test.tsx`
+- Component: `apps/web/tests/component/customers/CustomerFormModal.test.tsx` (errores indexados al quitar contactos)
+- Component: `apps/web/tests/component/customers/CustomersPage.test.tsx` (sin columna Facturas)
+- Verificación frontend: typecheck de aplicación y pruebas, lint, 301 unitarias, 68 integraciones y 148 pruebas de componentes.
+
 ### Fuera de alcance (intencional)
+
+POS/pagos/OT (siguen stub). Snapshot CUST-003 en UI (M22). Swap de servicios (M20). CxC: total adeudado y facturas pendientes por cliente.
 
 ---
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import type { CustomerListRow, SaveCustomerInput } from '../../api/contracts/customers';
+import { presentAppError } from '../../shared/errors/present-app-error';
 import { Button, Info, SearchInput, Skeleton, toPageLoadMessage, useToast } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
 import { CustomerFormModal } from './CustomerFormModal';
@@ -13,16 +14,19 @@ export function CustomersPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CustomerListRow | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   function openCreate() {
     setEditing(null);
     setFormError(null);
+    setFieldErrors({});
     setModalOpen(true);
   }
 
   function openEdit(row: CustomerListRow) {
     setEditing(row);
     setFormError(null);
+    setFieldErrors({});
     setModalOpen(true);
   }
 
@@ -33,14 +37,18 @@ export function CustomersPage() {
     setModalOpen(false);
     setEditing(null);
     setFormError(null);
+    setFieldErrors({});
   }
 
   async function handleSubmit(input: SaveCustomerInput) {
     setFormError(null);
+    setFieldErrors({});
     const response = await save(input);
 
     if (!response.ok) {
-      setFormError(response.error.message);
+      const presented = presentAppError(response.error);
+      setFormError(presented.summary);
+      setFieldErrors(presented.fields);
       return;
     }
 
@@ -90,6 +98,7 @@ export function CustomersPage() {
         customer={editing}
         isSaving={isSaving}
         error={formError}
+        fieldErrors={fieldErrors}
         onClose={closeModal}
         onSubmit={handleSubmit}
       />

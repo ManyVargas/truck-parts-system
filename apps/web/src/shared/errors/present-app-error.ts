@@ -1,0 +1,168 @@
+import type { AppError } from '../auth/types';
+
+export type PresentedError = {
+  summary: string;
+  fields: Record<string, string>;
+};
+
+const COPY = {
+  fiscalFormat: 'Debe ser un RNC de 9 dígitos o una cédula de 11 dígitos.',
+  fiscalConflict: 'Ya existe un cliente con esta identificación fiscal / cédula.',
+  nameRequired: 'El nombre es obligatorio.',
+  contactPhoneOrEmail: 'Cada contacto debe tener teléfono o correo.',
+  contactPrimary: 'Solo un contacto puede ser principal.',
+  emailInvalid: 'El correo no es válido.',
+  genericLocked: 'Cliente Contado es el predeterminado y no se puede editar.',
+  atLeastOneField: 'Indique al menos un dato para actualizar.',
+  currentPassword: 'La contraseña actual es incorrecta.',
+  passwordMustDiffer: 'La nueva contraseña debe ser diferente de la actual.',
+  passwordChangeRequired: 'Debe cambiar su contraseña desde Mi perfil para continuar.',
+} as const;
+
+/**
+ * Exact API and mock messages. Unknown server text is never shown to the operator.
+ * Keys must stay in sync with backend customer/auth constants.
+ */
+const KNOWN_TEXT: Record<string, { text: string; field?: string }> = {
+  'Fiscal identifier must be a 9-digit RNC or 11-digit Cédula': {
+    text: COPY.fiscalFormat,
+    field: 'rnc',
+  },
+  'A customer with this fiscal identifier already exists': {
+    text: COPY.fiscalConflict,
+    field: 'rnc',
+  },
+  'Name is required': { text: COPY.nameRequired, field: 'name' },
+  'Each contact must include a phone or email': { text: COPY.contactPhoneOrEmail },
+  'Only one contact can be primary': { text: COPY.contactPrimary, field: 'contacts' },
+  'At least one field is required': { text: COPY.atLeastOneField },
+  'Cliente contado cannot be edited': { text: COPY.genericLocked },
+  'Current password is incorrect': { text: COPY.currentPassword },
+  'New password must differ from current password': { text: COPY.passwordMustDiffer },
+  'El nombre es obligatorio': { text: COPY.nameRequired, field: 'name' },
+  'El correo no es válido': { text: COPY.emailInvalid },
+  'Cada contacto debe tener teléfono o correo': { text: COPY.contactPhoneOrEmail },
+  'Solo un contacto puede ser principal': { text: COPY.contactPrimary, field: 'contacts' },
+  'Cliente Contado es el predeterminado y no se puede editar': { text: COPY.genericLocked },
+};
+
+const FIELD_LABELS: Array<{ pattern: RegExp; label: string }> = [
+  { pattern: /^name$/, label: 'nombre' },
+  { pattern: /^rnc$/, label: 'identificación fiscal / cédula' },
+  { pattern: /^address$/, label: 'dirección' },
+  { pattern: /^notes$/, label: 'notas' },
+  { pattern: /^contacts$/, label: 'contactos' },
+  { pattern: /^contacts\.\d+$/, label: 'contacto' },
+  { pattern: /^contacts\.\d+\.email$/, label: 'correo del contacto' },
+  { pattern: /^contacts\.\d+\.phone$/, label: 'teléfono del contacto' },
+  { pattern: /^contacts\.\d+\.name$/, label: 'nombre del contacto' },
+  { pattern: /^contacts\.\d+\.title$/, label: 'cargo del contacto' },
+];
+
+type PresentInput = {
+  details?: Record<string, unknown>;
+  fallbackMessage: string;
+  serverMessage?: string;
+};
+
+function fieldLabel(path: string): string | undefined {
+  return FIELD_LABELS.find((entry) => entry.pattern.test(path))?.label;
+}
+
+function translateKnown(message: string): { text: string; field?: string } | undefined {
+  return KNOWN_TEXT[message];
+}
+
+/** Path-only fallback for known customer fields when Zod uses a default English message. */
+function translateByPath(path: string): { text: string; field: string } | undefined {
+  if (path === 'rnc') return { text: COPY.fiscalFormat, field: path };
+  if (path === 'name') return { text: COPY.nameRequired, field: path };
+  if (path === 'contacts') return { text: COPY.contactPrimary, field: path };
+  if (/^contacts\.\d+$/.test(path)) return { text: COPY.contactPhoneOrEmail, field: path };
+  if (/\.email$/.test(path)) return { text: COPY.emailInvalid, field: path };
+  return undefined;
+}
+
+function readIssues(details: Record<string, unknown> | undefined): Array<{ path: string; message: string }> {
+  const raw = details?.issues;
+  if (!Array.isArray(raw)) return [];
+
+  const issues: Array<{ path: string; message: string }> = [];
+  for (const issue of raw) {
+    if (!issue || typeof issue !== 'object') continue;
+    const path = 'path' in issue && typeof issue.path === 'string' ? issue.path : '';
+    const message = 'message' in issue && typeof issue.message === 'string' ? issue.message : '';
+    if (message) issues.push({ path, message });
+  }
+  return issues;
+}
+
+function summarize(fields: Record<string, string>): string {
+  const messages = [...new Set(Object.values(fields))];
+  if (messages.length === 1) return messages[0]!;
+
+  const labels = [
+    ...new Set(
+      Object.keys(fields)
+        .map((path) => fieldLabel(path))
+        .filter((label): label is string => Boolean(label)),
+    ),
+  ];
+  if (labels.length === 0) return messages.join(' ');
+  return `Revise: ${labels.join(', ')}.`;
+}
+
+function presentFromIssues(issues: Array<{ path: string; message: string }>): PresentedError | undefined {
+  const fields: Record<string, string> = {};
+
+  for (const issue of issues) {
+    const known = translateKnown(issue.message);
+    const mapped = known
+      ? { text: known.text, field: known.field ?? (fieldLabel(issue.path) ? issue.path : undefined) }
+      : fieldLabel(issue.path)
+        ? translateByPath(issue.path)
+        : undefined;
+    if (!mapped?.field) continue;
+    if (!fields[mapped.field]) fields[mapped.field] = mapped.text;
+  }
+
+  if (Object.keys(fields).length === 0) return undefined;
+  return { summary: summarize(fields), fields };
+}
+
+function presentFromKnownMessage(message: string | undefined): PresentedError | undefined {
+  if (!message) return undefined;
+  const known = translateKnown(message);
+  if (!known) return undefined;
+  const fields = known.field ? { [known.field]: known.text } : {};
+  return { summary: known.text, fields };
+}
+
+/**
+ * Turns a structured AppError into operator-facing Spanish copy.
+ * Unrecognized server text stays behind the generic fallback.
+ */
+export function presentError(input: PresentInput): PresentedError {
+  if (input.details?.reason === 'PASSWORD_CHANGE_REQUIRED') {
+    return { summary: COPY.passwordChangeRequired, fields: {} };
+  }
+
+  const fromIssues = presentFromIssues(readIssues(input.details));
+  if (fromIssues) return fromIssues;
+
+  const fromServer = presentFromKnownMessage(input.serverMessage);
+  if (fromServer) return fromServer;
+
+  const fromFallback = presentFromKnownMessage(input.fallbackMessage);
+  if (fromFallback) return fromFallback;
+
+  return { summary: input.fallbackMessage, fields: {} };
+}
+
+export function presentAppError(error: AppError): PresentedError {
+  return presentError({
+    details: error.details,
+    fallbackMessage: error.message,
+    serverMessage: error.message,
+  });
+}

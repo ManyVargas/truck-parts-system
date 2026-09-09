@@ -23,6 +23,12 @@ import {
   requestRecoveryWithHttp,
 } from '../client/auth-api';
 import {
+  getCustomerByIdWithHttp,
+  listCustomersWithHttp,
+  saveCustomerWithHttp,
+  searchCustomersWithHttp,
+} from '../client/customers-api';
+import {
   listRecoveryRequestsWithHttp,
   listUsersWithHttp,
   resolveRecoveryWithHttp,
@@ -31,8 +37,9 @@ import {
 import { httpNotImplemented } from '../client/http-not-implemented';
 
 /**
- * Access/profile uses the real M6–M8 API. Other repositories remain unavailable
- * until their integration milestone; capability guards keep their screens out of HTTP mode.
+ * Access/profile (R1) and customers (R2 M19) use the real API.
+ * Other repositories remain unavailable until their integration milestone;
+ * capability guards keep their screens out of HTTP mode.
  */
 export class HttpAuthRepository implements AuthRepository {
   async login(username: string, password: string) {
@@ -158,19 +165,19 @@ export class HttpInventoryRepository implements InventoryRepository {
 
 export class HttpCustomerRepository implements CustomerRepository {
   async list() {
-    return httpNotImplemented('HttpCustomerRepository', 'list');
+    return listCustomersWithHttp();
   }
 
-  async search() {
-    return httpNotImplemented('HttpCustomerRepository', 'search');
+  async search(query: string) {
+    return searchCustomersWithHttp(query);
   }
 
-  async getById() {
-    return httpNotImplemented('HttpCustomerRepository', 'getById');
+  async getById(id: string) {
+    return getCustomerByIdWithHttp(id);
   }
 
-  async save() {
-    return httpNotImplemented('HttpCustomerRepository', 'save');
+  async save(input: Parameters<CustomerRepository['save']>[0]) {
+    return saveCustomerWithHttp(input);
   }
 }
 

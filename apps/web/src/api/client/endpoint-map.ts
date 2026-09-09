@@ -35,7 +35,8 @@ export const REPOSITORY_ENDPOINT_MAP = {
     list: 'GET /api/customers',
     search: 'GET /api/customers?q=',
     getById: 'GET /api/customers/:id',
-    save: 'PUT /api/customers/:id',
+    create: 'POST /api/customers',
+    update: 'PATCH /api/customers/:id',
   },
   SalesRepository: {
     listInvoices: 'GET /api/sales',

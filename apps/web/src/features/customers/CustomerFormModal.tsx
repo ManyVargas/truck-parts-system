@@ -9,6 +9,7 @@ export type CustomerFormModalProps = {
   customer: Customer | null;
   isSaving: boolean;
   error: string | null;
+  fieldErrors?: Record<string, string>;
   onClose: () => void;
   onSubmit: (input: SaveCustomerInput) => void;
 };
@@ -50,16 +51,29 @@ function toSaveContacts(drafts: ContactDraft[]): SaveCustomerContactInput[] {
   }));
 }
 
+function firstError(
+  fieldErrors: Record<string, string> | undefined,
+  keys: string[],
+): string | undefined {
+  if (!fieldErrors) return undefined;
+  for (const key of keys) {
+    if (fieldErrors[key]) return fieldErrors[key];
+  }
+  return undefined;
+}
+
 export function CustomerFormModal({
   open,
   customer,
   isSaving,
   error,
+  fieldErrors,
   onClose,
   onSubmit,
 }: CustomerFormModalProps) {
   const [fields, setFields] = useState<FormFields>(EMPTY_FIELDS);
   const [baseline, setBaseline] = useState<FormFields>(EMPTY_FIELDS);
+  const [clearedFields, setClearedFields] = useState<Set<string>>(new Set());
   const nextKeyRef = useRef(0);
   const isEdit = customer != null;
 
@@ -91,7 +105,27 @@ export function CustomerFormModal({
       : EMPTY_FIELDS;
     setFields(next);
     setBaseline(next);
+    setClearedFields(new Set());
   }, [open, customer]);
+
+  useEffect(() => {
+    setClearedFields(new Set());
+  }, [error, fieldErrors]);
+
+  function visibleError(keys: string[]): string | undefined {
+    return firstError(
+      fieldErrors,
+      keys.filter((key) => !clearedFields.has(key)),
+    );
+  }
+
+  function clearFieldError(...keys: string[]) {
+    setClearedFields((current) => {
+      const next = new Set(current);
+      for (const key of keys) next.add(key);
+      return next;
+    });
+  }
 
   function addContact() {
     nextKeyRef.current += 1;
@@ -109,9 +143,18 @@ export function CustomerFormModal({
         },
       ],
     }));
+    clearFieldError('contacts');
   }
 
-  function updateContact(key: string, patch: Partial<ContactDraft>) {
+  function updateContact(key: string, index: number, patch: Partial<ContactDraft>) {
+    const touched = Object.keys(patch).map((field) => `contacts.${index}.${field}`);
+    if (patch.phone !== undefined || patch.email !== undefined) {
+      touched.push(`contacts.${index}`);
+    }
+    if (patch.isPrimary !== undefined) {
+      touched.push('contacts');
+    }
+    clearFieldError(...touched);
     setFields((current) => ({
       ...current,
       contacts: current.contacts.map((contact) => {
@@ -127,6 +170,10 @@ export function CustomerFormModal({
   }
 
   function removeContact(key: string) {
+    clearFieldError(
+      'contacts',
+      ...Object.keys(fieldErrors ?? {}).filter((field) => field.startsWith('contacts.')),
+    );
     setFields((current) => ({
       ...current,
       contacts: current.contacts.filter((contact) => contact.key !== key),
@@ -160,35 +207,52 @@ export function CustomerFormModal({
             {error}
           </Info>
         )}
-        <Field label="Nombre" htmlFor="customer-name">
+        <Field label="Nombre" htmlFor="customer-name" error={visibleError(['name'])}>
           <Input
             id="customer-name"
             value={fields.name}
-            onChange={(event) => setFields((current) => ({ ...current, name: event.target.value }))}
+            onChange={(event) => {
+              clearFieldError('name');
+              setFields((current) => ({ ...current, name: event.target.value }));
+            }}
             required
             autoFocus
           />
         </Field>
-        <Field label="Identificación fiscal / cédula" htmlFor="customer-rnc" hint="Opcional en ventas no fiscales">
+        <Field
+          label="Identificación fiscal / cédula"
+          htmlFor="customer-rnc"
+          hint="Opcional en ventas no fiscales"
+          error={visibleError(['rnc'])}
+        >
           <Input
             id="customer-rnc"
             value={fields.rnc}
-            onChange={(event) => setFields((current) => ({ ...current, rnc: event.target.value }))}
+            onChange={(event) => {
+              clearFieldError('rnc');
+              setFields((current) => ({ ...current, rnc: event.target.value }));
+            }}
           />
         </Field>
-        <Field label="Dirección" htmlFor="customer-address">
+        <Field label="Dirección" htmlFor="customer-address" error={visibleError(['address'])}>
           <Input
             id="customer-address"
             value={fields.address}
-            onChange={(event) => setFields((current) => ({ ...current, address: event.target.value }))}
+            onChange={(event) => {
+              clearFieldError('address');
+              setFields((current) => ({ ...current, address: event.target.value }));
+            }}
           />
         </Field>
-        <Field label="Notas" htmlFor="customer-notes">
+        <Field label="Notas" htmlFor="customer-notes" error={visibleError(['notes'])}>
           <Textarea
             id="customer-notes"
             rows={3}
             value={fields.notes}
-            onChange={(event) => setFields((current) => ({ ...current, notes: event.target.value }))}
+            onChange={(event) => {
+              clearFieldError('notes');
+              setFields((current) => ({ ...current, notes: event.target.value }));
+            }}
           />
         </Field>
 
@@ -199,6 +263,11 @@ export function CustomerFormModal({
               Agregar contacto
             </Button>
           </div>
+          {visibleError(['contacts']) && (
+            <p className="text-xs text-red-600" role="alert">
+              {visibleError(['contacts'])}
+            </p>
+          )}
 
           {fields.contacts.map((contact, index) => (
             <div
@@ -209,36 +278,57 @@ export function CustomerFormModal({
                 label="Nombre del contacto"
                 htmlFor={`contact-${index}-name`}
                 hint="Opcional si el contacto es la misma persona"
+                error={visibleError([`contacts.${index}.name`])}
               >
                 <Input
                   id={`contact-${index}-name`}
                   value={contact.name}
-                  onChange={(event) => updateContact(contact.key, { name: event.target.value })}
+                  onChange={(event) =>
+                    updateContact(contact.key, index, { name: event.target.value })
+                  }
                 />
               </Field>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Teléfono" htmlFor={`contact-${index}-phone`}>
+                <Field
+                  label="Teléfono"
+                  htmlFor={`contact-${index}-phone`}
+                  error={visibleError([`contacts.${index}.phone`, `contacts.${index}`])}
+                >
                   <Input
                     id={`contact-${index}-phone`}
                     value={contact.phone}
-                    onChange={(event) => updateContact(contact.key, { phone: event.target.value })}
+                    onChange={(event) =>
+                      updateContact(contact.key, index, { phone: event.target.value })
+                    }
                   />
                 </Field>
-                <Field label="Correo" htmlFor={`contact-${index}-email`}>
+                <Field
+                  label="Correo"
+                  htmlFor={`contact-${index}-email`}
+                  error={visibleError([`contacts.${index}.email`, `contacts.${index}`])}
+                >
                   <Input
                     id={`contact-${index}-email`}
                     type="email"
                     value={contact.email}
-                    onChange={(event) => updateContact(contact.key, { email: event.target.value })}
+                    onChange={(event) =>
+                      updateContact(contact.key, index, { email: event.target.value })
+                    }
                   />
                 </Field>
               </div>
               <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
-                <Field label="Cargo" htmlFor={`contact-${index}-title`}>
+                <Field
+                  label="Cargo"
+                  htmlFor={`contact-${index}-title`}
+                  error={visibleError([`contacts.${index}.title`])}
+                >
                   <Input
                     id={`contact-${index}-title`}
                     value={contact.title}
-                    onChange={(event) => updateContact(contact.key, { title: event.target.value })}
+                    onChange={(event) =>
+                      updateContact(contact.key, index, { title: event.target.value })
+                    }
                   />
                 </Field>
                 <label
@@ -250,7 +340,7 @@ export function CustomerFormModal({
                     type="checkbox"
                     checked={contact.isPrimary}
                     onChange={(event) =>
-                      updateContact(contact.key, { isPrimary: event.target.checked })
+                      updateContact(contact.key, index, { isPrimary: event.target.checked })
                     }
                   />
                   Principal

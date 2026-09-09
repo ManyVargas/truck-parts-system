@@ -1,4 +1,5 @@
 import type { AppError, AppErrorCode } from '../../shared/auth/types';
+import { presentError } from '../../shared/errors/present-app-error';
 
 export type HttpClientOptions = RequestInit & { parseJson?: boolean };
 
@@ -51,17 +52,15 @@ function mapResponseError(status: number, body: unknown): AppError {
     !Array.isArray(error.details)
       ? (error.details as Record<string, unknown>)
       : undefined;
-  let message = ERROR_MESSAGES[code];
-  if (code === 'VALIDATION' && 'message' in error) {
-    if (error.message === 'Current password is incorrect')
-      message = 'La contraseña actual es incorrecta.';
-    if (error.message === 'New password must differ from current password')
-      message = 'La nueva contraseña debe ser diferente de la actual.';
-  }
-  if (details?.reason === 'PASSWORD_CHANGE_REQUIRED')
-    message = 'Debe cambiar su contraseña desde Mi perfil para continuar.';
+  const serverMessage = 'message' in error && typeof error.message === 'string' ? error.message : undefined;
+  const presented = presentError({
+    details,
+    fallbackMessage: ERROR_MESSAGES[code],
+    serverMessage,
+  });
   const errorId =
     'errorId' in error && typeof error.errorId === 'string' ? error.errorId : undefined;
+  let message = presented.summary;
   if (code === 'INTERNAL' && errorId) message += ` Referencia: ${errorId}`;
   return { code, message, details, ...(errorId ? { errorId } : {}) };
 }

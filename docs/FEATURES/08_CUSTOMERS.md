@@ -65,14 +65,14 @@ At invoice confirmation, copy the applicable customer data into an immutable inv
 - [x] Customer search/select/create inside Draft flow. *(WM8: selector en POS; alta sigue en `/customers`)*
 - [x] Default `Cliente contado` behavior. *(WM8 `createDraft` usa C0; fiscal lo rechaza)*
 - [x] Fiscal-required field feedback. *(checkbox bloqueado + rechazo en servicio)*
-- [x] Basic customer maintenance. *(WM4 — `/customers`)*
+- [x] Basic customer maintenance. *(WM4 mock; API R2 M19 HTTP `/customers`)*
 - [x] Multiple contacts on a customer. *(prototipo mock — lista dinámica; `prepareCustomerSave`)*
 
 ### Tests
 - [x] Generic nonfiscal sale succeeds. *(prototipo mock — C0 + `fiscal: false`)*
 - [x] Generic fiscal sale rejected. *(prototipo mock — WM8)*
 - [x] Later customer edit leaves completed invoice unchanged. *(prototipo mock — WM8 snapshot; API R2 M12 HTTP)*
-- [x] Mechanic access denied. *(WM4 — `customers.manage` en repositorio)*
+- [x] Mechanic access denied. *(WM4 mock `customers.manage`; API R2 M19 HTTP 403 y sin nav)*
 
 ## Canonical validated requirements
 
