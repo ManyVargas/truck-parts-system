@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M15 completados)
+**Estado:** en curso (M1–M17 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 2, a medida que se completan.  
 No sustituye a `plan_release_2.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -576,18 +576,40 @@ PDF (M17). Swap web de rentabilidad (M24). Endpoint de recovery HTTP.
 
 ## Milestone 17 — PDF generar + estado de fallo
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-08
 
 ### Objetivo cumplido
 
+Emitir el PDF interno desde el snapshot completed, fuera de la transacción de venta. Un fallo deja la factura `COMPLETED` con `FAC-` y estado operativo `FAILED` + `errorId`.
+
 ### Qué se entregó
+
+- Columnas `Invoice.pdfStatus` / `pdfErrorId` / `pdfGeneratedAt` / `pdfTemplateVersion` (sin bytes).
+- Tras el primer `confirm`, render pdfkit; `GET /api/sales/:id/pdf` vuelve a renderizar si `READY` y responde 409 si `FAILED`.
+- Proyección `document: { status, errorId? }` en GET/confirm completed.
+- History `INVOICE_PDF_GENERATED` / `INVOICE_PDF_FAILED` en la transacción del estado PDF.
+- Mechanic 403; Seller descarga una factura que puede ver.
+- La metadata PDF `READY`/`FAILED` sigue siendo válida si una factura pasa posteriormente a `CANCELLED`.
 
 ### Decisiones técnicas
 
+- Opción A de infraestructura: el snapshot es la fuente de verdad; no hay S3 ni `BYTEA`.
+- El segundo confirm idempotente no reintenta el PDF (regenerar es M18).
+- Renderer inyectable (`InvoicePdfRenderer`), igual que `FxRateProvider`.
+- Plantilla `internal-v1` versionada: la descarga usa `pdfTemplateVersion`, conserva writers anteriores y rechaza una versión desconocida en vez de emitir otro documento.
+- El layout no es el diseño legal final; una futura plantilla debe registrarse como una versión nueva sin modificar el writer anterior.
+
 ### Validación
 
+- Unit: `apps/api/tests/unit/infrastructure/invoice-pdf.test.ts`
+- Unit: `apps/api/tests/unit/sales/history-validation.test.ts`
+- Integration: `apps/api/tests/integration/sales/pdf-http.test.ts`
+- Regresión: metadata preservada al cancelar, versión persistida entregada al renderer y rechazo de versiones desconocidas.
+
 ### Fuera de alcance (intencional)
+
+Regeneración Administrator (M18). Swap web (M23). S3 / DGII / NCF real.
 
 ---
 

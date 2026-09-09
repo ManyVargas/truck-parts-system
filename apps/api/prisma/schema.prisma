@@ -154,6 +154,11 @@ enum CostProvenance {
   UNKNOWN
 }
 
+enum InvoicePdfStatus {
+  READY
+  FAILED
+}
+
 model Invoice {
   id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   status       InvoiceStatus
@@ -173,6 +178,10 @@ model Invoice {
   fxRateSource          String?
   fxRateUpdatedAt       DateTime? @db.Timestamptz(3)
   fxRateObtainedAt      DateTime? @db.Timestamptz(3)
+  pdfStatus             InvoicePdfStatus?
+  pdfErrorId            String?           @db.Uuid
+  pdfGeneratedAt        DateTime?         @db.Timestamptz(3)
+  pdfTemplateVersion    String?
   createdAt    DateTime        @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime        @updatedAt @db.Timestamptz(3)
   customer     Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)

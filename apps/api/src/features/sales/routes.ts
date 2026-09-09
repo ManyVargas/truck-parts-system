@@ -8,6 +8,7 @@ import {
   deleteDraft,
   deleteDraftLine,
   getInvoice,
+  getInvoicePdf,
   getInvoices,
   patchDraft,
   patchDraftLine,
@@ -33,6 +34,7 @@ salesRouter.use((_req, res, next) => {
   next();
 });
 salesRouter.get('/', validate({ query: listInvoicesSchema }), getInvoices);
+salesRouter.get('/:id/pdf', validate({ params: invoiceIdSchema }), getInvoicePdf);
 salesRouter.get('/:id', validate({ params: invoiceIdSchema }), getInvoice);
 salesRouter.post('/', requireCsrfHeader, validate({ body: createDraftSchema }), postDraft);
 salesRouter.patch(

@@ -154,4 +154,37 @@ describe('invoice draft history validation', () => {
       }).success,
     ).toBe(false);
   });
+
+  it('accepts INVOICE_PDF_GENERATED and INVOICE_PDF_FAILED without extra fields', () => {
+    const generated = {
+      actor: { actorType: 'USER' as const, actorUserId: id },
+      subjectType: 'INVOICE' as const,
+      subjectId: id,
+      eventType: 'INVOICE_PDF_GENERATED' as const,
+      payload: { status: 'READY' as const, errorId: null, templateVersion: 'internal-v1' },
+    };
+    expect(historyEventSchema.parse(generated)).toEqual(generated);
+    const failed = {
+      ...generated,
+      eventType: 'INVOICE_PDF_FAILED' as const,
+      payload: {
+        status: 'FAILED' as const,
+        errorId: id,
+        templateVersion: 'internal-v1',
+      },
+    };
+    expect(historyEventSchema.parse(failed)).toEqual(failed);
+    expect(
+      historyEventSchema.safeParse({
+        ...generated,
+        payload: { ...generated.payload, extra: true },
+      }).success,
+    ).toBe(false);
+    expect(
+      historyEventSchema.safeParse({
+        ...failed,
+        payload: { ...failed.payload, errorId: null },
+      }).success,
+    ).toBe(false);
+  });
 });

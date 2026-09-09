@@ -22,6 +22,7 @@ import type {
   InvoiceUsdFxRetryHistorySnapshot,
   PublicFxProvenance,
   PublicInvoice,
+  PublicInvoiceDocument,
   PublicInvoiceLine,
   PublicInvoiceListItem,
   PublicProfitability,
@@ -190,6 +191,17 @@ function administratorProfitability(
   return deriveCompletedProfitability(invoice);
 }
 
+function toPublicInvoiceDocument(
+  invoice: InvoiceRecord | InvoiceListRecord,
+): PublicInvoiceDocument | undefined {
+  if (invoice.status !== 'COMPLETED' || invoice.pdfStatus == null) return undefined;
+  if (invoice.pdfStatus === 'FAILED') {
+    if (invoice.pdfErrorId == null) return undefined;
+    return { status: 'FAILED', errorId: invoice.pdfErrorId };
+  }
+  return { status: 'READY' };
+}
+
 function toPublicLine(
   line: InvoiceLine,
   fiscal: boolean,
@@ -247,6 +259,7 @@ function invoiceTotals(invoice: InvoiceRecord | InvoiceListRecord) {
 
 export function toPublicInvoice(invoice: InvoiceRecord, viewer: InvoiceViewer): PublicInvoice {
   const profitability = administratorProfitability(invoice, viewer);
+  const document = toPublicInvoiceDocument(invoice);
   return {
     id: invoice.id,
     status: invoice.status,
@@ -261,6 +274,7 @@ export function toPublicInvoice(invoice: InvoiceRecord, viewer: InvoiceViewer): 
     ),
     totals: invoiceTotals(invoice),
     ...(profitability ? { profitability: profitability.invoice } : {}),
+    ...(document ? { document } : {}),
     createdAt: invoice.createdAt.toISOString(),
     updatedAt: invoice.updatedAt.toISOString(),
   };

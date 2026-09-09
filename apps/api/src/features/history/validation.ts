@@ -306,6 +306,32 @@ export const historyEventSchema = z
           .strict(),
       })
       .strict(),
+    z
+      .object({
+        ...invoiceBase,
+        eventType: z.literal('INVOICE_PDF_GENERATED'),
+        payload: z
+          .object({
+            status: z.literal('READY'),
+            errorId: z.null(),
+            templateVersion: z.string(),
+          })
+          .strict(),
+      })
+      .strict(),
+    z
+      .object({
+        ...invoiceBase,
+        eventType: z.literal('INVOICE_PDF_FAILED'),
+        payload: z
+          .object({
+            status: z.literal('FAILED'),
+            errorId: z.uuid(),
+            templateVersion: z.string(),
+          })
+          .strict(),
+      })
+      .strict(),
   ])
   .superRefine((event, context) => {
     const expected =

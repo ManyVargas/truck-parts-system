@@ -8,6 +8,7 @@ import {
 import { logger } from '../../infrastructure/logging/index.js';
 import { CatalogRepository } from '../catalogs/repository.js';
 import { satisfiesFiscalIdentity } from '../customers/fiscal.js';
+import { InvoiceDocumentService } from '../invoice-documents/service.js';
 import {
   CATALOG_SERVICE_NOT_FOUND_MESSAGE,
   DEFAULT_DRAFT_CURRENCY,
@@ -150,6 +151,7 @@ export class SalesService {
     private readonly transaction: SalesTransaction = salesTransaction,
     private readonly fxRateProvider: FxRateProvider = unavailableFxRateProvider,
     private readonly sales: SalesRepository = new SalesRepository(),
+    private readonly invoiceDocuments: InvoiceDocumentService = new InvoiceDocumentService(),
   ) {}
 
   async createDraft(actorId: string, input: unknown) {
@@ -423,7 +425,30 @@ export class SalesService {
       },
     );
     const enriched = alreadyCompleted ? invoice : await this.enrichUsdProfitability(invoice);
-    return toPublicInvoice(enriched, actor);
+    const withDocument = alreadyCompleted
+      ? enriched
+      : await this.generateInvoicePdf(actorId, enriched);
+    return toPublicInvoice(withDocument, actor);
+  }
+
+  async getPdf(actorId: string, id: string) {
+    return this.invoiceDocuments.download(actorId, id);
+  }
+
+  /**
+   * PDF is outside the commercial transaction. Failure leaves the sale committed
+   * and document FAILED. Idempotent confirm does not retry.
+   */
+  private async generateInvoicePdf(actorId: string, invoice: InvoiceRecord): Promise<InvoiceRecord> {
+    try {
+      return await this.invoiceDocuments.recordInitialGeneration(actorId, invoice);
+    } catch (error) {
+      logger.warn(
+        { invoiceId: invoice.id, reason: error instanceof Error ? error.name : 'unknown' },
+        'invoice PDF persistence failed',
+      );
+      return invoice;
+    }
   }
 
   /**

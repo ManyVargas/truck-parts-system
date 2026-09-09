@@ -8,8 +8,10 @@ import { catalogsRouter } from './features/catalogs/routes.js';
 import { customersRouter } from './features/customers/routes.js';
 import { profitabilityRouter } from './features/profitability/routes.js';
 import { ProfitabilityService } from './features/profitability/service.js';
+import { InvoiceDocumentService } from './features/invoice-documents/service.js';
 import { salesRouter } from './features/sales/routes.js';
 import { SalesService } from './features/sales/service.js';
+import { SalesRepository } from './features/sales/repository.js';
 import { salesTransaction } from './features/sales/transaction.js';
 import { healthRouter } from './features/health/routes.js';
 import { usersRouter } from './features/users/routes.js';
@@ -20,6 +22,10 @@ import {
   requestLoggingMiddleware,
 } from './infrastructure/http/index.js';
 import { createFxRateProvider, type FxRateProvider } from './infrastructure/fx/index.js';
+import {
+  pdfkitInvoicePdfRenderer,
+  type InvoicePdfRenderer,
+} from './infrastructure/invoice-pdf/index.js';
 
 export type CreateAppOptions = {
   /** Test-only routers, mounted after feature routes and before the 404 handler. */
@@ -31,6 +37,8 @@ export type CreateAppOptions = {
   trustProxy?: boolean;
   /** Test double for COST-003. Production uses ExchangeRate-API via env. */
   fxRateProvider?: FxRateProvider;
+  /** Test double for SALE-004. Production uses pdfkit. */
+  invoicePdfRenderer?: InvoicePdfRenderer;
 };
 
 /** Matches body-parser's default; bodies over this size map to 413 PAYLOAD_TOO_LARGE. */
@@ -49,7 +57,16 @@ export function createApp(options: CreateAppOptions = {}): express.Application {
   const app = express();
   const trustProxy = options.trustProxy ?? isTrustProxyEnabled(process.env.TRUST_PROXY);
   const fxRateProvider = options.fxRateProvider ?? createFxRateProvider();
-  const salesService = new SalesService(salesTransaction, fxRateProvider);
+  const invoiceDocuments = new InvoiceDocumentService(
+    salesTransaction,
+    options.invoicePdfRenderer ?? pdfkitInvoicePdfRenderer,
+  );
+  const salesService = new SalesService(
+    salesTransaction,
+    fxRateProvider,
+    new SalesRepository(),
+    invoiceDocuments,
+  );
   const profitabilityService = new ProfitabilityService(salesTransaction, fxRateProvider);
   app.locals.salesService = salesService;
   app.locals.profitabilityService = profitabilityService;

@@ -10,6 +10,7 @@ import type {
   InvoiceRecord,
   InvoiceSequenceRecord,
   ListInvoicesQuery,
+  RecordInvoicePdfStatusRecord,
   RecordManualGrossProfitRecord,
   RecordUsdFxRateRecord,
   UpdateDraftInvoiceRecord,
@@ -226,6 +227,25 @@ export class SalesRepository {
         fxRateSource: input.source,
         fxRateUpdatedAt: input.rateUpdatedAt,
         fxRateObtainedAt: input.obtainedAt,
+      },
+    });
+    return { invoice: await this.findById(input.id), recorded: result.count > 0 };
+  }
+
+  async recordPdfStatus(
+    input: RecordInvoicePdfStatusRecord,
+  ): Promise<{ invoice: InvoiceRecord | null; recorded: boolean }> {
+    const result = await this.database.invoice.updateMany({
+      where: {
+        id: input.id,
+        status: 'COMPLETED',
+        pdfStatus: null,
+      },
+      data: {
+        pdfStatus: input.status,
+        pdfErrorId: input.errorId,
+        pdfGeneratedAt: input.generatedAt,
+        pdfTemplateVersion: input.templateVersion,
       },
     });
     return { invoice: await this.findById(input.id), recorded: result.count > 0 };

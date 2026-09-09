@@ -47,6 +47,14 @@ export async function postConfirmInvoice(req: Request, res: Response) {
   res.json(await salesServiceOf(req).confirm(actor(req), id(req), req.validated?.body ?? {}));
 }
 
+export async function getInvoicePdf(req: Request, res: Response) {
+  const file = await salesServiceOf(req).getPdf(actor(req), id(req));
+  res.status(200);
+  res.setHeader('Content-Type', file.contentType);
+  res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+  res.send(file.body);
+}
+
 export async function postDraftLine(req: Request, res: Response) {
   res.status(201).json(await salesServiceOf(req).addLine(actor(req), id(req), req.validated?.body));
 }

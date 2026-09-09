@@ -130,6 +130,24 @@ export type PublicInvoiceLine = {
   profitability?: PublicProfitability;
 };
 
+export type PublicInvoiceDocument =
+  | { status: 'READY' }
+  | { status: 'FAILED'; errorId: string };
+
+export type RecordInvoicePdfStatusRecord = {
+  id: string;
+  status: 'READY' | 'FAILED';
+  errorId: string | null;
+  generatedAt: Date;
+  templateVersion: string;
+};
+
+export type InvoicePdfHistorySnapshot = {
+  status: 'READY' | 'FAILED';
+  errorId: string | null;
+  templateVersion: string;
+};
+
 export type PublicInvoice = {
   id: string;
   status: InvoiceStatus;
@@ -142,6 +160,7 @@ export type PublicInvoice = {
   lines: PublicInvoiceLine[];
   totals: { gross: string; base: string; itbis: string };
   profitability?: PublicProfitability;
+  document?: PublicInvoiceDocument;
   createdAt: string;
   updatedAt: string;
 };
