@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M21 completados)
+**Estado:** en curso (M1–M22 completados)
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 2, a medida que se completan.  
 No sustituye a `plan_release_2.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
@@ -775,18 +775,34 @@ Confirmación / `FAC-` (M22). PDF (M23). Rentabilidad (M24). Pagos, cancelar, co
 
 ## Milestone 22 — Web: confirmación HTTP
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-09
 
 ### Objetivo cumplido
 
+Confirmar drafts HTTP reales sin cobro. El POS emite `FAC-`, el listado/detalle completed muestran snapshot, líneas, totales e ITBIS. PDF y profit siguen stub.
+
 ### Qué se entregó
+
+- `confirmInvoiceWithHttp`: `POST /api/sales/:id/confirm` con body `{}` y CSRF. Un payload de pago de la UI no se envía.
+- Listado HTTP: `DRAFT` y `COMPLETED` (ALL combina ambos). `CANCELLED` sigue vacío sin llamar al API.
+- `getInvoiceWithHttp` para el detalle completed. Acciones PDF/pago/cancelar/profit apagadas.
+- El botón Confirmar abre el modal en HTTP. Capability `payments` off: no hay pago inicial.
 
 ### Decisiones técnicas
 
+- Confirmación mock y drafts HTTP no se mezclan: el mismo `HttpSalesRepository` confirma y lista completed.
+- Filas completed navegan a `/sales/:id`. El GET de completed proyecta el snapshot de cliente, no el cliente vivo.
+- `payments`, `profitability` y PDF siguen off en HTTP.
+
 ### Validación
 
+- Unit: `apps/web/tests/unit/api/http-sales.test.ts`
+- Component: `apps/web/tests/component/sales/HttpSalesFlow.test.tsx`
+
 ### Fuera de alcance (intencional)
+
+PDF (M23). Rentabilidad (M24). Pagos, cancelar, corregir moneda. Inventario.
 
 ---
 

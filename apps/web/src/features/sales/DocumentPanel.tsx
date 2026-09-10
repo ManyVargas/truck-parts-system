@@ -72,7 +72,7 @@ export function DocumentPanel({
         <span>
           <span className="font-medium">Factura con comprobante fiscal</span>
           <span className="mt-0.5 block text-xs text-navy-400">
-            Activa el impuesto ITBIS (18% incluido) en las líneas gravadas. Requiere cliente con RNC o cédula.
+            Activa el ITBIS (18% incluido) en las líneas gravadas. Requiere cliente con RNC o cédula.
           </span>
         </span>
       </label>

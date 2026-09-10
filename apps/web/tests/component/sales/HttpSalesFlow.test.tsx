@@ -26,6 +26,18 @@ const cashCustomer = {
   updatedAt: '2026-09-07T01:00:00.000Z',
 };
 
+const fleetCustomer = {
+  id: '44444444-4444-4444-8444-444444444444',
+  name: 'Flota Este',
+  rnc: '131098765',
+  address: null,
+  notes: null,
+  isDefault: false,
+  contacts: [],
+  createdAt: '2026-09-07T01:00:00.000Z',
+  updatedAt: '2026-09-07T01:00:00.000Z',
+};
+
 const installation = {
   id: '55555555-5555-4555-8555-555555555555',
   name: 'Instalación mecánica',
@@ -55,13 +67,13 @@ type ApiLine = {
 
 type ApiInvoice = {
   id: string;
-  status: 'DRAFT';
-  number: null;
+  status: 'DRAFT' | 'COMPLETED' | 'CANCELLED';
+  number: string | null;
   currency: 'DOP' | 'USD';
   fiscal: boolean;
   customer: { id: string; name: string; rnc: string | null; isDefault: boolean };
-  customerSnapshot: null;
-  confirmedAt: null;
+  customerSnapshot: { name: string; rnc: string | null } | null;
+  confirmedAt: string | null;
   lines: ApiLine[];
   totals: { gross: string; base: string; itbis: string };
   createdAt: string;
@@ -85,9 +97,9 @@ function identity(role: Role) {
   };
 }
 
-function emptyInvoice(): ApiInvoice {
+function emptyInvoice(id = draftId): ApiInvoice {
   return {
-    id: draftId,
+    id,
     status: 'DRAFT',
     number: null,
     currency: 'DOP',
@@ -113,80 +125,159 @@ function sumGross(lines: ApiLine[]): string {
 }
 
 let role: Role;
-let invoice: ApiInvoice | null;
+let invoices: ApiInvoice[];
+let customers: Array<typeof cashCustomer | typeof fleetCustomer>;
+let nextDraftNumber: number;
+let nextFacNumber: number;
 let fetchMock: ReturnType<typeof vi.fn>;
+
+function invoiceById(id: string) {
+  return invoices.find((item) => item.id === id);
+}
+
+function replaceInvoice(next: ApiInvoice) {
+  invoices = invoices.map((item) => (item.id === next.id ? next : item));
+}
 
 beforeEach(() => {
   role = 'SELLER';
-  invoice = null;
+  invoices = [];
+  customers = [cashCustomer, fleetCustomer];
+  nextDraftNumber = 1;
+  nextFacNumber = 1;
   fetchMock = vi.fn(async (path: string, init?: RequestInit) => {
     const url = String(path);
     if (path === '/api/auth/session' || path === '/api/auth/me') return json(identity(role));
     if (url.startsWith('/api/customers?') && !init?.method) {
-      return json({ items: [cashCustomer], total: 1, page: 1, pageSize: 100 });
+      return json({ items: customers, total: customers.length, page: 1, pageSize: 100 });
+    }
+    if (url.startsWith('/api/customers/') && !init?.method) {
+      const id = url.slice('/api/customers/'.length);
+      const found = customers.find((customer) => customer.id === id);
+      if (!found) return json({ error: { code: 'NOT_FOUND' } }, 404);
+      return json(found);
+    }
+    if (url.startsWith('/api/customers/') && init?.method === 'PATCH') {
+      const id = url.slice('/api/customers/'.length);
+      const body = JSON.parse(init.body as string);
+      customers = customers.map((customer) =>
+        customer.id === id ? { ...customer, ...body } : customer,
+      );
+      const updated = customers.find((customer) => customer.id === id);
+      if (!updated) return json({ error: { code: 'NOT_FOUND' } }, 404);
+      return json(updated);
     }
     if (url === '/api/catalogs/services') return json({ items: [installation] });
     if (url.startsWith('/api/sales?status=DRAFT')) {
-      const items = invoice ? [invoice] : [];
+      const items = invoices.filter((item) => item.status === 'DRAFT');
+      return json({ items, total: items.length, page: 1, pageSize: 100 });
+    }
+    if (url.startsWith('/api/sales?status=COMPLETED')) {
+      const items = invoices.filter((item) => item.status === 'COMPLETED');
       return json({ items, total: items.length, page: 1, pageSize: 100 });
     }
     if (url === '/api/sales' && init?.method === 'POST') {
-      invoice = emptyInvoice();
-      return json(invoice, 201);
+      const created = emptyInvoice(
+        nextDraftNumber === 1 ? draftId : `bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb${nextDraftNumber}`,
+      );
+      nextDraftNumber += 1;
+      invoices = [...invoices, created];
+      return json(created, 201);
     }
-    if (url === `/api/sales/${draftId}` && init?.method === 'PATCH') {
-      const body = JSON.parse(init.body as string);
-      if (!invoice) return json({ error: { code: 'NOT_FOUND' } }, 404);
-      if (body.fiscal === true && (invoice.customer.isDefault || !invoice.customer.rnc)) {
-        return json(
-          {
-            error: {
-              code: 'CONFLICT',
-              message: 'A fiscal invoice requires a customer with RNC or Cédula',
-            },
-          },
-          409,
-        );
+
+    const salesMatch = url.match(/^\/api\/sales\/([^/]+)(?:\/(lines|confirm))?$/);
+    if (salesMatch) {
+      const id = salesMatch[1];
+      const action = salesMatch[2];
+      const current = invoiceById(id);
+      if (!current) return json({ error: { code: 'NOT_FOUND' } }, 404);
+
+      if (action === 'confirm' && init?.method === 'POST') {
+        if (JSON.parse(String(init.body)) !== null && JSON.stringify(JSON.parse(String(init.body))) !== '{}') {
+          throw new Error(`Unexpected confirm body: ${String(init.body)}`);
+        }
+        const number = `FAC-${String(nextFacNumber).padStart(6, '0')}`;
+        nextFacNumber += 1;
+        const confirmed: ApiInvoice = {
+          ...current,
+          status: 'COMPLETED',
+          number,
+          customerSnapshot: { name: current.customer.name, rnc: current.customer.rnc },
+          confirmedAt: '2026-09-09T13:00:00.000Z',
+        };
+        replaceInvoice(confirmed);
+        return json(confirmed);
       }
-      invoice = { ...invoice, ...body };
-      return json(invoice);
+
+      if (action === 'lines' && init?.method === 'POST') {
+        const body = JSON.parse(init.body as string);
+        const line: ApiLine = {
+          id: `line-${current.lines.length + 1}`,
+          type: body.type,
+          description: body.description ?? installation.name,
+          notes: typeof body.notes === 'string' && body.notes.trim() ? body.notes.trim() : null,
+          quantity: body.quantity ?? '1.00',
+          unitPrice: body.unitPrice ?? '0.00',
+          taxable: body.type === 'GENERIC' || body.type === 'EXTERNAL',
+          gross: body.unitPrice ?? '0.00',
+          base: body.unitPrice ?? '0.00',
+          itbis: body.type === 'GENERIC' || body.type === 'EXTERNAL' ? '0.00' : '0.00',
+          acquisitionCostDop: body.acquisitionCostDop ?? null,
+          costProvenance: body.costProvenance ?? null,
+          serviceId: body.serviceId ?? null,
+        };
+        const next = {
+          ...current,
+          lines: [...current.lines, line],
+          totals: { ...current.totals, gross: sumGross([...current.lines, line]) },
+        };
+        replaceInvoice(next);
+        return json(next, 201);
+      }
+
+      if (!action && init?.method === 'PATCH') {
+        const body = JSON.parse(init.body as string);
+        if (body.fiscal === true && (current.customer.isDefault || !current.customer.rnc)) {
+          return json(
+            {
+              error: {
+                code: 'CONFLICT',
+                message: 'A fiscal invoice requires a customer with RNC or Cédula',
+              },
+            },
+            409,
+          );
+        }
+        const nextCustomer =
+          body.customerId != null
+            ? customers.find((customer) => customer.id === body.customerId)
+            : current.customer;
+        const next: ApiInvoice = {
+          ...current,
+          ...body,
+          customer: nextCustomer
+            ? {
+                id: nextCustomer.id,
+                name: nextCustomer.name,
+                rnc: nextCustomer.rnc,
+                isDefault: nextCustomer.isDefault,
+              }
+            : current.customer,
+        };
+        replaceInvoice(next);
+        return json(next);
+      }
+
+      if (!action && init?.method === 'DELETE') {
+        invoices = invoices.filter((item) => item.id !== id);
+        return new Response(null, { status: 204 });
+      }
+
+      if (!action && !init?.method) {
+        return json(current);
+      }
     }
-    if (url === `/api/sales/${draftId}` && init?.method === 'DELETE') {
-      invoice = null;
-      return new Response(null, { status: 204 });
-    }
-    if (url === `/api/sales/${draftId}` && !init?.method) {
-      if (!invoice) return json({ error: { code: 'NOT_FOUND' } }, 404);
-      return json(invoice);
-    }
-    if (url === `/api/sales/${draftId}/lines` && init?.method === 'POST') {
-      if (!invoice) return json({ error: { code: 'NOT_FOUND' } }, 404);
-      const body = JSON.parse(init.body as string);
-      const line: ApiLine = {
-        id: `line-${invoice.lines.length + 1}`,
-        type: body.type,
-        description: body.description ?? installation.name,
-        notes: typeof body.notes === 'string' && body.notes.trim() ? body.notes.trim() : null,
-        quantity: body.quantity ?? '1.00',
-        unitPrice: body.unitPrice ?? '0.00',
-        taxable: body.type === 'GENERIC' || body.type === 'EXTERNAL',
-        gross: body.unitPrice ?? '0.00',
-        base: body.unitPrice ?? '0.00',
-        itbis: '0.00',
-        acquisitionCostDop: body.acquisitionCostDop ?? null,
-        costProvenance: body.costProvenance ?? null,
-        serviceId: body.serviceId ?? null,
-      };
-      invoice = {
-        ...invoice,
-        lines: [...invoice.lines, line],
-        totals: { ...invoice.totals, gross: sumGross([...invoice.lines, line]) },
-      };
-      return json(invoice, 201);
-    }
-    if (url === `/api/sales/${draftId}/confirm`) {
-      throw new Error('confirm must not be called in M21');
-    }
+
     throw new Error(`Unexpected endpoint: ${path} ${init?.method ?? 'GET'}`);
   });
   vi.stubGlobal('fetch', fetchMock);
@@ -294,26 +385,24 @@ describe('M21 HTTP POS draft UI', () => {
       ),
     ).toBe(true);
 
-    await user.click(screen.getByRole('button', { name: 'Confirmar venta' }));
-    expect(screen.queryByRole('dialog', { name: 'Confirmar venta' })).not.toBeInTheDocument();
-    expect(
-      fetchMock.mock.calls.some(([requestPath]) => String(requestPath).endsWith('/confirm')),
-    ).toBe(false);
-
     await user.click(screen.getByRole('button', { name: 'Descartar borrador' }));
     await user.click(screen.getByRole('button', { name: 'Sí, descartar' }));
     expect(await screen.findByRole('heading', { name: 'Ventas y Facturas' })).toBeVisible();
   });
 
-  it('shows an empty completed tab without requesting completed invoices', async () => {
+  it('shows an empty completed tab after requesting completed invoices', async () => {
     const user = userEvent.setup();
-    invoice = emptyInvoice();
+    invoices = [emptyInvoice()];
     mount();
     expect(await screen.findByText(`Borrador ${draftId}`)).toBeVisible();
     fetchMock.mockClear();
     await user.click(screen.getByRole('button', { name: 'Completada' }));
     expect(await screen.findByText('No hay facturas en esta pestaña')).toBeVisible();
-    expect(fetchMock.mock.calls.some(([path]) => String(path).includes('/api/sales'))).toBe(false);
+    expect(
+      fetchMock.mock.calls.some(([requestPath]) =>
+        String(requestPath).includes('/api/sales?status=COMPLETED'),
+      ),
+    ).toBe(true);
   });
 
   it('denies a mechanic the sales screen without calling the sales API', async () => {
@@ -324,5 +413,85 @@ describe('M21 HTTP POS draft UI', () => {
     expect(
       fetchMock.mock.calls.some(([path]) => String(path).startsWith('/api/sales')),
     ).toBe(false);
+  });
+});
+
+async function addGenericLine(
+  user: ReturnType<typeof userEvent.setup>,
+  description: string,
+  price: string,
+) {
+  await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
+  await user.type(screen.getByLabelText('Descripción'), description);
+  await user.clear(screen.getByLabelText('Precio'));
+  await user.type(screen.getByLabelText('Precio'), price);
+  await user.click(screen.getByRole('button', { name: 'Agregar' }));
+  expect(await screen.findByText(description)).toBeVisible();
+}
+
+async function confirmOpenSale(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'Confirmar venta' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Confirmar venta' });
+  expect(within(dialog).queryByText('Pago inicial')).not.toBeInTheDocument();
+  await user.click(within(dialog).getByRole('button', { name: 'Confirmar venta' }));
+}
+
+describe('M22 HTTP confirmation UI', () => {
+  it('confirms DOP and USD sales, shows FAC- in list and detail, and freezes the customer snapshot', async () => {
+    const user = userEvent.setup();
+    mount();
+
+    await user.click(await screen.findByRole('button', { name: 'Nuevo borrador' }));
+    expect(await screen.findByRole('heading', { name: 'Punto de venta' })).toBeVisible();
+    await user.selectOptions(screen.getByLabelText('Cliente'), fleetCustomer.id);
+    await addGenericLine(user, 'Filtro de aceite', '118');
+    await confirmOpenSale(user);
+
+    expect(await screen.findByText('Factura FAC-000001 confirmada')).toBeVisible();
+    expect(screen.getByText(/Cliente Flota Este/)).toBeVisible();
+    expect(
+      fetchMock.mock.calls.some(
+        ([requestPath, init]) =>
+          String(requestPath) === `/api/sales/${draftId}/confirm` && init?.method === 'POST',
+      ),
+    ).toBe(true);
+
+    await user.click(screen.getByRole('link', { name: 'Ventas y Facturas' }));
+    await user.click(await screen.findByRole('button', { name: 'Completada' }));
+    expect(await screen.findByText('FAC-000001')).toBeVisible();
+    expect(screen.getByText('Flota Este')).toBeVisible();
+
+    await user.click(screen.getByRole('link', { name: 'FAC-000001' }));
+    expect(await screen.findByRole('heading', { name: 'FAC-000001' })).toBeVisible();
+    expect(screen.getByText(/Flota Este/)).toBeVisible();
+    expect(screen.getByText('Filtro de aceite')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Vista previa del documento' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Rentabilidad')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: 'Clientes' }));
+    expect(await screen.findByText('Flota Este')).toBeVisible();
+    const fleetRow = screen.getByText('Flota Este').closest('tr');
+    await user.click(within(fleetRow as HTMLTableRowElement).getByRole('button', { name: 'Editar' }));
+    const nameField = await screen.findByLabelText('Nombre');
+    await user.clear(nameField);
+    await user.type(nameField, 'Flota Norte');
+    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+    expect(await screen.findByText('Flota Norte')).toBeVisible();
+
+    await user.click(screen.getByRole('link', { name: 'Ventas y Facturas' }));
+    await user.click(await screen.findByRole('button', { name: 'Completada' }));
+    await user.click(await screen.findByRole('link', { name: 'FAC-000001' }));
+    expect(await screen.findByRole('heading', { name: 'FAC-000001' })).toBeVisible();
+    expect(screen.getByText(/Flota Este/)).toBeVisible();
+    expect(screen.queryByText('Flota Norte')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: 'Ventas y Facturas' }));
+    await user.click(await screen.findByRole('button', { name: 'Nuevo borrador' }));
+    expect(await screen.findByRole('heading', { name: 'Punto de venta' })).toBeVisible();
+    await user.selectOptions(screen.getByLabelText('Moneda'), 'USD');
+    await addGenericLine(user, 'Servicio USD', '50');
+    await confirmOpenSale(user);
+    expect(await screen.findByText('Factura FAC-000002 confirmada')).toBeVisible();
+    expect(screen.getByLabelText('Moneda')).toHaveValue('USD');
   });
 });

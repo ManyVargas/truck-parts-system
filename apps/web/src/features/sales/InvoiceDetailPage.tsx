@@ -7,6 +7,7 @@ import { can } from '../../shared/auth/policies';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
 import { Button, Card, Chip, Info, money, Mono } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
+import { BackToSalesLink } from './BackToSalesLink';
 import { CancelInvoiceModal } from './CancelInvoiceModal';
 import { CurrencyCorrectionModal } from './CurrencyCorrectionModal';
 import { InvoiceHistory } from './InvoiceHistory';
@@ -51,6 +52,7 @@ export function InvoiceDetailPage() {
   return (
     <>
       <PageHeader
+        leading={<BackToSalesLink />}
         title={detail.number ?? detail.id}
         description={`${detail.customerName}${detail.customerRnc ? ` · ${detail.customerRnc}` : ''}`}
         actions={
@@ -105,9 +107,6 @@ export function InvoiceDetailPage() {
         )}
         {detail.fiscal ? <Chip tone="brand">Fiscal</Chip> : <Chip>Sin comprobante fiscal</Chip>}
         <Chip>{detail.currency}</Chip>
-        <Link to="/sales" className="text-sm text-brand hover:underline">
-          Volver al listado
-        </Link>
       </div>
 
       <div className="mb-8 grid gap-4 sm:grid-cols-3">

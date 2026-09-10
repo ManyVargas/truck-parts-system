@@ -101,7 +101,7 @@ export function ConfirmSaleModal({
           <strong>{draft.customerName}</strong>.
         </p>
         <p>
-          Total {money(draft.totals.gross, draft.currency)} · Impuesto ITBIS{' '}
+          Total {money(draft.totals.gross, draft.currency)} · ITBIS{' '}
           {money(draft.totals.itbis, draft.currency)}
         </p>
         {capabilities.workOrders && installed.length > 0 && (

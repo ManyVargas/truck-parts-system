@@ -32,14 +32,14 @@ export function PdfPreviewModal({ open, detail, onClose }: PdfPreviewModalProps)
           </p>
           <p>Identificación fiscal / cédula: {detail.customerRnc ?? '—'}</p>
           <p>Moneda: {currencyLabel(detail.currency)}</p>
-          <p>{detail.fiscal ? 'Factura con comprobante fiscal (impuesto ITBIS 18% incluido)' : 'Sin comprobante fiscal'}</p>
+          <p>{detail.fiscal ? 'Factura con comprobante fiscal (ITBIS 18% incluido)' : 'Sin comprobante fiscal'}</p>
         </div>
 
         <InvoiceLinesTable lines={detail.lines} currency={detail.currency} fiscal={detail.fiscal} />
 
         <div className="ml-auto max-w-xs space-y-1 text-sm">
           <div className="flex justify-between">
-            <span className="text-navy-400">Impuesto ITBIS</span>
+            <span className="text-navy-400">ITBIS</span>
             <span className="font-mono">
               {detail.fiscal ? money(itbisTotal, detail.currency) : money(0, detail.currency)}
             </span>

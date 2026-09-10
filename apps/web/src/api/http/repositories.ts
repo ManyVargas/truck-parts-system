@@ -57,9 +57,9 @@ import {
 import { httpNotImplemented } from '../client/http-not-implemented';
 
 /**
- * Access/profile (R1), customers (M19), services (M20) and POS drafts (M21) use the real API.
- * Confirm/PDF/profit and later-release repositories stay stubbed;
- * capability guards keep those screens out of HTTP mode.
+ * Access/profile (R1), customers (M19), services (M20), POS drafts (M21) and
+ * confirmation (M22) use the real API. PDF/profit and later-release repositories
+ * stay stubbed; capability guards keep those screens out of HTTP mode.
  */
 export class HttpAuthRepository implements AuthRepository {
   async login(username: string, password: string) {

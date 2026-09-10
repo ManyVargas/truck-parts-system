@@ -49,34 +49,74 @@ function json(body: unknown, status = 200) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('HTTP sales draft contract', () => {
-  it('lists only drafts and maps a missing number', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(
-      json({
-        items: [invoiceWithTotal],
-        total: 1,
-        page: 1,
-        pageSize: 100,
-      }),
-    );
+  it('lists drafts and completed invoices and leaves cancelled empty', async () => {
+    const fetchMock = vi.fn(async (path: string) => {
+      const url = String(path);
+      if (url.startsWith('/api/sales?status=DRAFT')) {
+        return json({
+          items: [invoiceWithTotal],
+          total: 1,
+          page: 1,
+          pageSize: 100,
+        });
+      }
+      if (url.startsWith('/api/sales?status=COMPLETED')) {
+        return json({
+          items: [
+            {
+              ...invoiceWithTotal,
+              id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+              status: 'COMPLETED',
+              number: 'FAC-000001',
+              customer: { ...cashCustomer, name: 'Nombre al confirmar' },
+              confirmedAt: '2026-09-09T13:00:00.000Z',
+              createdAt: '2026-09-09T13:00:00.000Z',
+            },
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 100,
+        });
+      }
+      throw new Error(`Unexpected ${path}`);
+    });
     vi.stubGlobal('fetch', fetchMock);
 
     const all = await repository.listInvoices('ALL');
-    expect(all).toMatchObject({
-      ok: true,
-      value: [
-        {
-          id: draftId,
-          number: `Borrador ${draftId}`,
-          status: 'DRAFT',
-          href: `/sales/draft/${draftId}`,
-          total: 118,
-        },
-      ],
-    });
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/sales?status=DRAFT&page=1&pageSize=100');
+    expect(all.ok).toBe(true);
+    if (all.ok) {
+      expect(all.value.map((row) => row.number)).toEqual(['FAC-000001', `Borrador ${draftId}`]);
+      expect(all.value[0]).toMatchObject({
+        status: 'COMPLETED',
+        href: '/sales/cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+        customerName: 'Nombre al confirmar',
+        balance: 118,
+      });
+      expect(all.value[1]).toMatchObject({
+        status: 'DRAFT',
+        href: `/sales/draft/${draftId}`,
+        balance: 0,
+      });
+    }
+    expect(fetchMock.mock.calls.map(([requestPath]) => requestPath)).toEqual(
+      expect.arrayContaining([
+        '/api/sales?status=DRAFT&page=1&pageSize=100',
+        '/api/sales?status=COMPLETED&page=1&pageSize=100',
+      ]),
+    );
 
     fetchMock.mockClear();
-    expect(await repository.listInvoices('COMPLETED')).toEqual({ ok: true, value: [] });
+    const completed = await repository.listInvoices('COMPLETED');
+    expect(completed).toMatchObject({
+      ok: true,
+      value: [{ number: 'FAC-000001', status: 'COMPLETED' }],
+    });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      '/api/sales?status=COMPLETED&page=1&pageSize=100',
+    );
+
+    fetchMock.mockClear();
+    expect(await repository.listInvoices('CANCELLED')).toEqual({ ok: true, value: [] });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -363,10 +403,125 @@ describe('HTTP sales draft contract', () => {
     });
   });
 
-  it('leaves confirmation unimplemented', async () => {
-    expect(await repository.confirmInvoice(draftId)).toMatchObject({
-      ok: false,
-      error: { code: 'INTERNAL' },
+  it('confirms with an empty CSRF body and maps FAC-', async () => {
+    const confirmed = {
+      ...invoiceWithTotal,
+      status: 'COMPLETED',
+      number: 'FAC-000001',
+      customer: { ...cashCustomer, name: 'Nombre al confirmar' },
+      confirmedAt: '2026-09-09T13:00:00.000Z',
+      lines: [
+        {
+          id: lineId,
+          type: 'GENERIC',
+          description: 'Filtro',
+          notes: null,
+          quantity: '1.00',
+          unitPrice: '118.00',
+          taxable: true,
+          gross: '118.00',
+          base: '100.00',
+          itbis: '18.00',
+          acquisitionCostDop: null,
+          costProvenance: 'UNKNOWN',
+          serviceId: null,
+        },
+      ],
+    };
+    const fetchMock = vi.fn(async (path: string, init?: RequestInit) => {
+      if (String(path) === `/api/sales/${draftId}/confirm` && init?.method === 'POST') {
+        return json(confirmed);
+      }
+      if (String(path).startsWith('/api/customers?')) {
+        return json({
+          items: [{ ...cashCustomer, address: null, notes: null, contacts: [] }],
+          total: 1,
+          page: 1,
+          pageSize: 100,
+        });
+      }
+      if (String(path) === '/api/catalogs/services') return json({ items: [installation] });
+      throw new Error(`Unexpected ${path} ${init?.method}`);
     });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await repository.confirmInvoice(draftId, {
+      amount: 50,
+      method: 'CASH',
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        status: 'COMPLETED',
+        number: 'FAC-000001',
+        customerName: 'Nombre al confirmar',
+        currency: 'DOP',
+        totals: { gross: 118, itbis: 18, taxableBase: 100 },
+      },
+    });
+    const confirmInit = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(new Headers(confirmInit.headers).get('X-Requested-With')).toBe('XMLHttpRequest');
+    expect(JSON.parse(String(confirmInit.body))).toEqual({});
+  });
+
+  it('loads completed invoice detail from the snapshot without PDF or profit', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        json({
+          ...invoiceWithTotal,
+          status: 'COMPLETED',
+          number: 'FAC-000002',
+          currency: 'USD',
+          customer: { ...cashCustomer, name: 'Snapshot', rnc: '131098765' },
+          confirmedAt: '2026-09-09T13:00:00.000Z',
+          profitability: { status: 'AVAILABLE', profitDop: '10.00' },
+          document: { status: 'READY' },
+          lines: [
+            {
+              id: lineId,
+              type: 'GENERIC',
+              description: 'Filtro',
+              notes: null,
+              quantity: '1.00',
+              unitPrice: '118.00',
+              taxable: true,
+              gross: '118.00',
+              base: '100.00',
+              itbis: '18.00',
+              acquisitionCostDop: null,
+              costProvenance: 'UNKNOWN',
+              serviceId: null,
+            },
+          ],
+        }),
+      ),
+    );
+
+    const result = await repository.getInvoice(draftId);
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        number: 'FAC-000002',
+        status: 'COMPLETED',
+        customerName: 'Snapshot',
+        customerRnc: '131098765',
+        currency: 'USD',
+        total: 118,
+        balance: 118,
+        lines: [{ description: 'Filtro', itbis: 18, gross: 118 }],
+        payments: [],
+        history: [],
+        actions: {
+          canPay: false,
+          canCancel: false,
+          canCorrectCurrency: false,
+          canViewPdf: false,
+        },
+      },
+    });
+    if (result.ok) {
+      expect(result.value.profitability).toBeUndefined();
+    }
   });
 });

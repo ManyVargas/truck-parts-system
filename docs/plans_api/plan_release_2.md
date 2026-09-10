@@ -268,8 +268,8 @@ Paralelo al inicio: M1 ∥ M3 ∥ M5 ∥ M6. M19 puede seguir a M2 sin esperar e
 | M18 | PDF regenerar Administrator | completado | **Listo para M23** |
 | M19 | Web: customers HTTP | completado | Swap `CustomerRepository` |
 | M20 | Web: catálogo de servicios HTTP | completado | Swap `ServiceRepository` |
-| M21 | Web: POS draft + líneas soportadas | pendiente | Swap subset draft de sales |
-| M22 | Web: confirmación HTTP | pendiente | Swap `confirmInvoice` |
+| M21 | Web: POS draft + líneas soportadas | completado | Swap subset draft de sales |
+| M22 | Web: confirmación HTTP | completado | Swap `confirmInvoice` |
 | M23 | Web: PDF HTTP | pendiente | Print / regenerate |
 | M24 | Web: rentabilidad HTTP | pendiente | Swap `ProfitabilityRepository` |
 | M25 | Exit gate Release 2 | pendiente | Verificación end-to-end; sin features nuevas |

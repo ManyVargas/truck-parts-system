@@ -137,21 +137,77 @@ function toPosDraft(
   };
 }
 
+function invoiceListNumber(item: ApiInvoiceListItem): string {
+  if (item.number) return item.number;
+  return item.status === 'DRAFT' ? `Borrador ${item.id}` : item.id;
+}
+
+function invoiceHref(item: ApiInvoiceListItem): string {
+  return item.status === 'DRAFT' ? `/sales/draft/${item.id}` : `/sales/${item.id}`;
+}
+
 function toSalesListRow(item: ApiInvoiceListItem): SalesListRow {
+  const total = moneyNumber(item.totals.gross);
+
   return {
     id: item.id,
-    number: item.number ?? `Borrador ${item.id}`,
+    number: invoiceListNumber(item),
     status: item.status,
     paymentState: 'UNPAID',
     customerId: item.customer.id,
     customerName: item.customer.name,
     currency: item.currency,
     fiscal: item.fiscal,
-    total: moneyNumber(item.totals.gross),
-    balance: 0,
+    total,
+    // Release 2 records no payments, so every completed invoice remains fully unpaid.
+    balance: item.status === 'COMPLETED' ? total : 0,
     createdAt: item.createdAt,
     confirmedAt: optionalText(item.confirmedAt),
-    href: `/sales/draft/${item.id}`,
+    href: invoiceHref(item),
+  };
+}
+
+function toInvoiceDetail(invoice: ApiInvoice): InvoiceDetailView {
+  const total = moneyNumber(invoice.totals.gross);
+
+  return {
+    id: invoice.id,
+    number: optionalText(invoice.number),
+    status: invoice.status,
+    paymentState: 'UNPAID',
+    customerId: invoice.customer.id,
+    customerName: invoice.customer.name,
+    customerRnc: optionalText(invoice.customer.rnc),
+    currency: invoice.currency,
+    fiscal: invoice.fiscal,
+    lines: invoice.lines.map((line) => ({
+      id: line.id,
+      type: line.type,
+      description: line.description,
+      notes: optionalText(line.notes),
+      quantity: moneyNumber(line.quantity),
+      unitPrice: moneyNumber(line.unitPrice),
+      taxable: line.taxable,
+      gross: moneyNumber(line.gross),
+      base: moneyNumber(line.base),
+      itbis: moneyNumber(line.itbis),
+    })),
+    payments: [],
+    total,
+    paid: 0,
+    refunded: 0,
+    balance: invoice.status === 'COMPLETED' ? total : 0,
+    createdAt: invoice.createdAt,
+    confirmedAt: optionalText(invoice.confirmedAt),
+    linkedWorkOrders: [],
+    history: [],
+    // PDF and profit stay off until M23/M24 even if the API already returns those fields.
+    actions: {
+      canPay: false,
+      canCancel: false,
+      canCorrectCurrency: false,
+      canViewPdf: false,
+    },
   };
 }
 
@@ -207,22 +263,31 @@ export function toHttpAddLineBody(input: AddDraftLineInput): Record<string, unkn
   return { type: input.type, ...notes };
 }
 
-function draftsCollectionPath(page: number): string {
+function invoicesCollectionPath(status: 'DRAFT' | 'COMPLETED', page: number): string {
   const params = new URLSearchParams({
-    status: 'DRAFT',
+    status,
     page: String(page),
     pageSize: String(PAGE_SIZE),
   });
   return `${SALES_PATH}?${params.toString()}`;
 }
 
-async function loadAllDraftPages(): Promise<SalesListRow[]> {
+function compareListRows(left: SalesListRow, right: SalesListRow): number {
+  if (left.createdAt !== right.createdAt) {
+    return left.createdAt < right.createdAt ? 1 : -1;
+  }
+  return left.id.localeCompare(right.id);
+}
+
+async function loadAllInvoicePages(status: 'DRAFT' | 'COMPLETED'): Promise<SalesListRow[]> {
   const items: SalesListRow[] = [];
   let page = 1;
   let total = 0;
 
   do {
-    const response = await httpClient<Page<ApiInvoiceListItem>>(draftsCollectionPath(page));
+    const response = await httpClient<Page<ApiInvoiceListItem>>(
+      invoicesCollectionPath(status, page),
+    );
     items.push(...response.items.map(toSalesListRow));
     total = response.total;
     if (response.items.length === 0) break;
@@ -304,14 +369,29 @@ async function mutateDraft(operation: () => Promise<ApiInvoice>): Promise<Result
 }
 
 export function listInvoicesWithHttp(tab?: SalesListTab): Promise<Result<SalesListRow[]>> {
-  if (tab === 'COMPLETED' || tab === 'CANCELLED') {
+  if (tab === 'CANCELLED') {
     return Promise.resolve(ok([]));
   }
-  return request(() => loadAllDraftPages());
+  if (tab === 'COMPLETED') {
+    return request(() => loadAllInvoicePages('COMPLETED'));
+  }
+  if (tab === 'DRAFT') {
+    return request(() => loadAllInvoicePages('DRAFT'));
+  }
+  return request(async () => {
+    const [drafts, completed] = await Promise.all([
+      loadAllInvoicePages('DRAFT'),
+      loadAllInvoicePages('COMPLETED'),
+    ]);
+    return [...drafts, ...completed].sort(compareListRows);
+  });
 }
 
-export async function getInvoiceWithHttp(_id: string): Promise<Result<InvoiceDetailView>> {
-  return httpNotImplemented('HttpSalesRepository', 'getInvoice');
+export function getInvoiceWithHttp(id: string): Promise<Result<InvoiceDetailView>> {
+  return request(async () => {
+    const invoice = await httpClient<ApiInvoice>(`${SALES_PATH}/${id}`);
+    return toInvoiceDetail(invoice);
+  });
 }
 
 export async function addPaymentWithHttp(
@@ -425,11 +505,18 @@ export function setDraftMetaWithHttp(input: SetDraftMetaInput): Promise<Result<P
   );
 }
 
-export async function confirmInvoiceWithHttp(
-  _draftId: string,
+export function confirmInvoiceWithHttp(
+  draftId: string,
   _payment?: ConfirmInvoicePayment,
 ): Promise<Result<PosDraftView>> {
-  return httpNotImplemented('HttpSalesRepository', 'confirmInvoice');
+  // R2 confirmation has no payment payload; extra fields are 400 on the API.
+  return mutateDraft(() =>
+    httpClient<ApiInvoice>(`${SALES_PATH}/${draftId}/confirm`, {
+      method: 'POST',
+      headers: CSRF_HEADERS,
+      body: JSON.stringify({}),
+    }),
+  );
 }
 
 export function discardDraftWithHttp(draftId: string): Promise<Result<void>> {
