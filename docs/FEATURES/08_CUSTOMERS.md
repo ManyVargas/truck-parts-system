@@ -10,6 +10,8 @@ The old consolidated requirements/validation files are intentionally no longer r
 
 **Release 2 — Billing Core**
 
+**Implementation (2026-09-10):** Production API + HTTP UI done (`/api/customers`, POS customer select, confirmation snapshot).
+
 ## What this feature does
 
 Support reusable customer information, a default `Cliente contado` for eligible nonfiscal sales, and immutable customer details on completed invoices.
@@ -42,7 +44,7 @@ Provide a stable generic customer such as `Cliente contado` for eligible nonfisc
 
 A customer may have **multiple contacts** (name, phone, email, optional title). Phone and email belong on contacts, not on the customer record. Contacts may be empty (`Cliente Contado`). Directory search remains name/RNC only.
 
-At invoice confirmation, copy the applicable customer data into an immutable invoice customer snapshot. Later edits to the reusable customer record must not alter already completed invoices.
+At invoice confirmation, copy the applicable customer data into an immutable invoice customer snapshot. This includes the primary contact's phone; if that contact has no phone, preserve a blank value without falling back to another contact. Later edits to the reusable customer record must not alter already completed invoices. Historical invoices keep the phone blank when its confirmation-time value cannot be reconstructed reliably.
 
 ## Feature-level acceptance criteria
 
@@ -55,24 +57,27 @@ At invoice confirmation, copy the applicable customer data into an immutable inv
 ## Implementation checklist
 
 ### Backend
-- [x] Define customer record and generic-customer strategy. *(API R2 M1: `Customer` + `Cliente contado`; prototipo mock: C0 bloqueado)*
-- [x] Implement create/search/edit. *(API R2 M2: `/api/customers`; WM4 mock)*
-- [x] Implement fiscal identity validation hook used by Sales. *(API R2 M2: `satisfiesFiscalIdentity`; confirmación fiscal en M7/M12)*
-- [x] Implement immutable invoice customer snapshot at confirmation. *(prototipo mock — WM8; API R2 M12: `customerName`/`customerRnc` al confirmar)*
-- [x] Prevent completed snapshots from following later customer edits. *(prototipo mock — WM8; API R2 M12: GET completed usa el snapshot)*
+
+- [x] Define customer record and generic-customer strategy. _(API R2 M1: `Customer` + `Cliente contado`; prototipo mock: C0 bloqueado)_
+- [x] Implement create/search/edit. _(API R2 M2: `/api/customers`; WM4 mock)_
+- [x] Implement fiscal identity validation hook used by Sales. _(API R2 M2: `satisfiesFiscalIdentity`; confirmación fiscal en M7/M12)_
+- [x] Implement immutable invoice customer snapshot at confirmation. _(prototipo mock — WM8; API: `customerName`, `customerRnc` y teléfono principal al confirmar)_
+- [x] Prevent completed snapshots from following later customer edits. _(prototipo mock — WM8; API R2 M12: GET completed usa el snapshot)_
 
 ### Frontend
-- [x] Customer search/select/create inside Draft flow. *(WM8: selector en POS; alta sigue en `/customers`)*
-- [x] Default `Cliente contado` behavior. *(WM8 `createDraft` usa C0; fiscal lo rechaza)*
-- [x] Fiscal-required field feedback. *(checkbox bloqueado + rechazo en servicio)*
-- [x] Basic customer maintenance. *(WM4 mock; API R2 M19 HTTP `/customers`)*
-- [x] Multiple contacts on a customer. *(prototipo mock — lista dinámica; `prepareCustomerSave`)*
+
+- [x] Customer search/select/create inside Draft flow. _(WM8: selector en POS; alta sigue en `/customers`)_
+- [x] Default `Cliente contado` behavior. _(WM8 `createDraft` usa C0; fiscal lo rechaza)_
+- [x] Fiscal-required field feedback. _(checkbox bloqueado + rechazo en servicio)_
+- [x] Basic customer maintenance. _(WM4 mock; API R2 M19 HTTP `/customers`)_
+- [x] Multiple contacts on a customer. _(prototipo mock — lista dinámica; `prepareCustomerSave`)_
 
 ### Tests
-- [x] Generic nonfiscal sale succeeds. *(prototipo mock — C0 + `fiscal: false`)*
-- [x] Generic fiscal sale rejected. *(prototipo mock — WM8)*
-- [x] Later customer edit leaves completed invoice unchanged. *(prototipo mock — WM8 snapshot; API R2 M12 HTTP)*
-- [x] Mechanic access denied. *(WM4 mock `customers.manage`; API R2 M19 HTTP 403 y sin nav)*
+
+- [x] Generic nonfiscal sale succeeds. _(prototipo mock — C0 + `fiscal: false`)_
+- [x] Generic fiscal sale rejected. _(prototipo mock — WM8)_
+- [x] Later customer edit leaves completed invoice unchanged. _(prototipo mock — WM8 snapshot; API R2 M12 HTTP)_
+- [x] Mechanic access denied. _(WM4 mock `customers.manage`; API R2 M19 HTTP 403 y sin nav)_
 
 ## Canonical validated requirements
 

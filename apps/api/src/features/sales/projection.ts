@@ -11,6 +11,9 @@ import {
   sumInvoiceMoney,
 } from './money/index.js';
 import { PROFITABILITY_REASONS, type Profitability } from './money/types.js';
+import { databaseDateString } from '../payments/dates.js';
+import { summarizePayments } from '../payments/summary.js';
+import type { InvoiceHistoryEntryView } from '../history/invoice-timeline.js';
 import type {
   InvoiceConfirmedHistorySnapshot,
   InvoiceCustomerSnapshot,
@@ -24,9 +27,17 @@ import type {
   PublicInvoice,
   PublicInvoiceDocument,
   PublicInvoiceLine,
+  PublicCustomerOutstanding,
   PublicInvoiceListItem,
   PublicProfitability,
+  PublicReceivableInvoice,
+  PublicReceivables,
 } from './types.js';
+import {
+  moneyString as decimalMoneyString,
+  type CustomerOutstanding,
+  type OpenReceivable,
+} from '../payments/receivables.js';
 
 function moneyString(value: { toFixed(places: number): string }): string {
   return value.toFixed(MONEY_DECIMAL_PLACES);
@@ -65,7 +76,7 @@ function customerSnapshotOf(
   invoice: InvoiceRecord | InvoiceListRecord,
 ): InvoiceCustomerSnapshot | null {
   if (invoice.status === 'DRAFT' || invoice.customerName == null) return null;
-  return { name: invoice.customerName, rnc: invoice.customerRnc };
+  return { name: invoice.customerName, rnc: invoice.customerRnc, phone: invoice.customerPhone };
 }
 
 function toCustomerView(invoice: InvoiceRecord | InvoiceListRecord) {
@@ -193,7 +204,7 @@ function administratorProfitability(
 function toPublicInvoiceDocument(
   invoice: InvoiceRecord | InvoiceListRecord,
 ): PublicInvoiceDocument | undefined {
-  if (invoice.status !== 'COMPLETED' || invoice.pdfStatus == null) return undefined;
+  if (invoice.status === 'DRAFT' || invoice.pdfStatus == null) return undefined;
   if (invoice.pdfStatus === 'FAILED') {
     if (invoice.pdfErrorId == null) return undefined;
     return { status: 'FAILED', errorId: invoice.pdfErrorId };
@@ -258,9 +269,14 @@ function invoiceTotals(invoice: InvoiceRecord | InvoiceListRecord) {
   };
 }
 
-export function toPublicInvoice(invoice: InvoiceRecord, viewer: InvoiceViewer): PublicInvoice {
+export function toPublicInvoice(
+  invoice: InvoiceRecord,
+  viewer: InvoiceViewer,
+  history: InvoiceHistoryEntryView[] = [],
+): PublicInvoice {
   const profitability = administratorProfitability(invoice, viewer);
   const document = toPublicInvoiceDocument(invoice);
+  const payment = summarizePayments(invoice);
   return {
     id: invoice.id,
     status: invoice.status,
@@ -270,12 +286,32 @@ export function toPublicInvoice(invoice: InvoiceRecord, viewer: InvoiceViewer): 
     customer: toCustomerView(invoice),
     customerSnapshot: customerSnapshotOf(invoice),
     confirmedAt: invoice.confirmedAt?.toISOString() ?? null,
+    dueDate: invoice.dueDate ? databaseDateString(invoice.dueDate) : null,
+    sellerName: invoice.confirmedByName,
+    cancelledAt: invoice.cancelledAt?.toISOString() ?? null,
+    cancelReason: invoice.cancelReason,
+    cancelledByName: invoice.cancelledByName,
+    paymentState: payment.state,
+    payments: invoice.payments.map((entry) => ({
+      id: entry.id,
+      kind: entry.kind,
+      amount: moneyString(entry.amount),
+      method: entry.method,
+      effectiveDate: databaseDateString(entry.effectiveDate),
+      recordedAt: entry.createdAt.toISOString(),
+      reference: entry.reference,
+      actorName: entry.actor.name,
+    })),
+    paid: moneyString(payment.paid),
+    refunded: moneyString(payment.refunded),
+    balance: moneyString(payment.balance),
     lines: invoice.lines.map((line, index) =>
       toPublicLine(line, invoice.fiscal, profitability?.lines[index]),
     ),
     totals: invoiceTotals(invoice),
     ...(profitability ? { profitability: profitability.invoice } : {}),
     ...(document ? { document } : {}),
+    history,
     createdAt: invoice.createdAt.toISOString(),
     updatedAt: invoice.updatedAt.toISOString(),
   };
@@ -286,6 +322,7 @@ export function toPublicInvoiceListItem(
   viewer: InvoiceViewer,
 ): PublicInvoiceListItem {
   const profitability = administratorProfitability(invoice, viewer);
+  const payment = summarizePayments(invoice);
   return {
     id: invoice.id,
     status: invoice.status,
@@ -295,10 +332,46 @@ export function toPublicInvoiceListItem(
     customer: toCustomerView(invoice),
     customerSnapshot: customerSnapshotOf(invoice),
     confirmedAt: invoice.confirmedAt?.toISOString() ?? null,
+    dueDate: invoice.dueDate ? databaseDateString(invoice.dueDate) : null,
+    paymentState: payment.state,
+    balance: moneyString(payment.balance),
     totals: invoiceTotals(invoice),
     ...(profitability ? { profitability: profitability.invoice } : {}),
     createdAt: invoice.createdAt.toISOString(),
     updatedAt: invoice.updatedAt.toISOString(),
+  };
+}
+
+function toPublicCustomerOutstanding(row: CustomerOutstanding): PublicCustomerOutstanding {
+  return {
+    customerId: row.customerId,
+    customerName: row.customerName,
+    currency: row.currency,
+    invoiceCount: row.invoiceCount,
+    invoiced: decimalMoneyString(row.invoiced),
+    paid: decimalMoneyString(row.paid),
+    balance: decimalMoneyString(row.balance),
+  };
+}
+
+export function toPublicReceivables(
+  open: OpenReceivable[],
+  customers: CustomerOutstanding[],
+  viewer: InvoiceViewer,
+  page: number,
+  pageSize: number,
+  total = open.length,
+): PublicReceivables {
+  const invoices: PublicReceivableInvoice[] = open.map((row) => ({
+    ...toPublicInvoiceListItem(row.invoice, viewer),
+    paid: decimalMoneyString(row.paid),
+  }));
+  return {
+    invoices,
+    customers: customers.map(toPublicCustomerOutstanding),
+    total,
+    page,
+    pageSize,
   };
 }
 
@@ -320,7 +393,14 @@ export function toConfirmedHistorySnapshot(
   invoice: InvoiceRecord,
 ): InvoiceConfirmedHistorySnapshot {
   const snapshot = customerSnapshotOf(invoice);
-  if (invoice.number == null || invoice.confirmedAt == null || snapshot == null) {
+  if (
+    invoice.number == null ||
+    invoice.confirmedAt == null ||
+    invoice.dueDate == null ||
+    invoice.confirmedByUserId == null ||
+    invoice.confirmedByName == null ||
+    snapshot == null
+  ) {
     throw new Error('Confirmed invoice is missing snapshot fields');
   }
   return {
@@ -332,6 +412,9 @@ export function toConfirmedHistorySnapshot(
     customerSnapshot: snapshot,
     totals: invoiceTotals(invoice),
     confirmedAt: invoice.confirmedAt.toISOString(),
+    dueDate: databaseDateString(invoice.dueDate),
+    confirmedByUserId: invoice.confirmedByUserId,
+    confirmedByName: invoice.confirmedByName,
   };
 }
 

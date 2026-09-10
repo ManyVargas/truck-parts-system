@@ -24,6 +24,15 @@ export const COST_AMOUNT_REQUIRED_MESSAGE =
   'Acquisition cost amount is required when provenance is not UNKNOWN';
 export const EMPTY_DRAFT_CONFIRM_MESSAGE = 'Agregue al menos una línea';
 export const DRAFT_ONLY_CONFIRM_MESSAGE = 'Solo se puede confirmar un borrador';
+export const PAYMENT_COMPLETED_ONLY_MESSAGE =
+  'Solo se pueden registrar pagos en facturas completadas';
+export const PAYMENT_DATE_RANGE_MESSAGE =
+  'La fecha del pago debe estar entre la confirmación y hoy';
+export const PAYMENT_EXCEEDS_BALANCE_MESSAGE = 'El pago no puede superar el saldo pendiente';
+export const PAYMENT_IDEMPOTENCY_MISMATCH_MESSAGE =
+  'La clave de idempotencia ya fue usada con datos de pago diferentes';
+export const CANCELLATION_COMPLETED_ONLY_MESSAGE = 'Solo se pueden cancelar facturas completadas';
+export const CANCELLATION_REASON_REQUIRED_MESSAGE = 'La cancelación requiere un motivo';
 export const INVOICE_NUMBER_PREFIX = 'FAC-';
 export const INVOICE_NUMBER_PAD_WIDTH = 6;
 

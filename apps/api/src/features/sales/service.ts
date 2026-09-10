@@ -1,14 +1,22 @@
-import type { InvoiceLine, InvoiceLineType, InvoiceStatus } from '@prisma/client';
+import { Prisma, type InvoiceLineType, type InvoiceStatus } from '@prisma/client';
 
 import { AppError } from '../../infrastructure/errors/app-error.js';
-import {
-  unavailableFxRateProvider,
-  type FxRateProvider,
-} from '../../infrastructure/fx/index.js';
+import { unavailableFxRateProvider, type FxRateProvider } from '../../infrastructure/fx/index.js';
 import { logger } from '../../infrastructure/logging/index.js';
 import { CatalogRepository } from '../catalogs/repository.js';
 import { satisfiesFiscalIdentity } from '../customers/fiscal.js';
 import { InvoiceDocumentService } from '../invoice-documents/service.js';
+import {
+  databaseDate,
+  databaseDateString,
+  businessDateString,
+  invoiceDueDate,
+  todayBusinessDate,
+} from '../payments/dates.js';
+import { summarizePayments } from '../payments/summary.js';
+import { openReceivables } from '../payments/receivables.js';
+import { toInvoiceHistoryEntries } from '../history/invoice-timeline.js';
+import { assertAdministrator } from '../users/policies.js';
 import {
   CATALOG_SERVICE_NOT_FOUND_MESSAGE,
   DEFAULT_DRAFT_CURRENCY,
@@ -21,6 +29,12 @@ import {
   INACTIVE_SERVICE_LINE_MESSAGE,
   LINE_NOT_FOUND_MESSAGE,
   MISSING_GENERIC_CUSTOMER_MESSAGE,
+  PAYMENT_COMPLETED_ONLY_MESSAGE,
+  PAYMENT_DATE_RANGE_MESSAGE,
+  PAYMENT_EXCEEDS_BALANCE_MESSAGE,
+  PAYMENT_IDEMPOTENCY_MISMATCH_MESSAGE,
+  CANCELLATION_COMPLETED_ONLY_MESSAGE,
+  CANCELLATION_REASON_REQUIRED_MESSAGE,
 } from './constants.js';
 import { DEFAULT_LINE_QUANTITY } from './money/constants.js';
 import {
@@ -29,19 +43,27 @@ import {
   parsePositiveDecimal,
   sumInvoiceMoney,
 } from './money/index.js';
-import { assertDraftLineCostEditable, assertDraftLineDescriptionEditable, assertDraftLineQuantityEditable, assertDraftLineTypeEnabled, requireInvoiceManager } from './policies.js';
+import {
+  assertDraftLineCostEditable,
+  assertDraftLineDescriptionEditable,
+  assertDraftLineQuantityEditable,
+  assertDraftLineTypeEnabled,
+  requireInvoiceManager,
+} from './policies.js';
 import {
   toConfirmedHistorySnapshot,
   toDraftHistorySnapshot,
-  toLineHistorySnapshot,
   toPublicInvoice,
   toPublicInvoiceListItem,
+  toPublicReceivables,
 } from './projection.js';
 import { SalesRepository } from './repository.js';
 import { salesTransaction, type SalesTransaction } from './transaction.js';
 import type { CreateInvoiceLineRecord, InvoiceRecord } from './types.js';
 import {
   addInvoiceLineSchema,
+  addPaymentSchema,
+  cancelInvoiceSchema,
   confirmInvoiceSchema,
   createDraftSchema,
   deliveryDraftLineSchema,
@@ -50,6 +72,7 @@ import {
   invoiceIdSchema,
   invoiceLineIdSchema,
   listInvoicesSchema,
+  listReceivablesSchema,
   serviceDraftLineSchema,
   setLinePriceSchema,
   updateDraftMetaSchema,
@@ -143,13 +166,6 @@ async function resolveDraftLineWrite(
   return toMerchandiseDraftLine(genericDraftLineSchema.parse(candidate));
 }
 
-function addedLine(before: InvoiceLine[], after: InvoiceLine[]): InvoiceLine {
-  const previousIds = new Set(before.map((line) => line.id));
-  const created = after.find((line) => !previousIds.has(line.id));
-  if (!created) throw AppError.internal('Created invoice line is missing');
-  return created;
-}
-
 export class SalesService {
   constructor(
     private readonly transaction: SalesTransaction = salesTransaction,
@@ -197,20 +213,45 @@ export class SalesService {
     });
   }
 
+  async listReceivables(actorId: string, query: unknown) {
+    const filters = listReceivablesSchema.parse(query);
+    return this.transaction(async ({ sales, users }) => {
+      const actor = requireInvoiceManager(await users.findById(actorId));
+      const receivables = await sales.listReceivables({
+        customerId: filters.customerId,
+        currency: filters.currency,
+        paymentState: filters.paymentState,
+        page: filters.page,
+        pageSize: filters.pageSize,
+        today: todayBusinessDate(),
+      });
+      const open = openReceivables(receivables.items);
+      return toPublicReceivables(
+        open,
+        receivables.customers,
+        actor,
+        filters.page,
+        filters.pageSize,
+        receivables.total,
+      );
+    });
+  }
+
   async getById(actorId: string, id: string) {
     invoiceIdSchema.parse({ id });
-    return this.transaction(async ({ sales, users }) => {
+    return this.transaction(async ({ sales, users, history }) => {
       const actor = requireInvoiceManager(await users.findById(actorId));
       const invoice = await sales.findById(id);
       if (!invoice) throw AppError.notFound('Invoice not found');
-      return toPublicInvoice(invoice, actor);
+      const events = await history.listBySubject('INVOICE', id);
+      return toPublicInvoice(invoice, actor, toInvoiceHistoryEntries(events, actor.role));
     });
   }
 
   async updateMeta(actorId: string, id: string, input: unknown) {
     invoiceIdSchema.parse({ id });
     const patch = updateDraftMetaSchema.parse(input);
-    return this.transaction(async ({ sales, customers, users, history }) => {
+    return this.transaction(async ({ sales, customers, users }) => {
       const actor = requireInvoiceManager(await users.findById(actorId));
       const existing = await sales.findById(id);
       if (!existing) throw AppError.notFound('Invoice not found');
@@ -230,16 +271,6 @@ export class SalesService {
         customerId: patch.customerId,
         currency: patch.currency,
         fiscal: patch.fiscal,
-      });
-      await history.append({
-        actor: { actorType: 'USER', actorUserId: actorId },
-        subjectType: 'INVOICE',
-        subjectId: id,
-        eventType: 'INVOICE_DRAFT_UPDATED',
-        payload: {
-          before: toDraftHistorySnapshot(existing),
-          after: toDraftHistorySnapshot(updated),
-        },
       });
       return toPublicInvoice(updated, actor);
     });
@@ -267,7 +298,7 @@ export class SalesService {
     invoiceIdSchema.parse({ id: invoiceId });
     const candidate = addInvoiceLineSchema.parse(input);
 
-    return this.transaction(async ({ sales, users, history, catalogs }) => {
+    return this.transaction(async ({ sales, users, catalogs }) => {
       const actor = requireInvoiceManager(await users.findById(actorId));
       const existing = await sales.findById(invoiceId);
       if (!existing) throw AppError.notFound('Invoice not found');
@@ -292,14 +323,6 @@ export class SalesService {
         invoiceId,
         ...line,
       });
-      const created = addedLine(existing.lines, updated.lines);
-      await history.append({
-        actor: { actorType: 'USER', actorUserId: actorId },
-        subjectType: 'INVOICE',
-        subjectId: invoiceId,
-        eventType: 'INVOICE_LINE_ADDED',
-        payload: toLineHistorySnapshot(created),
-      });
       return toPublicInvoice(updated, actor);
     });
   }
@@ -308,7 +331,7 @@ export class SalesService {
     invoiceLineIdSchema.parse({ id: invoiceId, lineId });
     const patch = setLinePriceSchema.parse(input);
 
-    return this.transaction(async ({ sales, users, history }) => {
+    return this.transaction(async ({ sales, users }) => {
       const actor = requireInvoiceManager(await users.findById(actorId));
       const existing = await sales.findById(invoiceId);
       if (!existing) throw AppError.notFound('Invoice not found');
@@ -353,16 +376,6 @@ export class SalesService {
       });
       const next = updated.lines.find((entry) => entry.id === lineId);
       if (!next) throw AppError.internal(LINE_NOT_FOUND_MESSAGE);
-      await history.append({
-        actor: { actorType: 'USER', actorUserId: actorId },
-        subjectType: 'INVOICE',
-        subjectId: invoiceId,
-        eventType: 'INVOICE_LINE_UPDATED',
-        payload: {
-          before: toLineHistorySnapshot(line),
-          after: toLineHistorySnapshot(next),
-        },
-      });
       return toPublicInvoice(updated, actor);
     });
   }
@@ -370,7 +383,7 @@ export class SalesService {
   async removeLine(actorId: string, invoiceId: string, lineId: string) {
     invoiceLineIdSchema.parse({ id: invoiceId, lineId });
 
-    return this.transaction(async ({ sales, users, history }) => {
+    return this.transaction(async ({ sales, users }) => {
       const actor = requireInvoiceManager(await users.findById(actorId));
       const existing = await sales.findById(invoiceId);
       if (!existing) throw AppError.notFound('Invoice not found');
@@ -378,13 +391,6 @@ export class SalesService {
       const line = existing.lines.find((entry) => entry.id === lineId);
       if (!line) throw AppError.notFound(LINE_NOT_FOUND_MESSAGE);
 
-      await history.append({
-        actor: { actorType: 'USER', actorUserId: actorId },
-        subjectType: 'INVOICE',
-        subjectId: invoiceId,
-        eventType: 'INVOICE_LINE_REMOVED',
-        payload: toLineHistorySnapshot(line),
-      });
       const updated = await sales.removeLine(invoiceId, lineId);
       return toPublicInvoice(updated, actor);
     });
@@ -392,9 +398,9 @@ export class SalesService {
 
   async confirm(actorId: string, id: string, input: unknown) {
     invoiceIdSchema.parse({ id });
-    confirmInvoiceSchema.parse(input ?? {});
+    const profile = confirmInvoiceSchema.parse(input ?? {});
     const { invoice, actor, alreadyCompleted } = await this.transaction(
-      async ({ sales, customers, users, history }) => {
+      async ({ sales, customers, payments, users, history }) => {
         const actor = requireInvoiceManager(await users.findById(actorId));
         await sales.lockById(id);
         const existing = await sales.findById(id);
@@ -423,13 +429,25 @@ export class SalesService {
           }),
         }));
         const totals = sumInvoiceMoney(lineMoney.map((entry) => entry.money));
+        const initialPaymentAmount = profile.payment
+          ? new Prisma.Decimal(profile.payment.amount)
+          : null;
+        if (initialPaymentAmount?.greaterThan(totals.gross)) {
+          throw AppError.conflict(PAYMENT_EXCEEDS_BALANCE_MESSAGE);
+        }
         const number = await sales.allocateNextNumber();
-        const completed = await sales.completeInvoice({
+        const confirmedAt = new Date();
+        const primaryPhone = customer.contacts.find((contact) => contact.isPrimary)?.phone ?? null;
+        let completed = await sales.completeInvoice({
           id,
           number,
-          confirmedAt: new Date(),
+          confirmedAt,
+          dueDate: invoiceDueDate(confirmedAt),
           customerName: customer.name,
           customerRnc: customer.rnc,
+          customerPhone: primaryPhone,
+          confirmedByUserId: actorId,
+          confirmedByName: actor.name,
           gross: totals.gross,
           base: totals.base,
           itbis: totals.itbis,
@@ -447,6 +465,33 @@ export class SalesService {
           eventType: 'INVOICE_CONFIRMED',
           payload: toConfirmedHistorySnapshot(completed),
         });
+        if (profile.payment && initialPaymentAmount) {
+          const payment = await payments.createPayment({
+            invoiceId: id,
+            amount: initialPaymentAmount,
+            currency: completed.currency,
+            method: profile.payment.method,
+            effectiveDate: todayBusinessDate(confirmedAt),
+            reference: profile.payment.reference ?? null,
+            actorUserId: actorId,
+            idempotencyKey: profile.payment.idempotencyKey ?? `confirm:${id}`,
+          });
+          await history.append({
+            actor: { actorType: 'USER', actorUserId: actorId },
+            subjectType: 'INVOICE',
+            subjectId: id,
+            eventType: 'PAYMENT_RECORDED',
+            payload: {
+              paymentId: payment.id,
+              amount: payment.amount.toFixed(2),
+              currency: payment.currency,
+              method: payment.method,
+              effectiveDate: databaseDateString(payment.effectiveDate),
+              reference: payment.reference,
+            },
+          });
+          completed = (await sales.findById(id))!;
+        }
         return { invoice: completed, actor, alreadyCompleted: false };
       },
     );
@@ -455,6 +500,137 @@ export class SalesService {
       ? enriched
       : await this.generateInvoicePdf(actorId, enriched);
     return toPublicInvoice(withDocument, actor);
+  }
+
+  async addPayment(actorId: string, id: string, input: unknown) {
+    invoiceIdSchema.parse({ id });
+    const profile = addPaymentSchema.parse(input);
+    return this.transaction(async ({ sales, payments, users, history }) => {
+      const actor = requireInvoiceManager(await users.findById(actorId));
+      await sales.lockById(id);
+      let invoice = await sales.findById(id);
+      if (!invoice) throw AppError.notFound('Invoice not found');
+      if (invoice.status !== 'COMPLETED' || invoice.confirmedAt == null) {
+        throw AppError.conflict(PAYMENT_COMPLETED_ONLY_MESSAGE);
+      }
+
+      const duplicate = await payments.findByIdempotencyKey(id, profile.idempotencyKey);
+      if (duplicate) {
+        const samePayment =
+          duplicate.kind === 'PAYMENT' &&
+          duplicate.amount.equals(profile.amount) &&
+          duplicate.method === profile.method &&
+          databaseDateString(duplicate.effectiveDate) === profile.effectiveDate &&
+          duplicate.reference === (profile.reference ?? null) &&
+          duplicate.currency === invoice.currency;
+        if (!samePayment) throw AppError.conflict(PAYMENT_IDEMPOTENCY_MISMATCH_MESSAGE);
+        return toPublicInvoice(invoice, actor);
+      }
+
+      const confirmedDate = businessDateString(invoice.confirmedAt);
+      const today = databaseDateString(todayBusinessDate());
+      if (profile.effectiveDate < confirmedDate || profile.effectiveDate > today) {
+        throw AppError.conflict(PAYMENT_DATE_RANGE_MESSAGE);
+      }
+      const amount = new Prisma.Decimal(profile.amount);
+      const summary = summarizePayments(invoice);
+      if (amount.greaterThan(summary.balance)) {
+        throw AppError.conflict(PAYMENT_EXCEEDS_BALANCE_MESSAGE);
+      }
+
+      const payment = await payments.createPayment({
+        invoiceId: id,
+        amount,
+        currency: invoice.currency,
+        method: profile.method,
+        effectiveDate: databaseDate(profile.effectiveDate),
+        reference: profile.reference ?? null,
+        actorUserId: actorId,
+        idempotencyKey: profile.idempotencyKey,
+      });
+      await history.append({
+        actor: { actorType: 'USER', actorUserId: actorId },
+        subjectType: 'INVOICE',
+        subjectId: id,
+        eventType: 'PAYMENT_RECORDED',
+        payload: {
+          paymentId: payment.id,
+          amount: payment.amount.toFixed(2),
+          currency: payment.currency,
+          method: payment.method,
+          effectiveDate: databaseDateString(payment.effectiveDate),
+          reference: payment.reference,
+        },
+      });
+      invoice = (await sales.findById(id))!;
+      return toPublicInvoice(invoice, actor);
+    });
+  }
+
+  async cancel(actorId: string, id: string, input: unknown) {
+    invoiceIdSchema.parse({ id });
+    const profile = cancelInvoiceSchema.parse(input);
+    return this.transaction(async ({ sales, payments, users, history }) => {
+      const actor = await users.findById(actorId);
+      assertAdministrator(actor);
+      if (!actor) throw AppError.unauthorized();
+      await sales.lockById(id);
+      const invoice = await sales.findById(id);
+      if (!invoice) throw AppError.notFound('Invoice not found');
+      if (
+        invoice.status === 'CANCELLED' &&
+        invoice.cancellationIdempotencyKey === profile.idempotencyKey
+      ) {
+        return toPublicInvoice(invoice, actor);
+      }
+      if (invoice.status !== 'COMPLETED') {
+        throw AppError.conflict(CANCELLATION_COMPLETED_ONLY_MESSAGE);
+      }
+      if (!profile.reason) throw AppError.conflict(CANCELLATION_REASON_REQUIRED_MESSAGE);
+
+      const summary = summarizePayments(invoice);
+      const netReceived = summary.paid.minus(summary.refunded);
+      if (netReceived.greaterThan(0) && !profile.refundMethod) {
+        throw AppError.conflict('La cancelación requiere el método del reembolso neto total');
+      }
+
+      const cancelledAt = new Date();
+      const refund = netReceived.greaterThan(0)
+        ? await payments.createRefund({
+            invoiceId: id,
+            amount: netReceived,
+            currency: invoice.currency,
+            method: profile.refundMethod!,
+            effectiveDate: todayBusinessDate(cancelledAt),
+            reference: profile.refundReference ?? null,
+            actorUserId: actorId,
+            idempotencyKey: profile.idempotencyKey,
+          })
+        : null;
+      const cancelled = await sales.cancelInvoice({
+        id,
+        cancelledAt,
+        reason: profile.reason,
+        actorUserId: actorId,
+        actorName: actor.name,
+        idempotencyKey: profile.idempotencyKey,
+      });
+      await history.append({
+        actor: { actorType: 'USER', actorUserId: actorId },
+        subjectType: 'INVOICE',
+        subjectId: id,
+        eventType: 'INVOICE_CANCELLED',
+        payload: {
+          reason: profile.reason,
+          cancelledAt: cancelledAt.toISOString(),
+          cancelledByName: actor.name,
+          refundId: refund?.id ?? null,
+          refundAmount: netReceived.toFixed(2),
+          refundMethod: refund?.method ?? null,
+        },
+      });
+      return toPublicInvoice(cancelled, actor);
+    });
   }
 
   async getPdf(actorId: string, id: string) {
@@ -470,7 +646,10 @@ export class SalesService {
    * PDF is outside the commercial transaction. Failure leaves the sale committed
    * and document FAILED. Idempotent confirm does not retry.
    */
-  private async generateInvoicePdf(actorId: string, invoice: InvoiceRecord): Promise<InvoiceRecord> {
+  private async generateInvoicePdf(
+    actorId: string,
+    invoice: InvoiceRecord,
+  ): Promise<InvoiceRecord> {
     try {
       return await this.invoiceDocuments.recordInitialGeneration(actorId, invoice);
     } catch (error) {

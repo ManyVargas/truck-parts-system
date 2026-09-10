@@ -14,6 +14,7 @@ COPY apps/web/package.json apps/web/package.json
 RUN npm ci
 
 COPY apps/api apps/api
+COPY apps/web/src/shared/assets/brand/SoloCamionesLogo.png apps/web/src/shared/assets/brand/SoloCamionesLogo.png
 RUN npm run build --workspace @truck-parts/api
 
 ENV NODE_ENV=production

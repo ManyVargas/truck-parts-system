@@ -153,9 +153,12 @@ describe('invoice draft history validation', () => {
         currency: 'DOP' as const,
         fiscal: false,
         customerId: id,
-        customerSnapshot: { name: 'Cliente contado', rnc: null },
+        customerSnapshot: { name: 'Cliente contado', rnc: null, phone: null },
         totals: { gross: '118.00', base: '118.00', itbis: '0.00' },
         confirmedAt: '2026-09-08T18:00:00.000Z',
+        dueDate: '2026-10-08',
+        confirmedByUserId: id,
+        confirmedByName: 'Ana Pérez',
       },
     };
     expect(historyEventSchema.parse(event)).toEqual(event);

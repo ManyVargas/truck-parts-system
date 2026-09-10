@@ -56,14 +56,16 @@ describe('RoleNav', () => {
     expect(screen.getByRole('link', { name: 'Inicio' })).not.toHaveAttribute('aria-current');
   });
 
-  it('keeps the seller menu flat because every item shares one intent', () => {
+  it('groups seller links into operation and receivables', () => {
     renderWithProviders(<RoleNav role="SELLER" />, {
       route: '/dashboard',
       auth: createAuthValue('SELLER'),
     });
 
-    expect(screen.queryByRole('heading', { name: 'Operación' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Operación' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Finanzas y control' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Clientes' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Cuentas por cobrar' })).toBeVisible();
     expect(screen.queryByRole('link', { name: 'Usuarios' })).not.toBeInTheDocument();
   });
 

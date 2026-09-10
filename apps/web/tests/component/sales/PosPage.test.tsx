@@ -139,6 +139,26 @@ describe('PosPage', () => {
     expect(await screen.findByTestId('pos-itbis')).not.toHaveTextContent('RD$0.00');
   });
 
+  it('shows line base, included ITBIS, and gross from the entered sale price', async () => {
+    const user = userEvent.setup();
+    renderPos('INV-DRAFT-01', CAPABILITY_PRESETS['release-2']);
+    await screen.findByText('Alternador 24V');
+
+    await user.click(screen.getByLabelText(/Factura con comprobante fiscal/));
+    await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
+    await user.type(screen.getByLabelText('Descripción'), 'Filtro fiscal');
+    await user.clear(screen.getByLabelText('Cantidad'));
+    await user.type(screen.getByLabelText('Cantidad'), '2');
+    await user.clear(screen.getByLabelText('Precio'));
+    await user.type(screen.getByLabelText('Precio'), '118');
+    await user.click(screen.getByRole('button', { name: 'Agregar' }));
+
+    expect(await screen.findByText('Filtro fiscal')).toBeVisible();
+    expect(screen.getByText('RD$200.00')).toBeVisible();
+    expect(screen.getByText('RD$36.00')).toBeVisible();
+    expect(screen.getByText('RD$236.00')).toBeVisible();
+  });
+
   it('confirms the seed draft and shows the assigned FAC number', async () => {
     const user = userEvent.setup();
     renderPos();

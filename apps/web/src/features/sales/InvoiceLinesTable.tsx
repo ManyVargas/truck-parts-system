@@ -7,10 +7,9 @@ import { InvoiceLineNoteText } from './InvoiceLineNoteText';
 export type InvoiceLinesTableProps = {
   lines: InvoiceLineView[];
   currency: Currency;
-  fiscal: boolean;
 };
 
-export function InvoiceLinesTable({ lines, currency, fiscal }: InvoiceLinesTableProps) {
+export function InvoiceLinesTable({ lines, currency }: InvoiceLinesTableProps) {
   return (
     <TableShell>
       <thead className="border-b border-navy-100 bg-navy-50 text-navy-400">
@@ -18,8 +17,7 @@ export function InvoiceLinesTable({ lines, currency, fiscal }: InvoiceLinesTable
           <th className="px-4 py-3 font-medium">Línea</th>
           <th className="px-4 py-3 font-medium">Tipo</th>
           <th className="px-4 py-3 font-medium text-right">Cantidad</th>
-          <th className="px-4 py-3 font-medium text-right">Precio final</th>
-          <th className="px-4 py-3 font-medium text-right">Base</th>
+          <th className="px-4 py-3 font-medium text-right">Precio</th>
           <th className="px-4 py-3 font-medium text-right">ITBIS</th>
           <th className="px-4 py-3 font-medium text-right">Total</th>
         </tr>
@@ -33,11 +31,8 @@ export function InvoiceLinesTable({ lines, currency, fiscal }: InvoiceLinesTable
             </td>
             <td className="px-4 py-3 text-navy-400">{LINE_TYPE_LABELS[line.type]}</td>
             <td className="px-4 py-3 text-right font-mono">{line.quantity}</td>
-            <td className="px-4 py-3 text-right font-mono">{money(line.unitPrice, currency)}</td>
             <td className="px-4 py-3 text-right font-mono">{money(line.base, currency)}</td>
-            <td className="px-4 py-3 text-right font-mono">
-              {fiscal ? money(line.itbis, currency) : '—'}
-            </td>
+            <td className="px-4 py-3 text-right font-mono">{money(line.itbis, currency)}</td>
             <td className="px-4 py-3 text-right font-mono">
               <Mono>{money(line.gross, currency)}</Mono>
             </td>

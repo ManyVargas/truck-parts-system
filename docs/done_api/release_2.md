@@ -2,10 +2,14 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M22 completados)
+**Estado:** en curso (M1–M23 completados; **M24–M25 pendientes**)
+
+El slice financiero de Release 3 se adelantó en el mismo árbol de código; el registro está en [`release_3.md`](release_3.md), no como milestones M26+ de este archivo.
 
 Este archivo documenta **qué se entregó** en cada milestone de Release 2, a medida que se completan.  
 No sustituye a `plan_release_2.md` (plan de ejecución) ni a los feature specs; es el registro histórico de implementación.
+
+**Nota posterior (2026-09-10):** M8–M11 registraron history de líneas (`INVOICE_LINE_*`) y M7 `INVOICE_DRAFT_UPDATED`. El owner recortó la **actividad de factura** a eventos de documento: esos tipos ya no se escriben y se ocultan en `GET /api/sales/:id` / UI. Los bullets de milestone de abajo describen lo entregado entonces; el comportamiento vigente está en [`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) y [`../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md`](../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md).
 
 ---
 
@@ -808,18 +812,37 @@ PDF (M23). Rentabilidad (M24). Pagos, cancelar, corregir moneda. Inventario.
 
 ## Milestone 23 — Web: PDF HTTP
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-10
 
 ### Objetivo cumplido
 
+Imprimir/descargar el PDF interno desde facturas completed HTTP y regenerarlo cuando el estado es `FAILED`. SALE-004 queda en la UI local.
+
 ### Qué se entregó
+
+- `document` en el detalle HTTP: `READY` habilita preview/download; `FAILED` muestra el error y `errorId`.
+- `GET /api/sales/:id/pdf` como blob (cookies same-origin). `POST /api/sales/:id/pdf/regenerate` con CSRF, solo Administrator.
+- Vista previa HTTP usa los bytes pdfkit, no el HTML del prototipo mock. El NCF en blanco sigue visible en el marco de la vista previa.
+- Profit HTTP sigue apagado (M24). Pagos y cancelación **sí** se cablearon después en HTTP (ver `release_3.md`); esta nota de M23 quedó histórica.
 
 ### Decisiones técnicas
 
+- No hay capability `pdf`: el PDF es una acción del detalle, no un módulo de navegación.
+- `httpClientBlob` distingue `application/pdf` de un envelope JSON de error (409 `FAILED`).
+- Regeneración oculta al Seller en UI; el API sigue siendo la autoridad (`requireAdministrator`).
+- El mock conserva la vista previa HTML y no modela `FAILED`.
+
 ### Validación
 
+- Unit: `apps/web/tests/unit/api/http-sales.test.ts`
+- Unit: `apps/web/tests/unit/shared/errors/present-app-error.test.ts`
+- Component: `apps/web/tests/component/sales/HttpSalesFlow.test.tsx`
+- Component: `apps/web/tests/component/sales/InvoiceDetailPage.test.tsx` (mock HTML intacto)
+
 ### Fuera de alcance (intencional)
+
+Rentabilidad (M24). Harness de fallo PDF en UI de demo. S3 / DGII / NCF real.
 
 ---
 

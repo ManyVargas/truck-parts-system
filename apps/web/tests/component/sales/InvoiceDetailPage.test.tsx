@@ -55,7 +55,7 @@ describe('InvoiceDetailPage', () => {
     expect(screen.getAllByText(/por Laura Pérez/).length).toBeGreaterThan(0);
   });
 
-  it('shows ITBIS breakdown for fiscal invoices and em dash for non-fiscal', async () => {
+  it('shows ITBIS breakdown for fiscal invoices', async () => {
     signInAs('ADMINISTRATOR');
     renderWithProviders(detailRoute(), {
       route: '/sales/INV-098',
@@ -67,7 +67,7 @@ describe('InvoiceDetailPage', () => {
     expect(screen.getByText('Rentabilidad')).toBeVisible();
   });
 
-  it('shows an em dash instead of ITBIS on a non-fiscal invoice PDF preview', async () => {
+  it('shows ITBIS as zero on a non-fiscal invoice PDF preview', async () => {
     signInAs('SELLER');
     const user = userEvent.setup();
     renderWithProviders(detailRoute(), {
@@ -76,12 +76,14 @@ describe('InvoiceDetailPage', () => {
     });
 
     expect(await screen.findByRole('heading', { name: 'FAC-000099' })).toBeVisible();
+    expect(screen.queryByText('Precio final')).not.toBeInTheDocument();
+    expect(screen.getAllByText('RD$0.00').length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: 'Vista previa del documento' }));
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('NCF: ______________________')).toBeVisible();
-    expect(within(dialog).getAllByText('—').length).toBeGreaterThan(0);
-    expect(within(dialog).getByText('RD$0.00')).toBeVisible();
+    expect(within(dialog).getByText('ITBIS incluido')).toBeVisible();
+    expect(within(dialog).getAllByText('RD$0.00').length).toBeGreaterThan(0);
   });
 
   it('lets an administrator cancel with a reason', async () => {
@@ -94,10 +96,40 @@ describe('InvoiceDetailPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'FAC-000097' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Cancelar factura' }));
-    await user.type(screen.getByLabelText('Motivo'), 'Cliente desistió');
-    await user.click(screen.getByRole('button', { name: 'Confirmar cancelación' }));
+    const cancelDialog = await screen.findByRole('dialog', { name: 'Cancelar factura' });
+    await user.type(within(cancelDialog).getByLabelText('Motivo'), 'Cliente desistió');
+    await user.click(within(cancelDialog).getByRole('button', { name: 'Cancelar factura' }));
+
+    const confirmDialog = await screen.findByRole('dialog', { name: 'Confirmar cancelación' });
+    expect(within(confirmDialog).getByText(/quedará cancelada/i)).toBeVisible();
+    await user.click(within(confirmDialog).getByRole('button', { name: 'Confirmar cancelación' }));
 
     expect(await screen.findByText('Cancelada')).toBeVisible();
+    expect(screen.getAllByText('Cancelada')).toHaveLength(1);
     expect(screen.getByText('Cliente desistió')).toBeVisible();
+  });
+
+  it('does not cancel when the administrator backs out of confirmation', async () => {
+    signInAs('ADMINISTRATOR');
+    const user = userEvent.setup();
+    renderWithProviders(detailRoute(), {
+      route: '/sales/INV-097',
+      auth: createAuthValue('ADMINISTRATOR'),
+    });
+
+    expect(await screen.findByRole('heading', { name: 'FAC-000097' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Cancelar factura' }));
+    const cancelDialog = await screen.findByRole('dialog', { name: 'Cancelar factura' });
+    await user.type(within(cancelDialog).getByLabelText('Motivo'), 'Cliente desistió');
+    await user.click(within(cancelDialog).getByRole('button', { name: 'Cancelar factura' }));
+
+    const confirmDialog = await screen.findByRole('dialog', { name: 'Confirmar cancelación' });
+    await user.click(within(confirmDialog).getByRole('button', { name: 'Volver' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Cancelar factura' })).toBeVisible();
+    expect(screen.queryByText('Cancelada')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByLabelText('Motivo')).toHaveValue(
+      'Cliente desistió',
+    );
   });
 });

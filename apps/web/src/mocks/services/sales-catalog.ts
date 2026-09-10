@@ -1,7 +1,9 @@
 import type { AppState, Invoice, User } from '../../api/contracts/entities';
 import type {
+  CustomerOutstandingRow,
   InvoiceDetailView,
   InvoiceLineView,
+  ReceivablesSnapshot,
   SalesListRow,
   SalesListTab,
 } from '../../api/contracts/sales';
@@ -14,6 +16,7 @@ import {
   lineBase,
   lineGross,
   lineItbis,
+  roundMoney,
 } from './invoice-money';
 import { profitabilityForInvoice } from './profitability-view';
 import { resolveActorName, toHistoryEventView } from './history-view';
@@ -51,6 +54,7 @@ export function toSalesListRow(state: AppState, invoice: Invoice): SalesListRow 
     balance: invoiceBalance(invoice),
     createdAt: invoice.createdAt,
     confirmedAt: invoice.confirmedAt,
+    dueDate: invoice.dueDate,
     href: draftHref(invoice),
   };
 }
@@ -71,6 +75,43 @@ export function buildSalesList(state: AppState, tab: SalesListTab = 'ALL'): Sale
       return rightKey.localeCompare(leftKey);
     })
     .map((invoice) => toSalesListRow(state, invoice));
+}
+
+export function buildReceivables(state: AppState): ReceivablesSnapshot {
+  const invoices = [...state.invoices]
+    .filter((invoice) => invoice.status === 'COMPLETED' && invoiceBalance(invoice) > 0)
+    .sort((left, right) => (left.dueDate ?? left.createdAt).localeCompare(right.dueDate ?? right.createdAt))
+    .map((invoice) => toSalesListRow(state, invoice));
+
+  const grouped = new Map<string, CustomerOutstandingRow>();
+  for (const row of invoices) {
+    const key = `${row.customerId}:${row.currency}`;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.invoiceCount += 1;
+      existing.invoiced = roundMoney(existing.invoiced + row.total);
+      existing.paid = roundMoney(existing.paid + (row.total - row.balance));
+      existing.balance = roundMoney(existing.balance + row.balance);
+      continue;
+    }
+    grouped.set(key, {
+      customerId: row.customerId,
+      customerName: row.customerName,
+      currency: row.currency,
+      invoiceCount: 1,
+      invoiced: row.total,
+      paid: roundMoney(row.total - row.balance),
+      balance: row.balance,
+    });
+  }
+
+  return {
+    invoices,
+    customers: [...grouped.values()].sort((left, right) => {
+      const name = left.customerName.localeCompare(right.customerName, 'es');
+      return name !== 0 ? name : left.currency.localeCompare(right.currency);
+    }),
+  };
 }
 
 function toLineView(line: Invoice['lines'][number], fiscal: boolean): InvoiceLineView {
@@ -153,6 +194,7 @@ export function buildInvoiceDetail(state: AppState, invoice: Invoice, actor: Use
       canCancel: completed && can(actor, 'sales.cancel'),
       canCorrectCurrency: completed && can(actor, 'sales.correctCurrency') && invoice.payments.length === 0 && invoice.paymentState !== 'PAID',
       canViewPdf: numbered && Boolean(invoice.number),
+      canRegeneratePdf: false,
     },
     deliveredAssemblies: invoice.deliveredAssemblies,
   };

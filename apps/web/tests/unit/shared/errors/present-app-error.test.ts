@@ -93,4 +93,13 @@ describe('presentError', () => {
       }).summary,
     ).toBe('Debe cambiar su contraseña desde Mi perfil para continuar.');
   });
+
+  it('keeps known PDF conflict messages in Spanish', () => {
+    expect(
+      presentError({
+        fallbackMessage: 'Los datos cambiaron. Actualice e intente nuevamente.',
+        serverMessage: 'La generación del PDF falló',
+      }).summary,
+    ).toBe('La generación del PDF falló');
+  });
 });

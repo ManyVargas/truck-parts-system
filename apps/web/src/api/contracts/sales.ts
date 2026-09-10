@@ -27,7 +27,23 @@ export type SalesListRow = {
   balance: number;
   createdAt: string;
   confirmedAt?: string;
+  dueDate?: string;
   href: string;
+};
+
+export type CustomerOutstandingRow = {
+  customerId: string;
+  customerName: string;
+  currency: Currency;
+  invoiceCount: number;
+  invoiced: number;
+  paid: number;
+  balance: number;
+};
+
+export type ReceivablesSnapshot = {
+  invoices: SalesListRow[];
+  customers: CustomerOutstandingRow[];
 };
 
 export type InvoiceLineView = {
@@ -49,6 +65,8 @@ export type PaymentView = {
   amount: number;
   method: PaymentMethod;
   createdAt: string;
+  effectiveDate?: string;
+  recordedAt?: string;
   reference?: string;
   actorName?: string;
 };
@@ -83,11 +101,19 @@ export type InvoiceProfitabilityView = {
   rateSource?: string;
 };
 
+export type InvoiceDocumentView = { status: 'READY' } | { status: 'FAILED'; errorId: string };
+
+export type InvoicePdfDownload = {
+  blob: Blob;
+  filename: string;
+};
+
 export type InvoiceDetailActions = {
   canPay: boolean;
   canCancel: boolean;
   canCorrectCurrency: boolean;
   canViewPdf: boolean;
+  canRegeneratePdf: boolean;
 };
 
 export type InvoiceDetailView = {
@@ -108,11 +134,15 @@ export type InvoiceDetailView = {
   balance: number;
   createdAt: string;
   confirmedAt?: string;
+  dueDate?: string;
+  sellerName?: string;
   cancelledAt?: string;
   cancelReason?: string;
+  cancelledByName?: string;
   linkedWorkOrders: LinkedWorkOrderView[];
   history: InvoiceHistoryEntry[];
   profitability?: InvoiceProfitabilityView;
+  document?: InvoiceDocumentView;
   actions: InvoiceDetailActions;
   /** Copied as-is from the invoice; omitted when no assembly was sold. */
   deliveredAssemblies?: DeliveredAssembly[];
@@ -122,6 +152,7 @@ export type AddPaymentInput = {
   invoiceId: string;
   amount: number;
   method: PaymentMethod;
+  effectiveDate: string;
   reference?: string;
   idempotencyKey?: string;
 };
@@ -141,6 +172,8 @@ export type CancelInvoiceInput = {
   reason: string;
   refundAmount?: number;
   refundMethod?: PaymentMethod;
+  refundReference?: string;
+  idempotencyKey?: string;
   inProgressDecision?: InProgressCancelDecision;
 };
 

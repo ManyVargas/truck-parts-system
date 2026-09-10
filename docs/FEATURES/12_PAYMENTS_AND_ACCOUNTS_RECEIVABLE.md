@@ -10,6 +10,8 @@ The old consolidated requirements/validation files are intentionally no longer r
 
 **Release 3 — Immediate financial priority after Billing Core**
 
+**Implementation (2026-09-10):** Pulled forward into the Release 2 local codebase. Production API + HTTP UI for the financial slice are in place (`InvoicePayment`, confirm-time optional payment, `POST /api/sales/:id/payments`, `GET /api/sales/receivables`, invoice payment history). **Do not treat this feature as complete.** Remaining checklist items that belong to Release 3 must still be implemented (after R2 M24/M25). Aging and collections stay deferred as specified in this file.
+
 ## What this feature does
 
 Record cash/credit behavior through an additive same-currency payment ledger and derive useful basic Accounts Receivable views without building an advanced accounting/collections module.
@@ -40,7 +42,11 @@ Payments own money received and refunded; Sales owns invoice state. Never equate
 
 Use additive payment records with amount, invoice currency, method, date, reference, actor, and idempotency identity. Never overwrite prior payments to represent later receipts. Reject overpayment under the current validated rules. Every payment/refund must use the invoice currency; do not perform operational currency conversion.
 
-Derive `Unpaid`, `Partially Paid`, and `Paid` from the preserved ledger. Basic Accounts Receivable should be a read model over Sales + Payments, not a second ledger/source of truth.
+Derive the public state from the preserved ledger and fixed due date; do not store a mutable payment-status column. The validated states are `Pending` while any balance remains through the due date, `Overdue` afterward, `Paid` when the chronological effective payments settle the total on/before the due date, `Paid late` when they settle it afterward, and `Cancelled` as the overriding state. A partial payment therefore remains `Pending` before due date while its payment detail and balance remain visible internally.
+
+The due date is the local calendar date in `America/Santo_Domingo` 30 calendar days after confirmation and expires at the end of that day. It is fixed, cannot be overridden, and remains visible as historical reference after payment. Existing completed invoices backfill it from `confirmedAt`; payment effective dates are date-only, may be entered by Seller/Administrator, and must be between the confirmation date and today. Settlement timing uses effective dates, not record timestamps.
+
+Supported operational methods are `CASH`, `TRANSFER`, and `CHECK`; references are optional. The internal invoice detail shows each additive movement with effective date, recorded time, method, reference and actor. The customer PDF intentionally omits payment movements and methods, showing only current outstanding balance.
 
 Recommended first AR projections:
 
@@ -50,7 +56,7 @@ Recommended first AR projections:
 
 Do not silently combine DOP and USD into one converted receivable balance.
 
-Advanced AR such as due-date policy, aging buckets, credit limits, interest, collection promises/tasks, formal statements, automated reminders, and bank reconciliation remains Future unless separately validated.
+Advanced AR such as aging buckets, credit limits, interest, collection promises/tasks, formal statements, automated reminders, and bank reconciliation remains Future unless separately validated.
 
 ## Feature-level acceptance criteria
 
@@ -67,32 +73,39 @@ Advanced AR such as due-date policy, aging buckets, credit limits, interest, col
 ## Implementation checklist
 
 ### Payment domain
+
 - [x] Additive payment record model.
 - [x] Payment idempotency/retry protection.
 - [x] Same-currency and positive-balance validation.
 - [x] Derived payment state/balance service.
 - [x] Initial payment at confirmation coordination.
 - [x] Additional/partial/mixed-method payment commands.
+- [x] Fixed 30-calendar-day due date and calculated Pending/Overdue/Paid/Paid-late states.
+- [x] Effective-date range and chronological settlement rules.
 
 ### Basic AR read models
-- [ ] Open receivables query.
-- [ ] Customer outstanding summary grouped by currency.
+
+- [x] Open receivables query.
+- [x] Customer outstanding summary grouped by currency.
 - [x] Invoice receivable/payment-history detail.
-- [ ] Filters by customer, invoice, payment state, date, and currency as justified.
-- [ ] Do not add overdue/aging until due-date behavior is validated.
+- [ ] Filters by customer, invoice, payment state, date, and currency as justified. _(Still required Release 3 work — not optional. Partial today: API `GET /receivables` accepts `customerId`, `currency`, and `paymentState` `PENDING`/`OVERDUE` only. HTTP UI filters customer **name** on the loaded snapshot and does not yet send those query params. Invoice id, date range, and Paid/Paid-late query filters are not implemented. Finish after R2 M24/M25.)_
+- [x] Overdue behavior uses the validated fixed due-date policy; aging remains deferred.
 
 ### Frontend
+
 - [x] Record initial/additional payment.
 - [x] Invoice payment history and current balance.
-- [ ] Accounts Receivable list.
-- [ ] Customer open-balance summary.
+- [x] Accounts Receivable list.
+- [x] Customer open-balance summary.
+- [x] Filter AR summary and open invoices by customer name.
 
 ### Tests
+
 - [x] Zero/partial/full payment cases.
 - [x] Multiple/mixed-method cases.
 - [x] Duplicate/concurrent payment tests.
 - [x] Overpayment and cross-currency rejection.
-- [ ] AR totals equal underlying ledger calculations.
+- [x] AR totals equal underlying ledger calculations.
 
 ## Canonical validated requirements
 

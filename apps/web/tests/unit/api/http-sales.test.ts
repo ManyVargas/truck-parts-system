@@ -31,6 +31,16 @@ const emptyInvoice = {
   customer: cashCustomer,
   customerSnapshot: null,
   confirmedAt: null,
+  dueDate: null,
+  sellerName: null,
+  cancelledAt: null,
+  cancelReason: null,
+  cancelledByName: null,
+  paymentState: 'PENDING',
+  payments: [],
+  paid: '0.00',
+  refunded: '0.00',
+  balance: '0.00',
   lines: [],
   totals: { gross: '0.00', base: '0.00', itbis: '0.00' },
   createdAt: '2026-09-09T12:00:00.000Z',
@@ -67,6 +77,7 @@ describe('HTTP sales draft contract', () => {
               ...invoiceWithTotal,
               id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
               status: 'COMPLETED',
+              balance: '118.00',
               number: 'FAC-000001',
               customer: { ...cashCustomer, name: 'Nombre al confirmar' },
               confirmedAt: '2026-09-09T13:00:00.000Z',
@@ -77,6 +88,9 @@ describe('HTTP sales draft contract', () => {
           page: 1,
           pageSize: 100,
         });
+      }
+      if (url.startsWith('/api/sales?status=CANCELLED')) {
+        return json({ items: [], total: 0, page: 1, pageSize: 100 });
       }
       throw new Error(`Unexpected ${path}`);
     });
@@ -111,13 +125,11 @@ describe('HTTP sales draft contract', () => {
       ok: true,
       value: [{ number: 'FAC-000001', status: 'COMPLETED' }],
     });
-    expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      '/api/sales?status=COMPLETED&page=1&pageSize=100',
-    );
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/sales?status=COMPLETED&page=1&pageSize=100');
 
     fetchMock.mockClear();
     expect(await repository.listInvoices('CANCELLED')).toEqual({ ok: true, value: [] });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/sales?status=CANCELLED&page=1&pageSize=100');
   });
 
   it('creates a draft with CSRF and loads lookups on getDraft', async () => {
@@ -407,6 +419,7 @@ describe('HTTP sales draft contract', () => {
     const confirmed = {
       ...invoiceWithTotal,
       status: 'COMPLETED',
+      balance: '118.00',
       number: 'FAC-000001',
       customer: { ...cashCustomer, name: 'Nombre al confirmar' },
       confirmedAt: '2026-09-09T13:00:00.000Z',
@@ -461,22 +474,34 @@ describe('HTTP sales draft contract', () => {
     });
     const confirmInit = fetchMock.mock.calls[0]?.[1] as RequestInit;
     expect(new Headers(confirmInit.headers).get('X-Requested-With')).toBe('XMLHttpRequest');
-    expect(JSON.parse(String(confirmInit.body))).toEqual({});
+    expect(JSON.parse(String(confirmInit.body))).toEqual({
+      payment: { amount: '50.00', method: 'CASH' },
+    });
   });
 
-  it('loads completed invoice detail from the snapshot without PDF or profit', async () => {
+  it('loads completed invoice detail from the snapshot with PDF ready and without profit', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(
         json({
           ...invoiceWithTotal,
           status: 'COMPLETED',
+          balance: '118.00',
           number: 'FAC-000002',
           currency: 'USD',
           customer: { ...cashCustomer, name: 'Snapshot', rnc: '131098765' },
           confirmedAt: '2026-09-09T13:00:00.000Z',
           profitability: { status: 'AVAILABLE', profitDop: '10.00' },
           document: { status: 'READY' },
+          history: [
+            {
+              id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+              type: 'INVOICE_CONFIRMED',
+              description: 'Factura FAC-000002 confirmada',
+              createdAt: '2026-09-09T13:00:00.000Z',
+              actorName: 'Ana Pérez',
+            },
+          ],
           lines: [
             {
               id: lineId,
@@ -511,17 +536,134 @@ describe('HTTP sales draft contract', () => {
         balance: 118,
         lines: [{ description: 'Filtro', itbis: 18, gross: 118 }],
         payments: [],
-        history: [],
+        history: [
+          {
+            id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+            type: 'INVOICE_CONFIRMED',
+            description: 'Factura FAC-000002 confirmada',
+            createdAt: '2026-09-09T13:00:00.000Z',
+            actorName: 'Ana Pérez',
+          },
+        ],
+        document: { status: 'READY' },
         actions: {
-          canPay: false,
-          canCancel: false,
+          canPay: true,
+          canCancel: true,
           canCorrectCurrency: false,
-          canViewPdf: false,
+          canViewPdf: true,
+          canRegeneratePdf: false,
         },
       },
     });
     if (result.ok) {
       expect(result.value.profitability).toBeUndefined();
     }
+  });
+
+  it('maps a failed document so the seller can see the error and cannot download', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        json({
+          ...invoiceWithTotal,
+          status: 'COMPLETED',
+          balance: '118.00',
+          number: 'FAC-000003',
+          document: { status: 'FAILED', errorId: 'pdf-err-1' },
+        }),
+      ),
+    );
+
+    const result = await repository.getInvoice(draftId);
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        document: { status: 'FAILED', errorId: 'pdf-err-1' },
+        actions: { canViewPdf: false, canRegeneratePdf: true },
+      },
+    });
+  });
+
+  it('downloads invoice PDF bytes with the server filename', async () => {
+    const bytes = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+    const fetchMock = vi.fn(
+      async (_path: string, _init?: RequestInit) =>
+        new Response(bytes, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="FAC-000002.pdf"',
+          },
+        }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await repository.getInvoicePdf(draftId);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.filename).toBe('FAC-000002.pdf');
+    expect(new Uint8Array(await result.value.blob.arrayBuffer())).toEqual(bytes);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/sales/${draftId}/pdf`,
+      expect.objectContaining({ credentials: 'include' }),
+    );
+    const init = fetchMock.mock.calls[0]?.[1];
+    expect(init?.method).toBeUndefined();
+    expect(new Headers(init?.headers).get('X-Requested-With')).toBeNull();
+  });
+
+  it('surfaces a failed PDF download as a conflict without treating it as JSON success', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          json(
+            {
+              error: {
+                code: 'CONFLICT',
+                message: 'La generación del PDF falló',
+                errorId: 'pdf-err-1',
+              },
+            },
+            409,
+          ),
+        ),
+    );
+
+    const result = await repository.getInvoicePdf(draftId);
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'CONFLICT', message: 'La generación del PDF falló', errorId: 'pdf-err-1' },
+    });
+  });
+
+  it('regenerates a failed PDF with CSRF and an empty body', async () => {
+    const fetchMock = vi.fn(async (path: string, init?: RequestInit) => {
+      if (String(path) === `/api/sales/${draftId}/pdf/regenerate` && init?.method === 'POST') {
+        return json({
+          ...invoiceWithTotal,
+          status: 'COMPLETED',
+          balance: '118.00',
+          number: 'FAC-000003',
+          document: { status: 'READY' },
+        });
+      }
+      throw new Error(`Unexpected ${path} ${init?.method}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await repository.regenerateInvoicePdf(draftId);
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        number: 'FAC-000003',
+        document: { status: 'READY' },
+        actions: { canViewPdf: true, canRegeneratePdf: false },
+      },
+    });
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(new Headers(init.headers).get('X-Requested-With')).toBe('XMLHttpRequest');
+    expect(JSON.parse(String(init.body))).toEqual({});
   });
 });

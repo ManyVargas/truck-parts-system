@@ -7,7 +7,7 @@ import { UX_TERMS } from '../../shared/copy/glossary';
 import { Button, Field, GuardedModal, Info, Input, Select, money, isFormDirty } from '../../shared/ui';
 import { PAYMENT_METHOD_LABELS } from './labels';
 
-const METHODS: PaymentMethod[] = ['CASH', 'CARD', 'TRANSFER', 'CHECK'];
+const METHODS: PaymentMethod[] = ['CASH', 'TRANSFER', 'CHECK'];
 
 type ConfirmSaleModalProps = {
   open: boolean;

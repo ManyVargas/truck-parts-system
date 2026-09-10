@@ -1,9 +1,10 @@
 # Plan Release 2 — Billing Core: Customers, Invoices, Cost/Profit, PDF
 
 **Release:** 2 — Billing Core  
-**Estado:** en curso (M1–M21 completados)  
+**Estado:** en curso (M1–M23 completados; **M24–M25 pendientes**)  
 **Último milestone planificado:** Milestone 25 — Exit gate Release 2  
-**Registro de implementación:** [`../done_api/release_2.md`](../done_api/release_2.md)
+**Registro de implementación:** [`../done_api/release_2.md`](../done_api/release_2.md)  
+**Trabajo adelantado:** el slice financiero de Release 3 (pagos, CxC, cancelación no-inventario) **ya está en el código**. Ver [`../done_api/release_3.md`](../done_api/release_3.md) y el snapshot en [`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md). No volver a implementarlo en un plan R3 desde cero.
 
 ---
 
@@ -13,7 +14,7 @@
 - **Release 1:** COMPLETADO. M1–M11 verificados en local (exit gate de navegador 2026-09-07) y M4 cerrado en GitHub (`CI R1` / check `R1 quality`). Ver [`plan-001.md`](plan-001.md) y [`../done_api/release-1.md`](../done_api/release-1.md).
 - **Entorno:** desarrollo y pruebas **únicamente en local** durante este plan. El primer despliegue productivo es un gate operativo **después** de completar Billing Core; no es un milestone de este archivo ([`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) §First production deployment).
 - **Features en alcance:** [`../FEATURES/08_CUSTOMERS.md`](../FEATURES/08_CUSTOMERS.md), slice R2 de [`../FEATURES/10_SALES_AND_INVOICES.md`](../FEATURES/10_SALES_AND_INVOICES.md), slice R2 de [`../FEATURES/11_COST_AND_PROFITABILITY.md`](../FEATURES/11_COST_AND_PROFITABILITY.md), slice de history de [`../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md`](../FEATURES/14_HISTORY_ADMIN_AND_RECOVERY.md). Permisos: [`../FEATURES/01_ACCESS_AND_USERS.md`](../FEATURES/01_ACCESS_AND_USERS.md) y [`../ROLES_AND_PERMISSIONS.md`](../ROLES_AND_PERMISSIONS.md).
-- **Frontend:** el prototipo mock de [`../plans_web/plan-001.md`](../plans_web/plan-001.md) está cerrado (WM12). Access/Users, clientes, catálogo de servicios y POS draft usan HTTP cuando `VITE_USE_MOCK_API=false`. Confirmación, PDF y rentabilidad siguen stub.
+- **Frontend:** el prototipo mock de [`../plans_web/plan-001.md`](../plans_web/plan-001.md) está cerrado (WM12). Access/Users, clientes, catálogo de servicios, POS draft, confirmación, PDF, **pagos, CxC y cancelación no-inventario** usan HTTP cuando `VITE_USE_MOCK_API` no es `true`. El detalle de factura HTTP muestra **actividad de documento** (Feature 14). **Rentabilidad HTTP sigue stub** (M24).
 - **Estado API de partida:** Auth, `requireAuth`/`requireRole`, usuarios, envelope de history (`HistoryEvent`) y convención `routes → controller → service → repository → validation → types` están listos. M1–M4 cubren clientes y catálogo de servicios (persistencia + HTTP). M5 es el motor decimal de ITBIS. M6 persiste el agregado Invoice/`FAC-`. M7 expone la cáscara HTTP de draft. M8 añade líneas GENERIC y rechaza ITEM/QTY. M9 añade líneas SERVICE de catálogo activo (precio en la línea). M10 añade líneas DELIVERY (descripción obligatoria; máximo una; `0` o positivo; no gravada). M11 añade líneas EXTERNAL gravadas con costo DOP. M12 confirma el draft: `FAC-`, snapshot de cliente y dinero congelado. M13 deriva profit DOP sobre ese snapshot y lo proyecta solo a Administrator. M14 registra profit DOP juzgado (COST-005) cuando el costo es desconocido. M15 enriquece USD con ExchangeRate-API o deja `PENDING_FX_RATE` sin abortar la venta. M16 reintenta la tasa histórica del día de confirmación. M17 genera el PDF interno tras confirmar (sin bytes persistidos) o deja `FAILED` + `errorId`. M18 regenera un PDF `FAILED` (solo Administrator) sin reabrir la venta.
 - **Ciclo por milestone:** plan → implementación → pruebas → revisión → commit. La integración web se hace **solo** cuando la función API cumple el criterio de la sección Integración API → Web.
 
@@ -39,18 +40,18 @@ La idea es el corte más pequeño que sigue siendo un commit releasable, sin dej
 
 ## Alcance total de Release 2
 
-| Incluido | Excluido |
+| Incluido | Excluido / ya no aplica como “futuro” |
 |---|---|
-| Clientes: search/create/edit, contactos, `Cliente contado`, validación fiscal, snapshot inmutable al confirmar | Pagos, CxC, balances, `addPayment` (Release 3) |
-| Catálogo de servicios mecánicos (Administrator mantiene; Seller usa) | Categorías de inventario / atributos (Release 4) |
-| Ciclo Draft → Completed; estado `Cancelled` en el dominio | Comando de cancelación / reembolso (Release 3) |
-| Moneda única DOP o USD por factura; secuencia compartida `FAC-` nunca reusada | Líneas de inventario individual o cantidad; reservas (Release 5) |
-| Líneas: genérica, servicio de catálogo, entrega, reventa externa | Venta instalada / ensamblaje (Release 7) |
-| ITBIS 18 % incluido en mercancía gravada; servicio y entrega no gravados | DGII / generación o validación de NCF / e-CF |
-| PDF interno regenerable con `NCF: ______________________` en blanco | Object storage / fotos (Release 4+) |
-| Costo DOP actual/estimado/desconocido; rentabilidad Administrator-only; COST-005; FX USD + retry | Corrección de moneda de factura completada INV-006 (Release 8) |
-| History de clientes, catálogo de servicios, draft, confirmación, PDF y rentabilidad | Recovery operacional / diagnósticos (Release 8) |
-| Integración web HTTP de clientes, POS no-inventario, confirmación, PDF y rentabilidad | Dashboard KPIs reales; staging, producción, hosting, HTTPS productivo, backups |
+| Clientes: search/create/edit, contactos, `Cliente contado`, validación fiscal, snapshot inmutable al confirmar | Categorías de inventario / atributos (Release 4) |
+| Catálogo de servicios mecánicos (Administrator mantiene; Seller usa) | Líneas de inventario individual o cantidad; reservas (Release 5) — API las rechaza con 409 |
+| Ciclo Draft → Completed; estado `Cancelled` en el dominio | Venta instalada / ensamblaje (Release 7) |
+| **Pagos, CxC básica y cancelación no-inventario:** adelantados (Release 3); ver `done_api/release_3.md`. `confirmInvoice` **puede** registrar pago inicial | Aging, límites de crédito, CxP (3B), corrección de moneda INV-006 (Release 8) |
+| Moneda única DOP o USD por factura; secuencia compartida `FAC-` nunca reusada | DGII / generación o validación de NCF / e-CF |
+| Líneas: genérica, servicio de catálogo, entrega, reventa externa | Object storage / fotos (Release 4+) |
+| ITBIS 18 % incluido en mercancía gravada; servicio y entrega no gravados | Dashboard KPIs reales; staging, producción, hosting, HTTPS productivo, backups |
+| PDF interno regenerable con `NCF: ______________________` en blanco | |
+| Costo DOP actual/estimado/desconocido; rentabilidad Administrator-only **API**; COST-005; FX USD + retry. **UI HTTP de rentabilidad = M24 pendiente** | |
+| History de clientes, catálogo de servicios, draft, confirmación, PDF, rentabilidad, **pagos y cancelación** | Recovery operacional / diagnósticos (Release 8) |
 
 ## Decisiones cerradas (fuente de verdad)
 
@@ -58,8 +59,8 @@ Documentadas en los feature specs, [`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLA
 
 1. Este archivo cubre **API + integración web**, igual que Release 1.
 2. R2 incluye **reventa externa (LINE-005)** y **rentabilidad USD/FX (COST-003 + retry)**.
-3. Confirmación es el evento comercial. No hay pagos en R2: `confirmInvoice` no registra dinero recibido.
-4. El estado `Cancelled` existe en el modelo; no hay endpoint de cancelar hasta Release 3.
+3. Confirmación es el evento comercial. El plan original no incluía pagos en R2; **el owner adelantó Release 3**: `confirmInvoice` puede registrar un pago inicial y `dueDate`. Pagos adicionales usan `POST /api/sales/:id/payments`.
+4. El estado `Cancelled` existe en el modelo. **El comando de cancelar no-inventario ya está implementado** (`POST /api/sales/:id/cancel`, solo Administrator). Restauración de inventario/OT sigue Release 5/7.
 5. Líneas ITEM/QTY se modelan en el discriminador para **rechazarlas** con error explícito, no para habilitarlas.
 6. Dinero: aritmética decimal (Prisma `Decimal` / equivalente), nunca `number` flotante. Redondeo a dos decimales **por línea**; totales = suma de líneas ya redondeadas.
 7. ITBIS 18 % **incluido** en el precio final de mercancía gravada (genérica y reventa externa). Servicio y entrega no gravados. Entrega gratuita usa `0` numérico, nunca texto.
@@ -70,7 +71,7 @@ Documentadas en los feature specs, [`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLA
 12. FX es un adaptador de infrastructure. El proveedor concreto es **[ExchangeRate-API](https://www.exchangerate-api.com/)** (API v6). La clave vive solo en env (p. ej. `EXCHANGE_RATE_API_KEY`); nunca en el código. Un test double es obligatorio. Falta de tasa, timeout, clave inválida o cuota agotada: la factura USD se confirma y la rentabilidad queda `UNAVAILABLE / PENDING FX RATE`.
 13. COST-005 (profit DOP juzgado) solo si el costo es desconocido. No pisa estimado ni pending FX.
 14. Seller ve costo de adquisición; solo Administrator ve profit/margen/estadísticas. Mechanic no ve clientes, facturas, precios, costos ni profit.
-15. History: el envelope de R1 se reutiliza. Cada escritura de negocio appende eventos en la **misma transacción**. No hay milestone aparte de history ni UI de historial en R2.
+15. History: el envelope de R1 se reutiliza. Cada escritura de negocio **relevante** appende eventos en la **misma transacción**. El detalle de factura HTTP proyecta actividad de documento (confirmación, pago, PDF, anulación; profit/FX solo Administrator). Owner: no append ni mostrar en esa UI `INVOICE_DRAFT_UPDATED` ni `INVOICE_LINE_ADDED` / `UPDATED` / `REMOVED`. No hay pantalla de administración de historial en R2.
 16. Hosting / RPO / RTO / HTTPS productivo **no bloquean** M1–M25. Bloquean el primer uso en producción, no este plan local.
 
 ## Integración API → Web (cuándo cablear)
@@ -102,7 +103,7 @@ Access/Users permanece en HTTP. Inventario, pagos, cancelación, OT, dashboard K
 | Línea SERVICE | M9 | idem | después de M11 | incluido en M21 |
 | Línea DELIVERY | M10 | idem | después de M11 | incluido en M21 |
 | Línea EXTERNAL + costo | M11 | idem | después de M11 | incluido en M21 |
-| Confirmación + `FAC-` + snapshot | M12 | `confirmInvoice` | **Después de M12**; swap en **M22** | Sin payload de pago |
+| Confirmación + `FAC-` + snapshot | M12 | `confirmInvoice` | **Después de M12**; swap en **M22** | Plan original: sin pago. **Hoy:** pago inicial opcional (R3 adelantado) |
 | Rentabilidad DOP | M13 | panel admin | **Después de M13**; swap en **M24** | Proyección Administrator-only |
 | COST-005 | M14 | `recordManualGrossProfit` | **Después de M14**; swap en **M24** | Mismo repositorio de rentabilidad |
 | FX pending | M15 | pending FX | **Después de M15**; swap en **M24** | Confirmación USD ya existe en M12 |
@@ -131,7 +132,7 @@ Access/Users permanece en HTTP. Inventario, pagos, cancelación, OT, dashboard K
 | **M22** | Confirmación HTTP | PDF / profit |
 | **M23** | PDF HTTP | Profit |
 | **M24** | Rentabilidad HTTP | Exit gate |
-| **M25** | Exit gate R2 | Release 3 (pagos/CxC) |
+| **M25** | Exit gate R2 | Rentabilidad HTTP (M24). Pagos/CxC **ya adelantados** (no son el “siguiente milestone” de este archivo) |
 
 **Release 2 cerrado (local):** Access/Users + clientes + facturas no-inventario + PDF + rentabilidad hablan con API real. Pagos, inventario, OT y recovery permanecen mock/deshabilitados.
 
@@ -270,7 +271,7 @@ Paralelo al inicio: M1 ∥ M3 ∥ M5 ∥ M6. M19 puede seguir a M2 sin esperar e
 | M20 | Web: catálogo de servicios HTTP | completado | Swap `ServiceRepository` |
 | M21 | Web: POS draft + líneas soportadas | completado | Swap subset draft de sales |
 | M22 | Web: confirmación HTTP | completado | Swap `confirmInvoice` |
-| M23 | Web: PDF HTTP | pendiente | Print / regenerate |
+| M23 | Web: PDF HTTP | completado | Print / regenerate |
 | M24 | Web: rentabilidad HTTP | pendiente | Swap `ProfitabilityRepository` |
 | M25 | Exit gate Release 2 | pendiente | Verificación end-to-end; sin features nuevas |
 
@@ -530,6 +531,8 @@ Paralelo al inicio: M1 ∥ M3 ∥ M5 ∥ M6. M19 puede seguir a M2 sin esperar e
 - Cero inventario / WO / jerarquía.
 - PDF y FX fuera de esta transacción.
 - Sin payload de pago (Release 3).
+
+Nota 2026-09-10: el corte **M12 original** no cobraba. Después se adelantó pago inicial opcional en confirmación.
 - History de confirmación + número en la misma transacción.
 
 **Pruebas:**
@@ -738,6 +741,8 @@ Paralelo al inicio: M1 ∥ M3 ∥ M5 ∥ M6. M19 puede seguir a M2 sin esperar e
 - `confirmInvoice` / PDF / profit siguen stub hasta M22–M24.
 - `addPayment` / `cancelInvoice` / `correctCurrency` no implementados.
 
+Nota 2026-09-10: el corte **M21 original** es el de arriba. Después se adelantó R3: HTTP enciende `payments` e `invoiceCancellation`; `addPayment`/`cancelInvoice` existen. `correctCurrency` sigue sin API.
+
 **Pruebas:**
 - Browser: draft, `Cliente contado` no fiscal, cuatro líneas, moneda, discard
 - Fiscal rechaza contado
@@ -863,13 +868,13 @@ El prototipo web no es dependencia de M1–M18. M19–M24 son swaps. M25 no impl
 
 ## Qué NO planificar aquí
 
-- Pagos, CxC, due dates, aging, cancelación/reembolso (Release 3)
+- Aging CxC, límites de crédito, CxP (3B). **Pagos/CxC/cancelación no-inventario ya están hechos** (`done_api/release_3.md`); no reimplementar.
 - Inventario, fotos, categorías de producto, reservas (Release 4–5)
 - Work Orders, jerarquía, ventas instaladas (Release 6–7)
-- Recovery operacional, corrección de moneda completed, diagnósticos (Release 8)
+- Recovery operacional, corrección de moneda completed, diagnósticos (Release 8) — excepto PDF regenerate y retry FX de rentabilidad, ya en API
 - Staging, producción, hosting, RPO/RTO, backups, HTTPS productivo (gate **después** de este plan)
-- DGII / NCF / e-CF / CxP
+- DGII / NCF / e-CF
 
 ## Próximo paso
 
-**Milestone 22:** Web confirmación HTTP. No mezclar confirmación mock con drafts HTTP.
+**Milestone 24:** Web rentabilidad HTTP. Seller no ve profit.

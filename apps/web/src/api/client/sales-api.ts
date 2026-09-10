@@ -6,9 +6,13 @@ import type {
   ConfirmInvoicePayment,
   CorrectCurrencyInput,
   CreateDraftResult,
+  CustomerOutstandingRow,
   InvoiceDetailView,
+  InvoiceDocumentView,
+  InvoicePdfDownload,
   PosDraftView,
   PosLineView,
+  ReceivablesSnapshot,
   RemoveDraftLineInput,
   SalesListRow,
   SalesListTab,
@@ -19,7 +23,7 @@ import type {
 import { err, ok, type Result } from '../../shared/auth/types';
 import { listCustomersWithHttp } from './customers-api';
 import { listServicesWithHttp } from './catalogs-api';
-import { httpClient, toAppError } from './http-client';
+import { httpClient, httpClientBlob, toAppError } from './http-client';
 import { httpNotImplemented } from './http-not-implemented';
 
 const SALES_PATH = '/api/sales';
@@ -50,6 +54,27 @@ type ApiInvoiceLine = {
   serviceId: string | null;
 };
 
+type ApiInvoiceDocument = { status: 'READY' } | { status: 'FAILED'; errorId: string };
+
+type ApiPayment = {
+  id: string;
+  kind: 'PAYMENT' | 'REFUND';
+  amount: string;
+  method: 'CASH' | 'TRANSFER' | 'CHECK';
+  effectiveDate: string;
+  recordedAt: string;
+  reference: string | null;
+  actorName: string;
+};
+
+type ApiHistoryEntry = {
+  id: string;
+  type: string;
+  description: string;
+  createdAt: string;
+  actorName?: string;
+};
+
 type ApiInvoice = {
   id: string;
   status: 'DRAFT' | 'COMPLETED' | 'CANCELLED';
@@ -59,8 +84,20 @@ type ApiInvoice = {
   customer: ApiCustomerView;
   createdAt: string;
   confirmedAt: string | null;
+  dueDate: string | null;
+  sellerName: string | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+  cancelledByName: string | null;
+  paymentState: 'PENDING' | 'OVERDUE' | 'PAID' | 'PAID_LATE' | 'CANCELLED';
+  payments: ApiPayment[];
+  paid: string;
+  refunded: string;
+  balance: string;
   lines: ApiInvoiceLine[];
   totals: { gross: string; base: string; itbis: string };
+  document?: ApiInvoiceDocument;
+  history?: ApiHistoryEntry[];
 };
 
 type ApiInvoiceListItem = Omit<ApiInvoice, 'lines'>;
@@ -153,28 +190,70 @@ function toSalesListRow(item: ApiInvoiceListItem): SalesListRow {
     id: item.id,
     number: invoiceListNumber(item),
     status: item.status,
-    paymentState: 'UNPAID',
+    paymentState: item.paymentState,
     customerId: item.customer.id,
     customerName: item.customer.name,
     currency: item.currency,
     fiscal: item.fiscal,
     total,
     // Release 2 records no payments, so every completed invoice remains fully unpaid.
-    balance: item.status === 'COMPLETED' ? total : 0,
+    balance: moneyNumber(item.balance),
     createdAt: item.createdAt,
     confirmedAt: optionalText(item.confirmedAt),
+    dueDate: optionalText(item.dueDate),
     href: invoiceHref(item),
   };
 }
 
+type ApiCustomerOutstanding = {
+  customerId: string;
+  customerName: string;
+  currency: 'DOP' | 'USD';
+  invoiceCount: number;
+  invoiced: string;
+  paid: string;
+  balance: string;
+};
+
+type ApiReceivables = {
+  invoices: Array<ApiInvoiceListItem & { paid: string }>;
+  customers: ApiCustomerOutstanding[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+function toCustomerOutstanding(row: ApiCustomerOutstanding): CustomerOutstandingRow {
+  return {
+    customerId: row.customerId,
+    customerName: row.customerName,
+    currency: row.currency,
+    invoiceCount: row.invoiceCount,
+    invoiced: moneyNumber(row.invoiced),
+    paid: moneyNumber(row.paid),
+    balance: moneyNumber(row.balance),
+  };
+}
+
+function toInvoiceDocument(
+  document: ApiInvoiceDocument | undefined,
+): InvoiceDocumentView | undefined {
+  if (document?.status === 'READY') return { status: 'READY' };
+  if (document?.status === 'FAILED' && document.errorId) {
+    return { status: 'FAILED', errorId: document.errorId };
+  }
+  return undefined;
+}
+
 function toInvoiceDetail(invoice: ApiInvoice): InvoiceDetailView {
   const total = moneyNumber(invoice.totals.gross);
+  const document = toInvoiceDocument(invoice.document);
 
   return {
     id: invoice.id,
     number: optionalText(invoice.number),
     status: invoice.status,
-    paymentState: 'UNPAID',
+    paymentState: invoice.paymentState,
     customerId: invoice.customer.id,
     customerName: invoice.customer.name,
     customerRnc: optionalText(invoice.customer.rnc),
@@ -192,21 +271,44 @@ function toInvoiceDetail(invoice: ApiInvoice): InvoiceDetailView {
       base: moneyNumber(line.base),
       itbis: moneyNumber(line.itbis),
     })),
-    payments: [],
+    payments: invoice.payments.map((payment) => ({
+      id: payment.id,
+      kind: payment.kind,
+      amount: moneyNumber(payment.amount),
+      method: payment.method,
+      createdAt: payment.effectiveDate,
+      effectiveDate: payment.effectiveDate,
+      recordedAt: payment.recordedAt,
+      reference: optionalText(payment.reference),
+      actorName: payment.actorName,
+    })),
     total,
-    paid: 0,
-    refunded: 0,
-    balance: invoice.status === 'COMPLETED' ? total : 0,
+    paid: moneyNumber(invoice.paid),
+    refunded: moneyNumber(invoice.refunded),
+    balance: moneyNumber(invoice.balance),
     createdAt: invoice.createdAt,
     confirmedAt: optionalText(invoice.confirmedAt),
+    dueDate: optionalText(invoice.dueDate),
+    sellerName: optionalText(invoice.sellerName),
+    cancelledAt: optionalText(invoice.cancelledAt),
+    cancelReason: optionalText(invoice.cancelReason),
+    cancelledByName: optionalText(invoice.cancelledByName),
     linkedWorkOrders: [],
-    history: [],
-    // PDF and profit stay off until M23/M24 even if the API already returns those fields.
+    history: (invoice.history ?? []).map((event) => ({
+      id: event.id,
+      type: event.type,
+      description: event.description,
+      createdAt: event.createdAt,
+      actorName: optionalText(event.actorName),
+    })),
+    document,
+    // Profit stays off until M24 even if the API already returns profitability.
     actions: {
-      canPay: false,
-      canCancel: false,
+      canPay: invoice.status === 'COMPLETED' && moneyNumber(invoice.balance) > 0,
+      canCancel: invoice.status === 'COMPLETED',
       canCorrectCurrency: false,
-      canViewPdf: false,
+      canViewPdf: document?.status === 'READY',
+      canRegeneratePdf: document?.status === 'FAILED',
     },
   };
 }
@@ -263,7 +365,7 @@ export function toHttpAddLineBody(input: AddDraftLineInput): Record<string, unkn
   return { type: input.type, ...notes };
 }
 
-function invoicesCollectionPath(status: 'DRAFT' | 'COMPLETED', page: number): string {
+function invoicesCollectionPath(status: 'DRAFT' | 'COMPLETED' | 'CANCELLED', page: number): string {
   const params = new URLSearchParams({
     status,
     page: String(page),
@@ -279,7 +381,9 @@ function compareListRows(left: SalesListRow, right: SalesListRow): number {
   return left.id.localeCompare(right.id);
 }
 
-async function loadAllInvoicePages(status: 'DRAFT' | 'COMPLETED'): Promise<SalesListRow[]> {
+async function loadAllInvoicePages(
+  status: 'DRAFT' | 'COMPLETED' | 'CANCELLED',
+): Promise<SalesListRow[]> {
   const items: SalesListRow[] = [];
   let page = 1;
   let total = 0;
@@ -370,7 +474,7 @@ async function mutateDraft(operation: () => Promise<ApiInvoice>): Promise<Result
 
 export function listInvoicesWithHttp(tab?: SalesListTab): Promise<Result<SalesListRow[]>> {
   if (tab === 'CANCELLED') {
-    return Promise.resolve(ok([]));
+    return request(() => loadAllInvoicePages('CANCELLED'));
   }
   if (tab === 'COMPLETED') {
     return request(() => loadAllInvoicePages('COMPLETED'));
@@ -379,11 +483,40 @@ export function listInvoicesWithHttp(tab?: SalesListTab): Promise<Result<SalesLi
     return request(() => loadAllInvoicePages('DRAFT'));
   }
   return request(async () => {
-    const [drafts, completed] = await Promise.all([
+    const [drafts, completed, cancelled] = await Promise.all([
       loadAllInvoicePages('DRAFT'),
       loadAllInvoicePages('COMPLETED'),
+      loadAllInvoicePages('CANCELLED'),
     ]);
-    return [...drafts, ...completed].sort(compareListRows);
+    return [...drafts, ...completed, ...cancelled].sort(compareListRows);
+  });
+}
+
+export function listReceivablesWithHttp(): Promise<Result<ReceivablesSnapshot>> {
+  return request(async () => {
+    const invoices: SalesListRow[] = [];
+    const customers: CustomerOutstandingRow[] = [];
+    let page = 1;
+    let total = 0;
+
+    do {
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(PAGE_SIZE),
+      });
+      const response = await httpClient<ApiReceivables>(`${SALES_PATH}/receivables?${params}`);
+      invoices.push(
+        ...response.invoices.map((item) => toSalesListRow(item)),
+      );
+      if (page === 1) {
+        customers.push(...response.customers.map(toCustomerOutstanding));
+      }
+      total = response.total;
+      if (response.invoices.length === 0) break;
+      page += 1;
+    } while (invoices.length < total);
+
+    return { invoices, customers };
   });
 }
 
@@ -394,16 +527,56 @@ export function getInvoiceWithHttp(id: string): Promise<Result<InvoiceDetailView
   });
 }
 
+export function getInvoicePdfWithHttp(id: string): Promise<Result<InvoicePdfDownload>> {
+  return request(() => httpClientBlob(`${SALES_PATH}/${id}/pdf`));
+}
+
+export function regenerateInvoicePdfWithHttp(id: string): Promise<Result<InvoiceDetailView>> {
+  return request(async () => {
+    const invoice = await httpClient<ApiInvoice>(`${SALES_PATH}/${id}/pdf/regenerate`, {
+      method: 'POST',
+      headers: CSRF_HEADERS,
+      body: JSON.stringify({}),
+    });
+    return toInvoiceDetail(invoice);
+  });
+}
+
 export async function addPaymentWithHttp(
-  _input: AddPaymentInput,
+  input: AddPaymentInput,
 ): Promise<Result<InvoiceDetailView>> {
-  return httpNotImplemented('HttpSalesRepository', 'addPayment');
+  return request(async () => {
+    const invoice = await httpClient<ApiInvoice>(`${SALES_PATH}/${input.invoiceId}/payments`, {
+      method: 'POST',
+      headers: CSRF_HEADERS,
+      body: JSON.stringify({
+        amount: moneyString(input.amount),
+        method: input.method,
+        effectiveDate: input.effectiveDate,
+        reference: input.reference,
+        idempotencyKey: input.idempotencyKey,
+      }),
+    });
+    return toInvoiceDetail(invoice);
+  });
 }
 
 export async function cancelInvoiceWithHttp(
-  _input: CancelInvoiceInput,
+  input: CancelInvoiceInput,
 ): Promise<Result<InvoiceDetailView>> {
-  return httpNotImplemented('HttpSalesRepository', 'cancelInvoice');
+  return request(async () => {
+    const invoice = await httpClient<ApiInvoice>(`${SALES_PATH}/${input.invoiceId}/cancel`, {
+      method: 'POST',
+      headers: CSRF_HEADERS,
+      body: JSON.stringify({
+        reason: input.reason,
+        refundMethod: input.refundMethod,
+        refundReference: input.refundReference,
+        idempotencyKey: input.idempotencyKey,
+      }),
+    });
+    return toInvoiceDetail(invoice);
+  });
 }
 
 export async function correctCurrencyWithHttp(
@@ -507,14 +680,24 @@ export function setDraftMetaWithHttp(input: SetDraftMetaInput): Promise<Result<P
 
 export function confirmInvoiceWithHttp(
   draftId: string,
-  _payment?: ConfirmInvoicePayment,
+  payment?: ConfirmInvoicePayment,
 ): Promise<Result<PosDraftView>> {
-  // R2 confirmation has no payment payload; extra fields are 400 on the API.
   return mutateDraft(() =>
     httpClient<ApiInvoice>(`${SALES_PATH}/${draftId}/confirm`, {
       method: 'POST',
       headers: CSRF_HEADERS,
-      body: JSON.stringify({}),
+      body: JSON.stringify(
+        payment
+          ? {
+              payment: {
+                amount: moneyString(payment.amount),
+                method: payment.method,
+                reference: payment.reference,
+                idempotencyKey: payment.idempotencyKey,
+              },
+            }
+          : {},
+      ),
     }),
   );
 }

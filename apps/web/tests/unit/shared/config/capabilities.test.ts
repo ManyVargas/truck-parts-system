@@ -26,7 +26,8 @@ describe('capability presets follow the Development Plan', () => {
     expect(capabilities.catalogs).toBe(true);
     expect(capabilities.sales).toBe(true);
     expect(capabilities.profitability).toBe(false);
-    expect(capabilities.payments).toBe(false);
+    expect(capabilities.payments).toBe(true);
+    expect(capabilities.invoiceCancellation).toBe(true);
     expect(capabilities.inventory).toBe(false);
     expect(isRouteAllowedForRole('/users', 'ADMINISTRATOR', capabilities)).toBe(true);
     expect(isRouteAllowedForRole('/catalogs', 'ADMINISTRATOR', capabilities)).toBe(true);
@@ -104,6 +105,7 @@ describe('capability presets follow the Development Plan', () => {
 
     expect(capabilities.payments).toBe(true);
     expect(capabilities.invoiceCancellation).toBe(true);
+    expect(isRouteAllowedForRole('/receivables', 'SELLER', capabilities)).toBe(true);
     expect(capabilities.inventory).toBe(false);
     expect(capabilities.inventorySales).toBe(false);
   });
@@ -146,7 +148,7 @@ describe('capability presets follow the Development Plan', () => {
   it('keeps the prototype preset complete, including mechanic work orders', () => {
     const capabilities = CAPABILITY_PRESETS.prototype;
 
-    expect(navItemsForRole('ADMINISTRATOR', capabilities)).toHaveLength(9);
+    expect(navItemsForRole('ADMINISTRATOR', capabilities)).toHaveLength(10);
     expect(isMechanicPathAllowed('/mechanic/pending', capabilities)).toBe(true);
     expect(defaultPathForRole('MECHANIC', capabilities)).toBe('/mechanic');
   });

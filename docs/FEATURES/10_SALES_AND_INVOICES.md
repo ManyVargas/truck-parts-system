@@ -10,6 +10,8 @@ The old consolidated requirements/validation files are intentionally no longer r
 
 **Release 2 Billing Core starts this feature; Release 5/7 complete inventory-backed and installed/assembly sale paths**
 
+**Implementation (2026-09-10):** Release 2 non-inventory lines, confirm/`FAC-`, PDF generate/regenerate, and HTTP POS/detail/PDF are done. Invoice detail HTTP shows **document activity** from history (confirm, payment, PDF, cancel; not draft/line churn — Feature 14). Confirm may record a **pulled-forward** initial payment and `dueDate` (Feature 12). Release 5/7 checklist `[x]` items are **prototype mock**; HTTP API still rejects ITEM/QTY with 409.
+
 ## What this feature does
 
 Provide Draft/Completed/Cancelled internal invoices, a shared FAC sequence, DOP/USD single-currency behavior, validated line types, included ITBIS, printable PDF output, and atomic confirmation semantics.
@@ -57,7 +59,7 @@ Taxable merchandise/product line prices are entered **tax-inclusive**. Derive ta
 
 Confirmation is a coordinating service/transaction. For inventory-backed paths it revalidates reservation, stock, hierarchy, `No desarmar`, and active physical operations before atomically committing sale state. Installed-item confirmation marks the piece `Sold` but keeps it `Installed` and creates/reuses a Dismantling Work Order; physical relation changes later at Work-Order completion.
 
-Invoice PDF rendering is secondary to sale validity. Preserve all invoice facts needed for deterministic regeneration, include a blank `NCF: ______________________`, and never imply DGII/NCF/e-CF integration.
+Invoice PDF rendering is secondary to sale validity. Preserve all invoice facts needed for deterministic regeneration, including confirmation seller, customer phone and fixed due date; historical rows leave non-reconstructable seller/phone snapshots blank. The current color template uses the Solo Camiones logo and fixed business identity, a sober industrial layout, line table, totals, current outstanding balance, thank-you message and Seller/Customer signature spaces. It includes a blank `NCF: ______________________` and never implies DGII/NCF/e-CF integration. Payment movements remain private in the invoice detail; the customer PDF shows only the current balance and the timestamp when that balance was calculated. A newly downloaded Cancelled invoice preserves original commercial facts and adds a prominent cancellation mark, reason, date and Administrator.
 
 ## Feature-level acceptance criteria
 
@@ -75,38 +77,42 @@ Invoice PDF rendering is secondary to sale validity. Preserve all invoice facts 
 ## Implementation checklist
 
 ### Release 2 — Billing Core
+
 - [x] Invoice aggregate and Draft/Completed/Cancelled state model.
-- [x] DOP/USD single-currency rule. *(prototipo mock — WM8)*
-- [x] Shared transactional `FAC-` sequence. *(prototipo mock — `facSeq`; API R2 M12: lock + `FAC-000001`, DOP/USD compartida)*
-- [x] Customer snapshot integration. *(prototipo mock — WM8; API R2 M12: `name` + `rnc`)*
-- [x] Generic merchandise line. *(prototipo mock — WM8; API draft HTTP — R2 M8)*
-- [x] Mechanical service catalog selection + negotiated price. *(prototipo mock — WM8; catálogo HTTP Admin — R2 M4/M20; selección POS HTTP — R2 M21)*
-- [x] Delivery paid/free/omitted line. *(prototipo mock — WM8; API draft HTTP — R2 M10)*
+- [x] DOP/USD single-currency rule. _(prototipo mock — WM8)_
+- [x] Shared transactional `FAC-` sequence. _(prototipo mock — `facSeq`; API R2 M12: lock + `FAC-000001`, DOP/USD compartida)_
+- [x] Customer and confirmation snapshot integration. _(API: customer name/RNC/primary phone, confirming Seller and fixed due date)_
+- [x] Generic merchandise line. _(prototipo mock — WM8; API draft HTTP — R2 M8)_
+- [x] Mechanical service catalog selection + negotiated price. _(prototipo mock — WM8; catálogo HTTP Admin — R2 M4/M20; selección POS HTTP — R2 M21)_
+- [x] Delivery paid/free/omitted line. _(prototipo mock — WM8; API draft HTTP — R2 M10)_
 - [x] Optional per-line notes (independent of description; Draft edit; frozen on confirm; POS, detail, PDF).
-- [x] External resale line if its cost dependency is enabled. *(prototipo mock — WM8; API draft HTTP — R2 M11)*
+- [x] External resale line if its cost dependency is enabled. _(prototipo mock — WM8; API draft HTTP — R2 M11)_
 - [x] Tax-inclusive 18% calculation and per-line rounding.
-- [x] Printable/regenerable internal PDF with blank NCF field.
-- [x] Explicitly reject unavailable inventory-backed line actions until their feature release. *(API R2 M8: ITEM/QTY 409; POS HTTP M21: capabilities apagan ITEM/QTY)*
+- [x] Printable/regenerable branded internal PDF with logo, blank NCF, balance/state, pagination, signatures and Cancelled rendering. _(API template `internal-v3`; UI preview/download and Administrator regeneration)_
+- [x] Explicitly reject unavailable inventory-backed line actions until their feature release. _(API R2 M8: ITEM/QTY 409; POS HTTP M21: capabilities apagan ITEM/QTY)_
 
-### Release 5 — Inventory-backed sales
-- [x] Individual inventory line. *(prototipo mock — WM8)*
-- [x] Quantity product line. *(prototipo mock — WM8)*
-- [x] Reservation ownership/revalidation. *(prototipo mock — WM8)*
-- [x] Atomic independent-item Sold transition. *(prototipo mock — WM8)*
-- [x] Atomic quantity consumption. *(prototipo mock — WM8)*
+### Release 5 — Inventory-backed sales (prototype mock only — production API not started)
 
-### Release 7 — Hierarchy-linked sales
-- [x] Installed-piece sale + Dismantling create-or-reuse. *(prototipo mock — WM8; completar desarme es WM10)*
-- [x] Complete-assembly subtree validation/snapshot. *(prototipo mock — bloqueo por OT activa; marca Sold; snapshot inmutable `deliveredAssemblies`)*
+- [x] Individual inventory line. _(prototipo mock — WM8; API 409)_
+- [x] Quantity product line. _(prototipo mock — WM8; API 409)_
+- [x] Reservation ownership/revalidation. _(prototipo mock — WM8)_
+- [x] Atomic independent-item Sold transition. _(prototipo mock — WM8)_
+- [x] Atomic quantity consumption. _(prototipo mock — WM8)_
+
+### Release 7 — Hierarchy-linked sales (prototype mock only — production API not started)
+
+- [x] Installed-piece sale + Dismantling create-or-reuse. _(prototipo mock — WM8; completar desarme es WM10)_
+- [x] Complete-assembly subtree validation/snapshot. _(prototipo mock — bloqueo por OT activa; marca Sold; snapshot inmutable `deliveredAssemblies`)_
 - [ ] Race handling versus hierarchy/Work-Order changes.
 
 ### Tests
+
 - [x] Decimal-safe invoice calculations.
-- [x] FAC uniqueness/non-reuse under concurrency/retry. *(prototipo mock — idempotencia de `confirmInvoice`; API R2 M12: HTTP concurrente + retry idempotente)*
-- [x] Mixed-currency rejection. *(una moneda por factura; el draft no mezcla líneas)*
-- [x] PDF failure/regeneration without sale rerun. *(API R2 M17: fallo simulado no revierte la venta; M18: `POST /api/sales/:id/pdf/regenerate` Administrator, solo `FAILED`)*
-- [x] Forced transaction failure leaves no partial sale/inventory/WO state. *(prototipo mock — validar todo antes de mutar; API R2 M12: fallo de history no consume `FAC-`)*
-- [x] Duplicate confirmation is idempotent or safely conflicts. *(API R2 M12: segundo POST → 200 y el mismo número)*
+- [x] FAC uniqueness/non-reuse under concurrency/retry. _(prototipo mock — idempotencia de `confirmInvoice`; API R2 M12: HTTP concurrente + retry idempotente)_
+- [x] Mixed-currency rejection. _(una moneda por factura; el draft no mezcla líneas)_
+- [x] PDF failure/regeneration without sale rerun. _(API R2 M17: fallo simulado no revierte la venta; M18: `POST /api/sales/:id/pdf/regenerate` Administrator, solo `FAILED`; UI HTTP M23: Seller ve el fallo y no regenera)_
+- [x] Forced transaction failure leaves no partial sale/inventory/WO state. _(prototipo mock — validar todo antes de mutar; API R2 M12: fallo de history no consume `FAC-`)_
+- [x] Duplicate confirmation is idempotent or safely conflicts. _(API R2 M12: segundo POST → 200 y el mismo número)_
 
 ## Canonical validated requirements
 

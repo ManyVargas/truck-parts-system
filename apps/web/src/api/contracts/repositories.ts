@@ -50,7 +50,9 @@ import type {
   CorrectCurrencyInput,
   CreateDraftResult,
   InvoiceDetailView,
+  InvoicePdfDownload,
   PosDraftView,
+  ReceivablesSnapshot,
   RemoveDraftLineInput,
   SalesListRow,
   SalesListTab,
@@ -127,7 +129,10 @@ export type CustomerRepository = {
 
 export type SalesRepository = {
   listInvoices(tab?: SalesListTab): Promise<Result<SalesListRow[]>>;
+  listReceivables(): Promise<Result<ReceivablesSnapshot>>;
   getInvoice(id: string): Promise<Result<InvoiceDetailView>>;
+  getInvoicePdf(id: string): Promise<Result<InvoicePdfDownload>>;
+  regenerateInvoicePdf(id: string): Promise<Result<InvoiceDetailView>>;
   addPayment(input: AddPaymentInput): Promise<Result<InvoiceDetailView>>;
   cancelInvoice(input: CancelInvoiceInput): Promise<Result<InvoiceDetailView>>;
   correctCurrency(input: CorrectCurrencyInput): Promise<Result<InvoiceDetailView>>;

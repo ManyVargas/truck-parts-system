@@ -31,6 +31,7 @@ const invoiceCustomerSnapshot = z
   .object({
     name: z.string(),
     rnc: z.string().nullable(),
+    phone: z.string().nullable(),
   })
   .strict();
 const invoiceConfirmedSnapshot = z
@@ -49,6 +50,9 @@ const invoiceConfirmedSnapshot = z
       })
       .strict(),
     confirmedAt: z.string(),
+    dueDate: z.iso.date(),
+    confirmedByUserId: z.uuid(),
+    confirmedByName: z.string().min(1),
   })
   .strict();
 const invoiceLineSnapshot = z
@@ -271,6 +275,38 @@ export const historyEventSchema = z
         ...invoiceBase,
         eventType: z.literal('INVOICE_CONFIRMED'),
         payload: invoiceConfirmedSnapshot,
+      })
+      .strict(),
+    z
+      .object({
+        ...invoiceBase,
+        eventType: z.literal('PAYMENT_RECORDED'),
+        payload: z
+          .object({
+            paymentId: z.uuid(),
+            amount: z.string(),
+            currency: z.enum(['DOP', 'USD']),
+            method: z.enum(['CASH', 'TRANSFER', 'CHECK']),
+            effectiveDate: z.iso.date(),
+            reference: z.string().nullable(),
+          })
+          .strict(),
+      })
+      .strict(),
+    z
+      .object({
+        ...invoiceBase,
+        eventType: z.literal('INVOICE_CANCELLED'),
+        payload: z
+          .object({
+            reason: z.string(),
+            cancelledAt: z.iso.datetime(),
+            cancelledByName: z.string(),
+            refundId: z.uuid().nullable(),
+            refundAmount: z.string(),
+            refundMethod: z.enum(['CASH', 'TRANSFER', 'CHECK']).nullable(),
+          })
+          .strict(),
       })
       .strict(),
     z

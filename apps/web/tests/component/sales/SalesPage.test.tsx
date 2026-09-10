@@ -5,7 +5,8 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { SalesPage } from '../../../src/features/sales/SalesPage';
-import { resetMockState } from '../../../src/mocks/state';
+import { cancelInvoice } from '../../../src/mocks/services/sales-commands';
+import { getMockState, resetMockState } from '../../../src/mocks/state';
 import { createAuthValue, renderWithProviders } from '../../support/render';
 import { signInAs } from '../../support/session';
 import '../../support/dom';
@@ -113,5 +114,21 @@ describe('SalesPage', () => {
     expect(screen.getByText('FAC-000096')).toBeVisible();
     expect(screen.getByText('Historial de cobros')).toBeVisible();
     expect(screen.queryByText('FAC-000098')).not.toBeInTheDocument();
+  });
+
+  it('shows cancelled invoices with a status chip and no duplicate payment chip', async () => {
+    const user = userEvent.setup();
+    const state = getMockState();
+    const admin = state.users.find((entry) => entry.role === 'ADMINISTRATOR')!;
+    cancelInvoice(state, admin, { invoiceId: 'INV-098', reason: 'Cliente desistió' });
+
+    renderWithProviders(<SalesPage />, { route: '/sales', auth: createAuthValue('SELLER') });
+    await user.click(screen.getByRole('button', { name: 'Cancelada' }));
+
+    const row = (await screen.findByText('FAC-000098')).closest('tr');
+    expect(row).not.toBeNull();
+    expect(within(row!).getAllByText('Cancelada')).toHaveLength(1);
+    expect(within(row!).queryByText('Sin pagar')).not.toBeInTheDocument();
+    expect(within(row!).getByText('—')).toBeVisible();
   });
 });

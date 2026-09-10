@@ -10,12 +10,15 @@ import {
   getInvoice,
   getInvoicePdf,
   getInvoices,
+  getReceivables,
   patchDraft,
   patchDraftLine,
   postConfirmInvoice,
   postDraft,
   postDraftLine,
   postRegenerateInvoicePdf,
+  postInvoicePayment,
+  postCancelInvoice,
 } from './controller.js';
 import {
   addInvoiceLineSchema,
@@ -24,8 +27,11 @@ import {
   invoiceIdSchema,
   invoiceLineIdSchema,
   listInvoicesSchema,
+  listReceivablesSchema,
   setLinePriceSchema,
   updateDraftMetaSchema,
+  addPaymentSchema,
+  cancelInvoiceSchema,
 } from './validation.js';
 
 export const salesRouter = Router();
@@ -35,6 +41,7 @@ salesRouter.use((_req, res, next) => {
   next();
 });
 salesRouter.get('/', validate({ query: listInvoicesSchema }), getInvoices);
+salesRouter.get('/receivables', validate({ query: listReceivablesSchema }), getReceivables);
 salesRouter.get('/:id/pdf', validate({ params: invoiceIdSchema }), getInvoicePdf);
 salesRouter.post(
   '/:id/pdf/regenerate',
@@ -51,17 +58,25 @@ salesRouter.patch(
   validate({ params: invoiceIdSchema, body: updateDraftMetaSchema }),
   patchDraft,
 );
-salesRouter.delete(
-  '/:id',
-  requireCsrfHeader,
-  validate({ params: invoiceIdSchema }),
-  deleteDraft,
-);
+salesRouter.delete('/:id', requireCsrfHeader, validate({ params: invoiceIdSchema }), deleteDraft);
 salesRouter.post(
   '/:id/confirm',
   requireCsrfHeader,
   validate({ params: invoiceIdSchema, body: confirmInvoiceSchema }),
   postConfirmInvoice,
+);
+salesRouter.post(
+  '/:id/payments',
+  requireCsrfHeader,
+  validate({ params: invoiceIdSchema, body: addPaymentSchema }),
+  postInvoicePayment,
+);
+salesRouter.post(
+  '/:id/cancel',
+  requireCsrfHeader,
+  requireAdministrator,
+  validate({ params: invoiceIdSchema, body: cancelInvoiceSchema }),
+  postCancelInvoice,
 );
 salesRouter.post(
   '/:id/lines',

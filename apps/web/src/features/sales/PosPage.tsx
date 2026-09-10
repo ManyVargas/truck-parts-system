@@ -322,7 +322,7 @@ export function PosPage() {
                 </Info>
               </div>
             )}
-            <TotalsPanel totals={draft.totals} currency={draft.currency} fiscal={draft.fiscal} />
+            <TotalsPanel totals={draft.totals} currency={draft.currency} />
           </Card>
           {!readOnly && (
             <PosCheckoutActions
@@ -549,9 +549,7 @@ function DraftLinesTable({ draft, readOnly, isMutating, onEdit, onRemove }: Draf
                 <td className="py-3 pr-3">
                   <LinePriceDisplay line={line} currency={draft.currency} />
                 </td>
-                <td className="py-3 pr-3 text-navy">
-                  {line.taxable && draft.fiscal ? money(line.itbis, draft.currency) : '—'}
-                </td>
+                <td className="py-3 pr-3 text-navy">{money(line.itbis, draft.currency)}</td>
                 <td className="py-3 pr-3 font-medium text-navy">
                   {money(line.gross, draft.currency)}
                 </td>
@@ -626,7 +624,7 @@ function DraftLineCards({ draft, readOnly, isMutating, onEdit, onRemove }: Draft
                 </div>
                 <div className="flex justify-between gap-3">
                   <dt className="text-navy-400">ITBIS</dt>
-                  <dd>{line.taxable && draft.fiscal ? money(line.itbis, draft.currency) : '—'}</dd>
+                  <dd>{money(line.itbis, draft.currency)}</dd>
                 </div>
                 <div className="flex justify-between gap-3 font-medium">
                   <dt>Total</dt>
@@ -662,7 +660,7 @@ function LinePriceDisplay({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <span>{money(line.unitPrice, currency)}</span>
+      <span>{money(line.base, currency)}</span>
       {line.pricePending && <span className="text-xs text-amber-700">Precio pendiente</span>}
     </div>
   );

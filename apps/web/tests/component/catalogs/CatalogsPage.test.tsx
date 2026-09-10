@@ -104,6 +104,27 @@ describe('CatalogsPage', () => {
     expect(row).not.toBeNull();
     await user.click(within(row!).getByRole('button', { name: 'Desactivar' }));
 
+    const dialog = await screen.findByRole('dialog', { name: 'Desactivar servicio' });
+    expect(within(dialog).getByText(/no aparecerá al facturar/i)).toBeVisible();
+    await user.click(within(dialog).getByRole('button', { name: 'Desactivar' }));
+
     expect(await screen.findByText('Servicio desactivado')).toBeVisible();
+  });
+
+  it('asks before deactivating a service and keeps it active if cancelled', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<CatalogsPage />, { route: '/catalogs' });
+    await screen.findByText('Motor');
+
+    await user.click(screen.getByRole('tab', { name: 'Servicios' }));
+    const row = (await screen.findByText('Instalación mecánica')).closest('tr');
+    expect(row).not.toBeNull();
+    await user.click(within(row!).getByRole('button', { name: 'Desactivar' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Desactivar servicio' });
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+
+    expect(screen.queryByRole('dialog', { name: 'Desactivar servicio' })).not.toBeInTheDocument();
+    expect(within(row!).getByText('Activo')).toBeVisible();
   });
 });

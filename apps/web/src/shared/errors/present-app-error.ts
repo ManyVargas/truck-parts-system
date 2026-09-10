@@ -14,6 +14,10 @@ const COPY = {
   emailInvalid: 'El correo no es válido.',
   genericLocked: 'Cliente Contado es el predeterminado y no se puede editar.',
   fiscalInvoiceIdentity: 'Una factura fiscal requiere un cliente con RNC o cédula.',
+  pdfFailed: 'La generación del PDF falló',
+  pdfNotReady: 'El PDF de la factura no está disponible',
+  pdfCompletedOnly: 'Solo las facturas confirmadas tienen PDF',
+  pdfRegenerateFailedOnly: 'Solo se puede regenerar el PDF de una factura con generación fallida',
   inventoryLinesUnavailable:
     'Las líneas de inventario no están disponibles. Esta factura no puede crear, reservar ni consumir stock.',
   fixedLineQuantity: 'Este tipo de línea no permite cambiar la cantidad.',
@@ -53,6 +57,12 @@ const KNOWN_TEXT: Record<string, { text: string; field?: string }> = {
   'A fiscal invoice requires a customer with RNC or Cédula': {
     text: COPY.fiscalInvoiceIdentity,
     field: 'fiscal',
+  },
+  'La generación del PDF falló': { text: COPY.pdfFailed },
+  'El PDF de la factura no está disponible': { text: COPY.pdfNotReady },
+  'Solo las facturas confirmadas tienen PDF': { text: COPY.pdfCompletedOnly },
+  'Solo se puede regenerar el PDF de una factura con generación fallida': {
+    text: COPY.pdfRegenerateFailedOnly,
   },
   'Inventory-backed lines are not available; this invoice cannot create, reserve, or consume stock': {
     text: COPY.inventoryLinesUnavailable,

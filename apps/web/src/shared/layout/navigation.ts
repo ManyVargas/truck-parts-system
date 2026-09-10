@@ -31,7 +31,7 @@ export type NavGroup = {
   items: NavItem[];
 };
 
-/** Desktop sidebar entries — Admin sees 9, Seller sees the first 4 when all capabilities are on. */
+/** Desktop sidebar entries — Admin sees 10, Seller sees 5 when all capabilities are on. */
 export const DESKTOP_NAV_ITEMS: NavItem[] = [
   {
     id: 'dashboard',
@@ -64,6 +64,14 @@ export const DESKTOP_NAV_ITEMS: NavItem[] = [
     roles: ['ADMINISTRATOR', 'SELLER'],
     group: 'operation',
     capability: 'customers',
+  },
+  {
+    id: 'receivables',
+    label: 'Cuentas por cobrar',
+    path: '/receivables',
+    roles: ['ADMINISTRATOR', 'SELLER'],
+    group: 'finance',
+    capability: 'payments',
   },
   {
     id: 'work-orders',
@@ -153,6 +161,7 @@ const KNOWN_DESKTOP_ROUTE_PATTERNS: RegExp[] = [
   /^\/sales\/draft\/[^/]+$/,
   /^\/sales\/[^/]+$/,
   /^\/customers$/,
+  /^\/receivables$/,
   /^\/work-orders$/,
   /^\/work-orders\/[^/]+$/,
   /^\/catalogs$/,

@@ -5,6 +5,7 @@ import { AppError } from '../../infrastructure/errors/app-error.js';
 import { CatalogRepository } from '../catalogs/repository.js';
 import { CustomerRepository } from '../customers/repository.js';
 import { HistoryRepository } from '../history/repository.js';
+import { PaymentRepository } from '../payments/repository.js';
 import { UserRepository } from '../users/repository.js';
 import { DUPLICATE_DELIVERY_LINE_MESSAGE } from './constants.js';
 import { SalesRepository } from './repository.js';
@@ -15,6 +16,7 @@ export type SalesRepositories = {
   customers: CustomerRepository;
   users: UserRepository;
   history: HistoryRepository;
+  payments: PaymentRepository;
 };
 export type SalesTransaction = <T>(
   work: (repositories: SalesRepositories) => Promise<T>,
@@ -49,6 +51,7 @@ export const salesTransaction: SalesTransaction = async (work) => {
             customers: new CustomerRepository(tx),
             users: new UserRepository(tx),
             history: new HistoryRepository(tx),
+            payments: new PaymentRepository(tx),
           }),
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );

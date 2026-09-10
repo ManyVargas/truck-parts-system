@@ -114,7 +114,7 @@ describe('M7 draft HTTP shell (SALE-001 draft)', () => {
       fiscal: true,
       customer: { id: identified.id, rnc: '131123456', isDefault: false },
     });
-    expect(await prisma.historyEvent.count({ where: { subjectId: created.body.id } })).toBe(2);
+    expect(await prisma.historyEvent.count({ where: { subjectId: created.body.id } })).toBe(1);
   });
 
   it('rejects fiscal drafts that use Cliente contado and discards only drafts', async () => {
@@ -149,6 +149,7 @@ describe('M7 draft HTTP shell (SALE-001 draft)', () => {
         customerId: generic!.id,
         number: `FAC-${randomUUID().slice(0, 6)}`,
         confirmedAt: new Date(),
+        dueDate: new Date('2026-10-10T00:00:00.000Z'),
         customerName: generic!.name,
         customerRnc: generic!.rnc,
         gross: '0.00',
@@ -266,10 +267,10 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
     });
     expect(added.body.totals).toEqual({ gross: '236.00', base: '200.00', itbis: '36.00' });
     expect(
-      await prisma.historyEvent.findFirst({
+      await prisma.historyEvent.count({
         where: { subjectId: draft.body.id, eventType: 'INVOICE_LINE_ADDED' },
       }),
-    ).not.toBeNull();
+    ).toBe(0);
 
     const priced = await seller.agent
       .patch(`${ROOT}/${draft.body.id}/lines/${added.body.lines[0].id}`)
@@ -284,6 +285,11 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
       acquisitionCostDop: '80.00',
     });
     expect(priced.body.totals).toEqual({ gross: '118.00', base: '100.00', itbis: '18.00' });
+    expect(
+      await prisma.historyEvent.count({
+        where: { subjectId: draft.body.id, eventType: 'INVOICE_LINE_UPDATED' },
+      }),
+    ).toBe(0);
 
     const counted = await seller.agent
       .patch(`${ROOT}/${draft.body.id}/lines/${added.body.lines[0].id}`)
@@ -351,13 +357,16 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
     expect(cleared.status).toBe(200);
     expect(cleared.body.lines[0].notes).toBeNull();
 
-    const tooLong = await seller.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
-      type: 'GENERIC',
-      description: 'Otro',
-      notes: 'x'.repeat(101),
-      unitPrice: '10.00',
-      costProvenance: 'UNKNOWN',
-    });
+    const tooLong = await seller.agent
+      .post(`${ROOT}/${draft.body.id}/lines`)
+      .set(CSRF)
+      .send({
+        type: 'GENERIC',
+        description: 'Otro',
+        notes: 'x'.repeat(101),
+        unitPrice: '10.00',
+        costProvenance: 'UNKNOWN',
+      });
     expect(tooLong.status).toBe(400);
 
     const restored = await seller.agent
@@ -468,6 +477,7 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
         customerId: generic!.id,
         number: `FAC-${randomUUID().slice(0, 6)}`,
         confirmedAt: new Date(),
+        dueDate: new Date('2026-10-10T00:00:00.000Z'),
         customerName: generic!.name,
         customerRnc: generic!.rnc,
         gross: '0.00',
@@ -483,25 +493,6 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
     });
     expect(blocked.status).toBe(409);
     expect(blocked.body.error.message).toBe(DRAFT_ONLY_EDIT_MESSAGE);
-  });
-
-  it('does not keep a line when history append fails', async () => {
-    const admin = await fixture();
-    const draft = await admin.agent.post(ROOT).set(CSRF).send({});
-    expect(draft.status).toBe(201);
-
-    vi.spyOn(HistoryRepository.prototype, 'append').mockImplementation(async () => {
-      throw new Error('history-unavailable');
-    });
-    await expect(
-      service.addLine(admin.user.id, draft.body.id, {
-        type: 'GENERIC',
-        description: 'Filtro',
-        unitPrice: '118.00',
-        costProvenance: 'UNKNOWN',
-      }),
-    ).rejects.toThrow('history-unavailable');
-    expect(await prisma.invoiceLine.count({ where: { invoiceId: draft.body.id } })).toBe(0);
   });
 });
 
@@ -560,14 +551,7 @@ describe('M9 draft SERVICE lines (LINE-004)', () => {
       serviceId: catalog.body.id,
     });
     expect(copiedName.body.totals).toEqual({ gross: '618.00', base: '600.00', itbis: '18.00' });
-    const serviceAddedEvent = await prisma.historyEvent.findFirst({
-      where: {
-        subjectId: draft.body.id,
-        eventType: 'INVOICE_LINE_ADDED',
-        payload: { path: ['serviceId'], equals: catalog.body.id },
-      },
-    });
-    expect(serviceAddedEvent?.payload).toMatchObject({ serviceId: catalog.body.id });
+    expect(copiedName.body.lines[1].serviceId).toBe(catalog.body.id);
 
     const overridden = await seller.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
       type: 'SERVICE',
@@ -745,16 +729,11 @@ describe('M10 draft DELIVERY lines (LINE-006)', () => {
       gross: '150.00',
     });
     expect(restored.body.totals).toEqual({ gross: '268.00', base: '250.00', itbis: '18.00' });
-
-    const addedEvent = await prisma.historyEvent.findFirst({
-      where: {
-        subjectId: draft.body.id,
-        eventType: 'INVOICE_LINE_ADDED',
-        payload: { path: ['type'], equals: 'DELIVERY' },
-      },
-      orderBy: { occurredAt: 'asc' },
-    });
-    expect(addedEvent?.payload).toMatchObject({ type: 'DELIVERY', unitPrice: '0.00' });
+    expect(
+      await prisma.historyEvent.count({
+        where: { subjectId: draft.body.id, eventType: 'INVOICE_LINE_ADDED' },
+      }),
+    ).toBe(0);
   });
 
   it('rejects missing descriptions, negative amounts, textual placeholders, quantity, and cost', async () => {
@@ -900,10 +879,13 @@ describe('M11 draft EXTERNAL lines (LINE-005)', () => {
     expect(removed.status).toBe(200);
     expect(removed.body.lines).toHaveLength(2);
     expect(
-      await prisma.historyEvent.findFirst({
-        where: { subjectId: draft.body.id, eventType: 'INVOICE_LINE_ADDED' },
+      await prisma.historyEvent.count({
+        where: {
+          subjectId: draft.body.id,
+          eventType: { in: ['INVOICE_LINE_ADDED', 'INVOICE_LINE_REMOVED'] },
+        },
       }),
-    ).not.toBeNull();
+    ).toBe(0);
   });
 
   it('rejects UNKNOWN with amount, missing actual cost, numeric money, extra fields, and ITEM/QTY', async () => {
@@ -993,7 +975,7 @@ describe('M12 confirmation FAC- snapshot (SALE-001, CUST-003)', () => {
       currency: 'DOP',
       fiscal: false,
       customer: { id: generic!.id, name: generic!.name, rnc: null },
-      customerSnapshot: { name: generic!.name, rnc: null },
+      customerSnapshot: { name: generic!.name, rnc: null, phone: null },
       totals: { gross: '118.00', base: '118.00', itbis: '0.00' },
     });
     expect(dop.body.confirmedAt).toEqual(expect.any(String));
@@ -1024,7 +1006,7 @@ describe('M12 confirmation FAC- snapshot (SALE-001, CUST-003)', () => {
       number: 'FAC-000002',
       currency: 'USD',
       fiscal: true,
-      customerSnapshot: { name: 'Taller Norte', rnc: '131123456' },
+      customerSnapshot: { name: 'Taller Norte', rnc: '131123456', phone: null },
       totals: { gross: '118.00', base: '100.00', itbis: '18.00' },
     });
     expect(await prisma.invoiceSequence.findUnique({ where: { name: 'FAC' } })).toMatchObject({
@@ -1086,7 +1068,11 @@ describe('M12 confirmation FAC- snapshot (SALE-001, CUST-003)', () => {
     await addGenericLine(admin.agent, draft.body.id);
     const confirmed = await admin.agent.post(`${ROOT}/${draft.body.id}/confirm`).set(CSRF).send({});
     expect(confirmed.status).toBe(200);
-    expect(confirmed.body.customerSnapshot).toEqual({ name: 'Taller Norte', rnc: '131123456' });
+    expect(confirmed.body.customerSnapshot).toEqual({
+      name: 'Taller Norte',
+      rnc: '131123456',
+      phone: null,
+    });
 
     const renamed = await admin.agent
       .patch(`/api/customers/${identified.id}`)
@@ -1097,7 +1083,25 @@ describe('M12 confirmation FAC- snapshot (SALE-001, CUST-003)', () => {
 
     const loaded = await admin.agent.get(`${ROOT}/${draft.body.id}`);
     expect(loaded.status).toBe(200);
-    expect(loaded.body.customerSnapshot).toEqual({ name: 'Taller Norte', rnc: '131123456' });
+    expect(loaded.body.history.map((event: { type: string }) => event.type)).toEqual(
+      expect.arrayContaining(['INVOICE_DRAFT_CREATED', 'INVOICE_CONFIRMED']),
+    );
+    expect(loaded.body.history.map((event: { type: string }) => event.type)).not.toContain(
+      'INVOICE_LINE_ADDED',
+    );
+    expect(loaded.body.history.map((event: { type: string }) => event.type)).not.toContain(
+      'INVOICE_LINE_REMOVED',
+    );
+    expect(loaded.body.history[0]).toMatchObject({
+      type: expect.stringMatching(/^INVOICE_/),
+      description: expect.any(String),
+      actorName: 'Fixture',
+    });
+    expect(loaded.body.customerSnapshot).toEqual({
+      name: 'Taller Norte',
+      rnc: '131123456',
+      phone: null,
+    });
     expect(loaded.body.customer).toMatchObject({
       id: identified.id,
       name: 'Taller Norte',
@@ -1305,6 +1309,12 @@ describe('M13 DOP profitability Administrator boundary (COST-001..004)', () => {
     expect(sellerView.status).toBe(200);
     expect(sellerView.body.lines[0].acquisitionCostDop).toBe('12300.00');
     expectNoProfitability(sellerView.body);
+    expect(sellerView.body.history.map((event: { type: string }) => event.type)).not.toContain(
+      'INVOICE_GROSS_PROFIT_RECORDED',
+    );
+    expect(sellerView.body.history.map((event: { type: string }) => event.type)).toContain(
+      'INVOICE_CONFIRMED',
+    );
 
     const sellerList = await seller.agent.get(`${ROOT}?status=COMPLETED`);
     expect(sellerList.status).toBe(200);

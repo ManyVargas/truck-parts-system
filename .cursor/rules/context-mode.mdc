@@ -1,8 +1,6 @@
 ---
-description: context-mode routing rules for context window protection
-alwaysApply: true
+alwaysApply: false
 ---
-
 # context-mode
 
 Raw tool output floods context window. Use context-mode MCP tools to keep raw data in sandbox.

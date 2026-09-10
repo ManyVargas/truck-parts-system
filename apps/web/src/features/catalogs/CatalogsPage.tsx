@@ -2,7 +2,14 @@ import { useState } from 'react';
 
 import type { SaveCategoryInput, SaveServiceInput } from '../../api/contracts/catalogs';
 import type { Category, Service } from '../../api/contracts/entities';
-import { Button, Info, Skeleton, toPageLoadMessage, useToast } from '../../shared/ui';
+import {
+  Button,
+  ConfirmActionModal,
+  Info,
+  Skeleton,
+  toPageLoadMessage,
+  useToast,
+} from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
 import { Tabs } from '../../shared/layout/Tabs';
 import { CategoryFormModal } from './CategoryFormModal';
@@ -34,6 +41,7 @@ export function CatalogsPage() {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [togglingServiceId, setTogglingServiceId] = useState<string | null>(null);
+  const [pendingToggle, setPendingToggle] = useState<Service | null>(null);
 
   function openCreateCategory() {
     setEditingCategory(null);
@@ -104,6 +112,7 @@ export function CatalogsPage() {
       return;
     }
 
+    setPendingToggle(null);
     pushToast(row.active ? 'Servicio desactivado' : 'Servicio activado', 'success');
   }
 
@@ -135,9 +144,7 @@ export function CatalogsPage() {
         setFormError(null);
         setServiceModalOpen(true);
       }}
-      onToggleActive={(row) => {
-        void handleToggleService(row);
-      }}
+      onToggleActive={setPendingToggle}
     />
   ) : null;
 
@@ -212,6 +219,30 @@ export function CatalogsPage() {
           void handleServiceSubmit(input);
         }}
       />
+
+      <ConfirmActionModal
+        open={pendingToggle != null}
+        title={pendingToggle?.active ? 'Desactivar servicio' : 'Activar servicio'}
+        confirmLabel={pendingToggle?.active ? 'Desactivar' : 'Activar'}
+        confirmVariant={pendingToggle?.active ? 'danger' : 'primary'}
+        busy={Boolean(pendingToggle && togglingServiceId === pendingToggle.id)}
+        onCancel={() => {
+          if (!togglingServiceId) setPendingToggle(null);
+        }}
+        onConfirm={() => {
+          if (pendingToggle) void handleToggleService(pendingToggle);
+        }}
+      >
+        {pendingToggle?.active ? (
+          <Info tone="warning" title="Dejará de ofrecerse en ventas">
+            {pendingToggle.name} no aparecerá al facturar. Las facturas existentes no cambian.
+          </Info>
+        ) : (
+          <p className="text-sm text-navy-700">
+            Se volverá a ofrecer <strong>{pendingToggle?.name}</strong> en el punto de venta.
+          </p>
+        )}
+      </ConfirmActionModal>
     </>
   );
 }

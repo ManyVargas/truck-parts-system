@@ -67,6 +67,7 @@ describe('addPayment', () => {
       invoiceId: 'INV-098',
       amount: 5_000,
       method: 'TRANSFER',
+      effectiveDate: '2026-09-09',
       reference: 'TRX-1',
     });
 
@@ -82,13 +83,30 @@ describe('addPayment', () => {
   it('rejects overpayment and non-positive amounts', () => {
     const state = createInitialState();
 
-    expect(addPayment(state, seller, { invoiceId: 'INV-098', amount: 20_000, method: 'CASH' }).ok).toBe(
-      false,
-    );
-    expect(addPayment(state, seller, { invoiceId: 'INV-098', amount: 0, method: 'CASH' }).ok).toBe(false);
-    expect(addPayment(state, seller, { invoiceId: 'INV-098', amount: -10, method: 'CASH' }).ok).toBe(
-      false,
-    );
+    expect(
+      addPayment(state, seller, {
+        invoiceId: 'INV-098',
+        amount: 20_000,
+        method: 'CASH',
+        effectiveDate: '2026-09-09',
+      }).ok,
+    ).toBe(false);
+    expect(
+      addPayment(state, seller, {
+        invoiceId: 'INV-098',
+        amount: 0,
+        method: 'CASH',
+        effectiveDate: '2026-09-09',
+      }).ok,
+    ).toBe(false);
+    expect(
+      addPayment(state, seller, {
+        invoiceId: 'INV-098',
+        amount: -10,
+        method: 'CASH',
+        effectiveDate: '2026-09-09',
+      }).ok,
+    ).toBe(false);
     expect(state.invoices.find((entry) => entry.id === 'INV-098')?.payments).toEqual([]);
   });
 
@@ -98,6 +116,7 @@ describe('addPayment', () => {
       invoiceId: 'INV-099' as const,
       amount: 3_600,
       method: 'CARD' as const,
+      effectiveDate: '2026-09-09',
       idempotencyKey: 'pay-once',
     };
 
@@ -113,7 +132,10 @@ describe('addPayment', () => {
 describe('cancelInvoice', () => {
   it('cancels a pending dismantling invoice and restores availability without detaching the piece', () => {
     const state = createInitialState();
-    const result = cancelInvoice(state, admin, { invoiceId: 'INV-098', reason: 'Cliente desistió' });
+    const result = cancelInvoice(state, admin, {
+      invoiceId: 'INV-098',
+      reason: 'Cliente desistió',
+    });
 
     expect(result.ok).toBe(true);
     expect(state.invoices.find((entry) => entry.id === 'INV-098')?.status).toBe('CANCELLED');
@@ -139,8 +161,12 @@ describe('cancelInvoice', () => {
         inProgressDecision: 'STOP',
       }).ok,
     ).toBe(true);
-    expect(stopped.workOrders.find((order) => order.id === 'OD-DEMO-060')?.status).toBe('CANCELLED');
-    expect(stopped.items.find((item) => item.id === 'TUR-009')?.physicalRelationship).toBe('INSTALLED');
+    expect(stopped.workOrders.find((order) => order.id === 'OD-DEMO-060')?.status).toBe(
+      'CANCELLED',
+    );
+    expect(stopped.items.find((item) => item.id === 'TUR-009')?.physicalRelationship).toBe(
+      'INSTALLED',
+    );
 
     const continued = createInitialState();
     expect(
@@ -150,38 +176,36 @@ describe('cancelInvoice', () => {
         inProgressDecision: 'CONTINUE',
       }).ok,
     ).toBe(true);
-    expect(continued.workOrders.find((order) => order.id === 'OD-DEMO-060')?.status).toBe('IN_PROGRESS');
-    expect(continued.items.find((item) => item.id === 'TUR-009')?.commercialState).toBe('AVAILABLE');
+    expect(continued.workOrders.find((order) => order.id === 'OD-DEMO-060')?.status).toBe(
+      'IN_PROGRESS',
+    );
+    expect(continued.items.find((item) => item.id === 'TUR-009')?.commercialState).toBe(
+      'AVAILABLE',
+    );
   });
 
-  it('records an additive refund and rejects refunds above paid', () => {
+  it('records the full net refund and ignores a larger requested amount', () => {
     const state = createInitialState();
-    const tooMuch = cancelInvoice(state, admin, {
+    const cancelled = cancelInvoice(state, admin, {
       invoiceId: 'INV-099',
       reason: 'Devolución',
       refundAmount: 8_000,
       refundMethod: 'CASH',
     });
-    expect(tooMuch.ok).toBe(false);
-    expect(state.invoices.find((entry) => entry.id === 'INV-099')?.status).toBe('COMPLETED');
-
-    const okCancel = cancelInvoice(state, admin, {
-      invoiceId: 'INV-099',
-      reason: 'Devolución',
-      refundAmount: 3_600,
-      refundMethod: 'CASH',
-    });
-    expect(okCancel.ok).toBe(true);
+    expect(cancelled.ok).toBe(true);
     const invoice = state.invoices.find((entry) => entry.id === 'INV-099')!;
     expect(invoice.status).toBe('CANCELLED');
-    expect(invoice.payments.some((payment) => payment.kind === 'REFUND' && payment.amount === 3_600)).toBe(
-      true,
-    );
+    expect(
+      invoice.payments.some((payment) => payment.kind === 'REFUND' && payment.amount === 3_600),
+    ).toBe(true);
     expect(state.qtyProducts.find((product) => product.id === 'QTY-OIL-15W40')?.onHand).toBe(52);
   });
 
   it('rejects cancellation without a reason', () => {
-    const result = cancelInvoice(createInitialState(), admin, { invoiceId: 'INV-097', reason: '   ' });
+    const result = cancelInvoice(createInitialState(), admin, {
+      invoiceId: 'INV-097',
+      reason: '   ',
+    });
     expect(result.ok).toBe(false);
   });
 
@@ -220,7 +244,7 @@ describe('cancelInvoice', () => {
     expect(alternator.parentId).toBe('MOT-003');
   });
 
-  it('CANCEL-002: rejects cancelling a paid or partial invoice without refundAmount', () => {
+  it('CANCEL-002: rejects cancelling a paid or partial invoice without refund method', () => {
     const paidState = createInitialState();
     const missingPaid = cancelInvoice(paidState, admin, {
       invoiceId: 'INV-097',
@@ -230,18 +254,18 @@ describe('cancelInvoice', () => {
     if (!missingPaid.ok) {
       expect(missingPaid.error.code).toBe('VALIDATION');
       expect(missingPaid.error.message).toBe(
-        'La cancelación de una factura pagada o parcialmente pagada requiere un reembolso mayor que cero',
+        'La cancelación requiere el método del reembolso neto total',
       );
     }
     expect(paidState.invoices.find((entry) => entry.id === 'INV-097')?.status).toBe('COMPLETED');
 
-    const zeroPaid = cancelInvoice(createInitialState(), admin, {
+    const withMethod = cancelInvoice(createInitialState(), admin, {
       invoiceId: 'INV-097',
       reason: 'Cliente devolvió la mercancía',
       refundAmount: 0,
       refundMethod: 'CASH',
     });
-    expect(zeroPaid.ok).toBe(false);
+    expect(withMethod.ok).toBe(true);
 
     const missingPartial = cancelInvoice(createInitialState(), admin, {
       invoiceId: 'INV-099',
@@ -262,14 +286,17 @@ describe('cancelInvoice', () => {
     expect(result.ok).toBe(true);
     const invoice = state.invoices.find((entry) => entry.id === 'INV-097')!;
     expect(invoice.status).toBe('CANCELLED');
-    expect(invoice.payments.some((payment) => payment.kind === 'REFUND' && payment.amount === 5_500)).toBe(
-      true,
-    );
+    expect(
+      invoice.payments.some((payment) => payment.kind === 'REFUND' && payment.amount === 5_500),
+    ).toBe(true);
   });
 
   it('CANCEL-002: cancels an unpaid completed invoice with only a reason', () => {
     const state = createInitialState();
-    const result = cancelInvoice(state, admin, { invoiceId: 'INV-098', reason: 'Cliente desistió' });
+    const result = cancelInvoice(state, admin, {
+      invoiceId: 'INV-098',
+      reason: 'Cliente desistió',
+    });
 
     expect(result.ok).toBe(true);
     const invoice = state.invoices.find((entry) => entry.id === 'INV-098')!;
@@ -303,9 +330,9 @@ describe('cancelInvoice', () => {
     expect(wo.linkedInvoiceIds).toEqual(['INV-096', draftId]);
 
     const cancelled = state.invoices.find((entry) => entry.id === 'INV-096')!;
-    expect(buildInvoiceDetail(state, cancelled, admin).linkedWorkOrders.map((order) => order.id)).toEqual([
-      'OD-DEMO-060',
-    ]);
+    expect(
+      buildInvoiceDetail(state, cancelled, admin).linkedWorkOrders.map((order) => order.id),
+    ).toEqual(['OD-DEMO-060']);
   });
 
   it('leaves a completed dismantling independent and the parent incomplete', () => {

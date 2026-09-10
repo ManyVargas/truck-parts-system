@@ -25,7 +25,7 @@ import {
   setDraftLineQuantity,
   setDraftMeta,
 } from '../services/sales-commands';
-import { buildInvoiceDetail, buildSalesList } from '../services/sales-catalog';
+import { buildInvoiceDetail, buildReceivables, buildSalesList } from '../services/sales-catalog';
 import { buildPosDraftView } from '../services/sales-draft';
 import { requirePermission } from '../services/require-permission';
 import { cloneForRead, getMockState } from '../state';
@@ -40,6 +40,15 @@ export class MockSalesRepository implements SalesRepository {
     return ok(cloneForRead(buildSalesList(getMockState(), tab)));
   }
 
+  async listReceivables() {
+    const permission = requirePermission('sales.manage');
+    if (!permission.ok) {
+      return permission;
+    }
+
+    return ok(cloneForRead(buildReceivables(getMockState())));
+  }
+
   async getInvoice(id: string) {
     const permission = requirePermission('sales.manage');
     if (!permission.ok) {
@@ -52,6 +61,14 @@ export class MockSalesRepository implements SalesRepository {
     }
 
     return ok(cloneForRead(buildInvoiceDetail(getMockState(), invoice, permission.value)));
+  }
+
+  async getInvoicePdf() {
+    return err({ code: 'INTERNAL', message: 'El prototipo mock usa la vista previa HTML, no bytes de PDF.' });
+  }
+
+  async regenerateInvoicePdf() {
+    return err({ code: 'INTERNAL', message: 'La regeneración de PDF no está disponible en el prototipo mock.' });
   }
 
   async addPayment(input: AddPaymentInput) {

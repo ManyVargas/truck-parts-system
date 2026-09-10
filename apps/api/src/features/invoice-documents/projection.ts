@@ -6,6 +6,7 @@ import {
 } from '../../infrastructure/invoice-pdf/index.js';
 import { MONEY_DECIMAL_PLACES } from '../sales/money/constants.js';
 import type { InvoicePdfHistorySnapshot, InvoiceRecord } from '../sales/types.js';
+import { summarizePayments } from '../payments/summary.js';
 
 function moneyString(value: { toFixed(places: number): string }): string {
   return value.toFixed(MONEY_DECIMAL_PLACES);
@@ -18,13 +19,14 @@ function persistedLineMoney(line: InvoiceLine) {
 
 export function toInvoicePdfFacts(invoice: InvoiceRecord): InvoicePdfFacts | null {
   if (
-    invoice.status !== 'COMPLETED' ||
+    invoice.status === 'DRAFT' ||
     invoice.number == null ||
     invoice.confirmedAt == null ||
     invoice.customerName == null ||
     invoice.gross == null ||
     invoice.base == null ||
-    invoice.itbis == null
+    invoice.itbis == null ||
+    invoice.dueDate == null
   ) {
     return null;
   }
@@ -38,18 +40,30 @@ export function toInvoicePdfFacts(invoice: InvoiceRecord): InvoicePdfFacts | nul
       notes: line.notes,
       quantity: moneyString(line.quantity),
       unitPrice: moneyString(line.unitPrice),
+      base: moneyString(money.base),
       gross: moneyString(money.gross),
       itbis: moneyString(money.itbis),
     });
   }
 
+  const payment = summarizePayments(invoice);
   return {
+    status: invoice.status,
     number: invoice.number,
     currency: invoice.currency,
     fiscal: invoice.fiscal,
     customerName: invoice.customerName,
     customerRnc: invoice.customerRnc,
+    customerPhone: invoice.customerPhone,
+    sellerName: invoice.confirmedByName,
     confirmedAt: invoice.confirmedAt,
+    dueDate: invoice.dueDate,
+    paymentState: payment.state,
+    balance: moneyString(payment.balance),
+    generatedAt: new Date(),
+    cancelledAt: invoice.cancelledAt,
+    cancelReason: invoice.cancelReason,
+    cancelledByName: invoice.cancelledByName,
     lines,
     totals: {
       gross: moneyString(invoice.gross),

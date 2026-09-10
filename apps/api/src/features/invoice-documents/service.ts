@@ -63,7 +63,7 @@ export class InvoiceDocumentService {
       return existing;
     });
 
-    if (invoice.status !== 'COMPLETED') {
+    if (invoice.status === 'DRAFT') {
       throw AppError.conflict(PDF_COMPLETED_ONLY_MESSAGE);
     }
     if (invoice.pdfStatus === 'FAILED') {
@@ -103,7 +103,7 @@ export class InvoiceDocumentService {
       return { invoice: existing, actor: { role: actor.role } };
     });
 
-    if (loaded.invoice.status !== 'COMPLETED') {
+    if (loaded.invoice.status === 'DRAFT') {
       throw AppError.conflict(PDF_COMPLETED_ONLY_MESSAGE);
     }
     if (loaded.invoice.pdfStatus !== 'FAILED') {
@@ -171,7 +171,11 @@ export class InvoiceDocumentService {
             subjectType: 'INVOICE',
             subjectId: invoiceId,
             eventType: 'INVOICE_PDF_GENERATED',
-            payload: { status: 'READY', errorId: null, templateVersion: INVOICE_PDF_TEMPLATE_VERSION },
+            payload: {
+              status: 'READY',
+              errorId: null,
+              templateVersion: INVOICE_PDF_TEMPLATE_VERSION,
+            },
           });
         } else if (errorId != null) {
           await history.append({

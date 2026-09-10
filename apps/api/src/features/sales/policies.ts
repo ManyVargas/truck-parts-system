@@ -25,7 +25,12 @@ const DESCRIPTION_EDITABLE_DRAFT_LINE_TYPES = new Set<InvoiceLineType>([
 ]);
 const COST_EDITABLE_DRAFT_LINE_TYPES = new Set<InvoiceLineType>(['GENERIC', 'EXTERNAL']);
 
-type InvoiceManager = { active: boolean; role: Role; mustChangePassword: boolean };
+type InvoiceManager = {
+  active: boolean;
+  role: Role;
+  mustChangePassword: boolean;
+  name: string;
+};
 
 export function assertInvoiceManager(user: InvoiceManager | null): void {
   requireInvoiceManager(user);

@@ -8,7 +8,9 @@ The old consolidated requirements/validation files are intentionally no longer r
 
 ## Delivery
 
-**Release 2 minimal support for resale/cost fields; completed in Release 4/5 with inventory and USD profitability**
+**Release 2 invoice-line cost, DOP profit, USD FX, COST-005, and FX retry; inventory-weighted cost completes in Release 4/5**
+
+**Implementation (2026-09-10):** Production **API is done** for invoice-line cost snapshots, Administrator profit projection, FX pending/retry, and COST-005. HTTP UI swap is **not done** (R2 M24: `HttpProfitabilityRepository` still `httpNotImplemented`; HTTP capability `profitability` is off). Protected acquisition-cost correction is **prototype mock / Release 8**, not an API command.
 
 ## What this feature does
 
@@ -70,8 +72,8 @@ Seller and Administrator may view acquisition cost. Only Administrator may view 
 - [x] Implement DOP gross-profit calculation. *(API R2 M13: derivado del snapshot completed, Administrator-only)*
 - [x] Implement FX adapter interface and normalization to DOP-per-USD. *(API R2 M15: ExchangeRate-API Pair USD/DOP)*
 - [x] Persist FX provenance and profitability status. *(API R2 M15: tasa persistida; pending derivado si falta)*
-- [x] Implement pending-profitability retry command. *(API R2 M16: `POST /api/profitability/:invoiceId/retry`, tasa histórica del día UTC de `confirmedAt`)*
-- [x] Implement protected acquisition-cost correction with history.
+- [x] Implement pending-profitability retry command. *(API R2 M16: `POST /api/profitability/:invoiceId/retry`, tasa histórica del día UTC de `confirmedAt`; HTTP UI pending M24)*
+- [ ] Implement protected acquisition-cost correction with history. _(Prototype mock may exist; production API not started — inventory INV-006 / Release 8)_
 - [x] Enforce Administrator-only profitability projections. *(API R2 M13: GET/confirm/list omiten profit para Seller)*
 - [x] Persist Administrator-recorded DOP gross profit when calculation is unavailable. *(API R2 M14: COST-005, `POST /api/profitability/:invoiceId/manual-gross-profit`)*
 

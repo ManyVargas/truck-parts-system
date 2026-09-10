@@ -10,6 +10,8 @@ The old consolidated requirements/validation files are intentionally no longer r
 
 **Release 1 foundation; required before any production business flow**
 
+**Implementation (2026-09-10):** Production API + HTTP UI done. Release 1 **COMPLETED**.
+
 ## What this feature does
 
 Provide individual authenticated access, the fixed Administrator/Seller/Mechanic role model, safe deactivation, and server-side authorization.

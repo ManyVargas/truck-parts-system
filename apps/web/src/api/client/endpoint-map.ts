@@ -40,6 +40,7 @@ export const REPOSITORY_ENDPOINT_MAP = {
   },
   SalesRepository: {
     listInvoices: 'GET /api/sales?status=DRAFT',
+    listReceivables: 'GET /api/sales/receivables',
     getInvoice: 'GET /api/sales/:id',
     createDraft: 'POST /api/sales',
     getDraft: 'GET /api/sales/:id',
@@ -50,6 +51,8 @@ export const REPOSITORY_ENDPOINT_MAP = {
     setLineQuantity: 'PATCH /api/sales/:id/lines/:lineId',
     removeLine: 'DELETE /api/sales/:id/lines/:lineId',
     confirmInvoice: 'POST /api/sales/:id/confirm',
+    getInvoicePdf: 'GET /api/sales/:id/pdf',
+    regenerateInvoicePdf: 'POST /api/sales/:id/pdf/regenerate',
     addPayment: 'POST /api/sales/:id/payments',
     cancelInvoice: 'POST /api/sales/:id/cancel',
   },

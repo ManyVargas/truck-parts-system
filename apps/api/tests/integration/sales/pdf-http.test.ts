@@ -145,21 +145,26 @@ describe('M17 PDF generate + failed status (SALE-004)', () => {
     ).toBe(1);
   });
 
-  it('keeps PDF metadata valid when a completed invoice becomes cancelled', async () => {
+  it('serves a versioned CANCELLED PDF after the controlled cancellation', async () => {
     const app = createTestApp();
     const admin = await fixture(request.agent(app));
     const invoice = await confirmGeneric(admin.agent);
 
-    await expect(
-      prisma.invoice.update({
-        where: { id: invoice.id },
-        data: { status: 'CANCELLED' },
-      }),
-    ).resolves.toMatchObject({
+    const cancelled = await admin.agent
+      .post(`${SALES}/${invoice.id}/cancel`)
+      .set(CSRF)
+      .send({ reason: 'Venta anulada por el cliente', idempotencyKey: randomUUID() });
+    expect(cancelled.status).toBe(200);
+    expect(cancelled.body).toMatchObject({ status: 'CANCELLED', paymentState: 'CANCELLED' });
+    await expect(prisma.invoice.findUnique({ where: { id: invoice.id } })).resolves.toMatchObject({
       status: 'CANCELLED',
       pdfStatus: 'READY',
-      pdfTemplateVersion: 'internal-v2',
+      pdfTemplateVersion: 'internal-v3',
     });
+
+    const pdf = await admin.agent.get(`${SALES}/${invoice.id}/pdf`).buffer(true);
+    expect(pdf.status).toBe(200);
+    expect(Buffer.from(pdf.body).subarray(0, 5).toString('latin1')).toBe('%PDF-');
   });
 
   it('passes the persisted template version to the renderer on download', async () => {

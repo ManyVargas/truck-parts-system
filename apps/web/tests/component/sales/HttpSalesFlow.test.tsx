@@ -72,12 +72,23 @@ type ApiInvoice = {
   currency: 'DOP' | 'USD';
   fiscal: boolean;
   customer: { id: string; name: string; rnc: string | null; isDefault: boolean };
-  customerSnapshot: { name: string; rnc: string | null } | null;
+  customerSnapshot: { name: string; rnc: string | null; phone: string | null } | null;
   confirmedAt: string | null;
+  dueDate: string | null;
+  sellerName: string | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+  cancelledByName: string | null;
+  paymentState: 'PENDING' | 'OVERDUE' | 'PAID' | 'PAID_LATE' | 'CANCELLED';
+  payments: [];
+  paid: string;
+  refunded: string;
+  balance: string;
   lines: ApiLine[];
   totals: { gross: string; base: string; itbis: string };
   createdAt: string;
   updatedAt: string;
+  document?: { status: 'READY' } | { status: 'FAILED'; errorId: string };
 };
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
@@ -112,6 +123,16 @@ function emptyInvoice(id = draftId): ApiInvoice {
     },
     customerSnapshot: null,
     confirmedAt: null,
+    dueDate: null,
+    sellerName: null,
+    cancelledAt: null,
+    cancelReason: null,
+    cancelledByName: null,
+    paymentState: 'PENDING',
+    payments: [],
+    paid: '0.00',
+    refunded: '0.00',
+    balance: '0.00',
     lines: [],
     totals: { gross: '0.00', base: '0.00', itbis: '0.00' },
     createdAt: '2026-09-09T12:00:00.000Z',
@@ -176,6 +197,10 @@ beforeEach(() => {
       const items = invoices.filter((item) => item.status === 'COMPLETED');
       return json({ items, total: items.length, page: 1, pageSize: 100 });
     }
+    if (url.startsWith('/api/sales?status=CANCELLED')) {
+      const items = invoices.filter((item) => item.status === 'CANCELLED');
+      return json({ items, total: items.length, page: 1, pageSize: 100 });
+    }
     if (url === '/api/sales' && init?.method === 'POST') {
       const created = emptyInvoice(
         nextDraftNumber === 1 ? draftId : `bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb${nextDraftNumber}`,
@@ -193,7 +218,10 @@ beforeEach(() => {
       if (!current) return json({ error: { code: 'NOT_FOUND' } }, 404);
 
       if (action === 'confirm' && init?.method === 'POST') {
-        if (JSON.parse(String(init.body)) !== null && JSON.stringify(JSON.parse(String(init.body))) !== '{}') {
+        if (
+          JSON.parse(String(init.body)) !== null &&
+          JSON.stringify(JSON.parse(String(init.body))) !== '{}'
+        ) {
           throw new Error(`Unexpected confirm body: ${String(init.body)}`);
         }
         const number = `FAC-${String(nextFacNumber).padStart(6, '0')}`;
@@ -202,8 +230,12 @@ beforeEach(() => {
           ...current,
           status: 'COMPLETED',
           number,
-          customerSnapshot: { name: current.customer.name, rnc: current.customer.rnc },
+          customerSnapshot: { name: current.customer.name, rnc: current.customer.rnc, phone: null },
           confirmedAt: '2026-09-09T13:00:00.000Z',
+          dueDate: '2026-10-09',
+          sellerName: role,
+          balance: current.totals.gross,
+          document: { status: 'READY' },
         };
         replaceInvoice(confirmed);
         return json(confirmed);
@@ -278,9 +310,57 @@ beforeEach(() => {
       }
     }
 
+    const pdfMatch = url.match(/^\/api\/sales\/([^/]+)\/pdf(?:\/(regenerate))?$/);
+    if (pdfMatch) {
+      const current = invoiceById(pdfMatch[1]!);
+      if (!current) return json({ error: { code: 'NOT_FOUND' } }, 404);
+
+      if (pdfMatch[2] === 'regenerate' && init?.method === 'POST') {
+        if (role !== 'ADMINISTRATOR') return json({ error: { code: 'FORBIDDEN' } }, 403);
+        if (current.document?.status !== 'FAILED') {
+          return json(
+            {
+              error: {
+                code: 'CONFLICT',
+                message: 'Solo se puede regenerar el PDF de una factura con generación fallida',
+              },
+            },
+            409,
+          );
+        }
+        const next = { ...current, document: { status: 'READY' as const } };
+        replaceInvoice(next);
+        return json(next);
+      }
+
+      if (!pdfMatch[2] && !init?.method) {
+        if (current.document?.status === 'FAILED') {
+          return json(
+            {
+              error: {
+                code: 'CONFLICT',
+                message: 'La generación del PDF falló',
+                errorId: current.document.errorId,
+              },
+            },
+            409,
+          );
+        }
+        return new Response(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="${current.number ?? 'invoice'}.pdf"`,
+          },
+        });
+      }
+    }
+
     throw new Error(`Unexpected endpoint: ${path} ${init?.method ?? 'GET'}`);
   });
   vi.stubGlobal('fetch', fetchMock);
+  URL.createObjectURL = () => 'blob:http://localhost/invoice-pdf';
+  URL.revokeObjectURL = () => {};
 });
 
 afterEach(() => vi.unstubAllGlobals());
@@ -314,9 +394,13 @@ describe('M21 HTTP POS draft UI', () => {
 
     await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
     const typeSelect = await screen.findByLabelText('Tipo de línea');
-    expect(within(typeSelect).getByRole('option', { name: 'Mercancía genérica' })).toBeInTheDocument();
+    expect(
+      within(typeSelect).getByRole('option', { name: 'Mercancía genérica' }),
+    ).toBeInTheDocument();
     expect(within(typeSelect).getByRole('option', { name: 'Reventa externa' })).toBeInTheDocument();
-    expect(within(typeSelect).getByRole('option', { name: 'Servicio mecánico' })).toBeInTheDocument();
+    expect(
+      within(typeSelect).getByRole('option', { name: 'Servicio mecánico' }),
+    ).toBeInTheDocument();
     expect(within(typeSelect).getByRole('option', { name: 'Entrega' })).toBeInTheDocument();
     expect(within(typeSelect).queryByRole('option', { name: 'Pieza' })).not.toBeInTheDocument();
 
@@ -410,9 +494,9 @@ describe('M21 HTTP POS draft UI', () => {
     mount();
 
     expect(await screen.findByText('Acceso no autorizado')).toBeVisible();
-    expect(
-      fetchMock.mock.calls.some(([path]) => String(path).startsWith('/api/sales')),
-    ).toBe(false);
+    expect(fetchMock.mock.calls.some(([path]) => String(path).startsWith('/api/sales'))).toBe(
+      false,
+    );
   });
 });
 
@@ -432,7 +516,7 @@ async function addGenericLine(
 async function confirmOpenSale(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Confirmar venta' }));
   const dialog = await screen.findByRole('dialog', { name: 'Confirmar venta' });
-  expect(within(dialog).queryByText('Pago inicial')).not.toBeInTheDocument();
+  expect(within(dialog).getByText('Pago inicial')).toBeVisible();
   await user.click(within(dialog).getByRole('button', { name: 'Confirmar venta' }));
 }
 
@@ -465,13 +549,20 @@ describe('M22 HTTP confirmation UI', () => {
     expect(await screen.findByRole('heading', { name: 'FAC-000001' })).toBeVisible();
     expect(screen.getByText(/Flota Este/)).toBeVisible();
     expect(screen.getByText('Filtro de aceite')).toBeVisible();
-    expect(screen.queryByRole('button', { name: 'Vista previa del documento' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Vista previa del documento' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('NCF: ______________________')).toBeVisible();
+    expect(within(dialog).getByTitle('FAC-000001.pdf')).toBeVisible();
+    expect(within(dialog).getByRole('button', { name: 'Descargar' })).toBeVisible();
     expect(screen.queryByText('Rentabilidad')).not.toBeInTheDocument();
+    await user.click(within(dialog).getByText('Cerrar'));
 
     await user.click(screen.getByRole('link', { name: 'Clientes' }));
     expect(await screen.findByText('Flota Este')).toBeVisible();
     const fleetRow = screen.getByText('Flota Este').closest('tr');
-    await user.click(within(fleetRow as HTMLTableRowElement).getByRole('button', { name: 'Editar' }));
+    await user.click(
+      within(fleetRow as HTMLTableRowElement).getByRole('button', { name: 'Editar' }),
+    );
     const nameField = await screen.findByLabelText('Nombre');
     await user.clear(nameField);
     await user.type(nameField, 'Flota Norte');
@@ -493,5 +584,60 @@ describe('M22 HTTP confirmation UI', () => {
     await confirmOpenSale(user);
     expect(await screen.findByText('Factura FAC-000002 confirmada')).toBeVisible();
     expect(screen.getByLabelText('Moneda')).toHaveValue('USD');
+  });
+
+  it('hides PDF regeneration from the seller when generation failed', async () => {
+    const completedId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    invoices = [
+      {
+        ...emptyInvoice(completedId),
+        status: 'COMPLETED',
+        number: 'FAC-000009',
+        document: { status: 'FAILED', errorId: 'pdf-err-9' },
+        customerSnapshot: { name: cashCustomer.name, rnc: null, phone: null },
+        confirmedAt: '2026-09-09T13:00:00.000Z',
+      },
+    ];
+    mount(`/sales/${completedId}`);
+
+    expect(await screen.findByRole('heading', { name: 'FAC-000009' })).toBeVisible();
+    expect(screen.getByText(/Referencia: pdf-err-9/)).toBeVisible();
+    expect(
+      screen.queryByRole('button', { name: 'Vista previa del documento' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Regenerar documento' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Rentabilidad')).not.toBeInTheDocument();
+  });
+
+  it('lets an administrator regenerate a failed PDF without reopening the sale', async () => {
+    role = 'ADMINISTRATOR';
+    const completedId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    invoices = [
+      {
+        ...emptyInvoice(completedId),
+        status: 'COMPLETED',
+        number: 'FAC-000009',
+        document: { status: 'FAILED', errorId: 'pdf-err-9' },
+        customerSnapshot: { name: cashCustomer.name, rnc: null, phone: null },
+        confirmedAt: '2026-09-09T13:00:00.000Z',
+      },
+    ];
+    const user = userEvent.setup();
+    mount(`/sales/${completedId}`);
+
+    expect(await screen.findByRole('heading', { name: 'FAC-000009' })).toBeVisible();
+    expect(screen.getByText(/Referencia: pdf-err-9/)).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Regenerar documento' }));
+
+    expect(await screen.findByRole('button', { name: 'Vista previa del documento' })).toBeVisible();
+    expect(screen.queryByText(/Referencia: pdf-err-9/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Regenerar documento' })).not.toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(
+        ([requestPath, init]) =>
+          String(requestPath) === `/api/sales/${completedId}/pdf/regenerate` &&
+          init?.method === 'POST',
+      ),
+    ).toBe(true);
   });
 });

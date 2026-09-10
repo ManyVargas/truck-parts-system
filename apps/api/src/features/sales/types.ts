@@ -5,15 +5,28 @@ import type {
   InvoiceCurrency,
   InvoiceLine,
   InvoiceLineType,
+  InvoicePayment,
   InvoiceSequence,
   InvoiceStatus,
   Prisma,
   Role,
+  User,
 } from '@prisma/client';
 
-export type InvoiceRecord = Invoice & { lines: InvoiceLine[]; customer: Customer };
+import type { InvoiceHistoryEntryView } from '../history/invoice-timeline.js';
 
-export type InvoiceListRecord = Invoice & { customer: Customer; lines: InvoiceLine[] };
+export type InvoicePaymentRecord = InvoicePayment & { actor: User };
+export type InvoiceRecord = Invoice & {
+  lines: InvoiceLine[];
+  customer: Customer;
+  payments: InvoicePaymentRecord[];
+};
+
+export type InvoiceListRecord = Invoice & {
+  customer: Customer;
+  lines: InvoiceLine[];
+  payments: InvoicePayment[];
+};
 
 export type InvoiceViewer = { role: Role };
 
@@ -31,6 +44,45 @@ export type UpdateDraftInvoiceRecord = {
 
 export type ListInvoicesQuery = {
   status?: InvoiceStatus;
+  page: number;
+  pageSize: number;
+};
+
+export type ListReceivablesQuery = {
+  customerId?: string;
+  currency?: InvoiceCurrency;
+  paymentState?: 'PENDING' | 'OVERDUE';
+  page: number;
+  pageSize: number;
+  today: Date;
+};
+
+export type ReceivablesCustomerAggregate = {
+  customerId: string;
+  customerName: string;
+  currency: InvoiceCurrency;
+  invoiceCount: number;
+  invoiced: Prisma.Decimal;
+  paid: Prisma.Decimal;
+  balance: Prisma.Decimal;
+};
+
+export type PublicCustomerOutstanding = {
+  customerId: string;
+  customerName: string;
+  currency: InvoiceCurrency;
+  invoiceCount: number;
+  invoiced: string;
+  paid: string;
+  balance: string;
+};
+
+export type PublicReceivableInvoice = PublicInvoiceListItem & { paid: string };
+
+export type PublicReceivables = {
+  invoices: PublicReceivableInvoice[];
+  customers: PublicCustomerOutstanding[];
+  total: number;
   page: number;
   pageSize: number;
 };
@@ -69,8 +121,12 @@ export type CompleteInvoiceRecord = {
   id: string;
   number: string;
   confirmedAt: Date;
+  dueDate: Date;
   customerName: string;
   customerRnc: string | null;
+  customerPhone: string | null;
+  confirmedByUserId: string | null;
+  confirmedByName: string | null;
   gross: Prisma.Decimal | string;
   base: Prisma.Decimal | string;
   itbis: Prisma.Decimal | string;
@@ -89,6 +145,20 @@ export type InvoiceCustomerView = {
 export type InvoiceCustomerSnapshot = {
   name: string;
   rnc: string | null;
+  phone: string | null;
+};
+
+export type PublicPaymentState = 'PENDING' | 'OVERDUE' | 'PAID' | 'PAID_LATE' | 'CANCELLED';
+
+export type PublicInvoicePayment = {
+  id: string;
+  kind: InvoicePayment['kind'];
+  amount: string;
+  method: InvoicePayment['method'];
+  effectiveDate: string;
+  recordedAt: string;
+  reference: string | null;
+  actorName: string;
 };
 
 export type RecordUsdFxRateRecord = {
@@ -139,6 +209,8 @@ export type PublicInvoiceLine = {
 
 export type PublicInvoiceDocument = { status: 'READY' } | { status: 'FAILED'; errorId: string };
 
+export type PublicInvoiceHistoryEntry = InvoiceHistoryEntryView;
+
 export type RecordInvoicePdfStatusRecord = {
   id: string;
   status: 'READY' | 'FAILED';
@@ -163,10 +235,21 @@ export type PublicInvoice = {
   customer: InvoiceCustomerView;
   customerSnapshot: InvoiceCustomerSnapshot | null;
   confirmedAt: string | null;
+  dueDate: string | null;
+  sellerName: string | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+  cancelledByName: string | null;
+  paymentState: PublicPaymentState;
+  payments: PublicInvoicePayment[];
+  paid: string;
+  refunded: string;
+  balance: string;
   lines: PublicInvoiceLine[];
   totals: { gross: string; base: string; itbis: string };
   profitability?: PublicProfitability;
   document?: PublicInvoiceDocument;
+  history: PublicInvoiceHistoryEntry[];
   createdAt: string;
   updatedAt: string;
 };
@@ -180,6 +263,9 @@ export type PublicInvoiceListItem = {
   customer: InvoiceCustomerView;
   customerSnapshot: InvoiceCustomerSnapshot | null;
   confirmedAt: string | null;
+  dueDate: string | null;
+  paymentState: PublicPaymentState;
+  balance: string;
   totals: { gross: string; base: string; itbis: string };
   profitability?: PublicProfitability;
   createdAt: string;
@@ -203,6 +289,27 @@ export type InvoiceConfirmedHistorySnapshot = {
   customerSnapshot: InvoiceCustomerSnapshot;
   totals: { gross: string; base: string; itbis: string };
   confirmedAt: string;
+  dueDate: string;
+  confirmedByUserId: string;
+  confirmedByName: string;
+};
+
+export type PaymentRecordedHistorySnapshot = {
+  paymentId: string;
+  amount: string;
+  currency: InvoiceCurrency;
+  method: InvoicePayment['method'];
+  effectiveDate: string;
+  reference: string | null;
+};
+
+export type InvoiceCancelledHistorySnapshot = {
+  reason: string;
+  cancelledAt: string;
+  cancelledByName: string;
+  refundId: string | null;
+  refundAmount: string;
+  refundMethod: InvoicePayment['method'] | null;
 };
 
 export type InvoiceUsdFxRetryHistorySnapshot = {

@@ -42,7 +42,10 @@ import {
   discardDraftWithHttp,
   getDraftWithHttp,
   getInvoiceWithHttp,
+  getInvoicePdfWithHttp,
   listInvoicesWithHttp,
+  listReceivablesWithHttp,
+  regenerateInvoicePdfWithHttp,
   removeDraftLineWithHttp,
   setDraftLinePriceWithHttp,
   setDraftLineQuantityWithHttp,
@@ -57,9 +60,9 @@ import {
 import { httpNotImplemented } from '../client/http-not-implemented';
 
 /**
- * Access/profile (R1), customers (M19), services (M20), POS drafts (M21) and
- * confirmation (M22) use the real API. PDF/profit and later-release repositories
- * stay stubbed; capability guards keep those screens out of HTTP mode.
+ * Access/profile (R1), customers (M19), services (M20), POS drafts (M21),
+ * confirmation (M22) and PDF (M23) use the real API. Profit and later-release
+ * repositories stay stubbed; capability guards keep those screens out of HTTP mode.
  */
 export class HttpAuthRepository implements AuthRepository {
   async login(username: string, password: string) {
@@ -206,8 +209,20 @@ export class HttpSalesRepository implements SalesRepository {
     return listInvoicesWithHttp(tab);
   }
 
+  async listReceivables() {
+    return listReceivablesWithHttp();
+  }
+
   async getInvoice(id: string) {
     return getInvoiceWithHttp(id);
+  }
+
+  async getInvoicePdf(id: string) {
+    return getInvoicePdfWithHttp(id);
+  }
+
+  async regenerateInvoicePdf(id: string) {
+    return regenerateInvoicePdfWithHttp(id);
   }
 
   async addPayment(input: Parameters<SalesRepository['addPayment']>[0]) {

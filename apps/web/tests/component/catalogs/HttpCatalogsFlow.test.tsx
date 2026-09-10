@@ -141,6 +141,8 @@ describe('M20 HTTP mechanical service catalog UI', () => {
     const row = screen.getByText('Instalación mecánica').closest('tr');
     expect(row).not.toBeNull();
     await user.click(within(row as HTMLTableRowElement).getByRole('button', { name: 'Desactivar' }));
+    const deactivateDialog = await screen.findByRole('dialog', { name: 'Desactivar servicio' });
+    await user.click(within(deactivateDialog).getByRole('button', { name: 'Desactivar' }));
     expect(await screen.findByText('Servicio desactivado')).toBeVisible();
     const patchCall = fetchMock.mock.calls.find(
       ([requestPath, init]) =>

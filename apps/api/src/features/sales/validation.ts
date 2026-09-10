@@ -34,6 +34,12 @@ export const listInvoicesSchema = paginationSchema.extend({
   status: invoiceStatusSchema.optional(),
 });
 
+export const listReceivablesSchema = paginationSchema.extend({
+  customerId: z.uuid().optional(),
+  currency: invoiceCurrencySchema.optional(),
+  paymentState: z.enum(['PENDING', 'OVERDUE']).optional(),
+});
+
 export const invoiceLineIdSchema = z.strictObject({
   id: z.uuid(),
   lineId: z.uuid(),
@@ -162,4 +168,30 @@ export const setLinePriceSchema = z
     DRAFT_META_REQUIRED_MESSAGE,
   );
 
-export const confirmInvoiceSchema = z.strictObject({});
+export const paymentMethodSchema = z.enum(['CASH', 'TRANSFER', 'CHECK']);
+export const paymentDateSchema = z.iso.date();
+export const confirmInvoiceSchema = z.strictObject({
+  payment: z
+    .strictObject({
+      amount: positiveDecimal12x2StringSchema,
+      method: paymentMethodSchema,
+      reference: z.string().trim().min(1).max(100).nullable().optional(),
+      idempotencyKey: z.string().trim().min(1).max(100).optional(),
+    })
+    .optional(),
+});
+
+export const addPaymentSchema = z.strictObject({
+  amount: positiveDecimal12x2StringSchema,
+  method: paymentMethodSchema,
+  effectiveDate: paymentDateSchema,
+  reference: z.string().trim().min(1).max(100).nullable().optional(),
+  idempotencyKey: z.string().trim().min(1).max(100),
+});
+
+export const cancelInvoiceSchema = z.strictObject({
+  reason: z.string().trim().min(1).max(500),
+  refundMethod: paymentMethodSchema.optional(),
+  refundReference: z.string().trim().min(1).max(100).nullable().optional(),
+  idempotencyKey: z.string().trim().min(1).max(100),
+});

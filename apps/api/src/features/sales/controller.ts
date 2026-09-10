@@ -23,11 +23,17 @@ function lineId(req: Request): string {
 }
 
 export async function postDraft(req: Request, res: Response) {
-  res.status(201).json(await salesServiceOf(req).createDraft(actor(req), req.validated?.body ?? {}));
+  res
+    .status(201)
+    .json(await salesServiceOf(req).createDraft(actor(req), req.validated?.body ?? {}));
 }
 
 export async function getInvoices(req: Request, res: Response) {
   res.json(await salesServiceOf(req).list(actor(req), req.validated?.query));
+}
+
+export async function getReceivables(req: Request, res: Response) {
+  res.json(await salesServiceOf(req).listReceivables(actor(req), req.validated?.query));
 }
 
 export async function getInvoice(req: Request, res: Response) {
@@ -59,12 +65,24 @@ export async function postRegenerateInvoicePdf(req: Request, res: Response) {
   res.json(await salesServiceOf(req).regeneratePdf(actor(req), id(req)));
 }
 
+export async function postInvoicePayment(req: Request, res: Response) {
+  res
+    .status(201)
+    .json(await salesServiceOf(req).addPayment(actor(req), id(req), req.validated?.body));
+}
+
+export async function postCancelInvoice(req: Request, res: Response) {
+  res.json(await salesServiceOf(req).cancel(actor(req), id(req), req.validated?.body));
+}
+
 export async function postDraftLine(req: Request, res: Response) {
   res.status(201).json(await salesServiceOf(req).addLine(actor(req), id(req), req.validated?.body));
 }
 
 export async function patchDraftLine(req: Request, res: Response) {
-  res.json(await salesServiceOf(req).setLinePrice(actor(req), id(req), lineId(req), req.validated?.body));
+  res.json(
+    await salesServiceOf(req).setLinePrice(actor(req), id(req), lineId(req), req.validated?.body),
+  );
 }
 
 export async function deleteDraftLine(req: Request, res: Response) {
