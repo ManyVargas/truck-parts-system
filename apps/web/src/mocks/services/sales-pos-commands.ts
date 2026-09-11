@@ -33,8 +33,10 @@ import {
 import { derivePaymentState, invoiceTotal, roundMoney } from './invoice-money';
 import {
   activeWorkAffectingAssembly,
+  CASH_CUSTOMER_CREDIT_FORBIDDEN_MESSAGE,
   CASH_CUSTOMER_ID,
   customerQualifiesForFiscal,
+  isCashCustomer,
 } from './sales-helpers';
 import { applyUsdProfitability } from './usd-profitability';
 
@@ -883,6 +885,7 @@ export function confirmInvoice(
     }
   }
 
+  const invoiceGross = invoiceTotal(invoice);
   let initialPaymentAmount: number | undefined;
   if (payment) {
     if (!PAYMENT_METHODS.includes(payment.method)) {
@@ -892,14 +895,23 @@ export function confirmInvoice(
     if (!amount.ok) {
       return amount;
     }
-    const total = invoiceTotal(invoice);
-    if (amount.value > total) {
+    if (amount.value > invoiceGross) {
       return err({
         code: 'VALIDATION',
         message: 'El pago no puede superar el saldo pendiente',
       });
     }
     initialPaymentAmount = amount.value;
+  }
+  if (
+    isCashCustomer(customer) &&
+    invoiceGross > 0 &&
+    (initialPaymentAmount == null || initialPaymentAmount !== invoiceGross)
+  ) {
+    return err({
+      code: 'CONFLICT',
+      message: CASH_CUSTOMER_CREDIT_FORBIDDEN_MESSAGE,
+    });
   }
 
   for (const line of invoice.lines) {

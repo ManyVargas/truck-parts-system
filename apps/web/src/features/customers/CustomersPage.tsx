@@ -1,15 +1,19 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import type { CustomerListRow, SaveCustomerInput } from '../../api/contracts/customers';
+import { parseListPage, setListPageParam } from '../../api/contracts/pagination';
 import { presentAppError } from '../../shared/errors/present-app-error';
-import { Button, Info, SearchInput, Skeleton, toPageLoadMessage, useToast } from '../../shared/ui';
+import { Button, Info, PaginationBar, SearchInput, Skeleton, toPageLoadMessage, useToast } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
 import { CustomerFormModal } from './CustomerFormModal';
 import { CustomerTable } from './CustomerTable';
 import { useCustomers } from './useCustomers';
 
 export function CustomersPage() {
-  const { query, setQuery, result, isSaving, save } = useCustomers();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = parseListPage(searchParams.get('page'));
+  const { query, setQuery, result, isSaving, save } = useCustomers(page);
   const { pushToast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CustomerListRow | null>(null);
@@ -83,14 +87,41 @@ export function CustomersPage() {
           label="Buscar por nombre o identificación fiscal"
           placeholder="Nombre o identificación fiscal / cédula"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setSearchParams(
+              (prev) => {
+                const nextParams = new URLSearchParams(prev);
+                setListPageParam(nextParams, 1);
+                return nextParams;
+              },
+              { replace: true },
+            );
+          }}
         />
       </div>
 
       {result.status === 'loading' ? (
         <Skeleton label="Cargando clientes" />
       ) : (
-        <CustomerTable rows={result.rows} onEdit={openEdit} />
+        <>
+          <CustomerTable rows={result.rows} onEdit={openEdit} />
+          <PaginationBar
+            page={result.page}
+            pageSize={result.pageSize}
+            total={result.total}
+            onPageChange={(nextPage) => {
+              setSearchParams(
+                (prev) => {
+                  const nextParams = new URLSearchParams(prev);
+                  setListPageParam(nextParams, nextPage);
+                  return nextParams;
+                },
+                { replace: true },
+              );
+            }}
+          />
+        </>
       )}
 
       <CustomerFormModal

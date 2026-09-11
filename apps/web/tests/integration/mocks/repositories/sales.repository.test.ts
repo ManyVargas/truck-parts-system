@@ -20,10 +20,10 @@ describe('MockSalesRepository', () => {
     expect(listed.ok).toBe(true);
     if (listed.ok) {
       expect(
-        listed.value.some((row) => row.number === 'FAC-000098' && row.paymentState === 'UNPAID'),
+        listed.value.items.some((row) => row.number === 'FAC-000098' && row.paymentState === 'UNPAID'),
       ).toBe(true);
       expect(
-        listed.value.some(
+        listed.value.items.some(
           (row) => row.number === 'FAC-000099' && row.paymentState === 'PARTIALLY_PAID',
         ),
       ).toBe(true);
@@ -115,7 +115,7 @@ describe('MockSalesRepository', () => {
     const detail = await mockSalesRepository.getInvoice('INV-DRAFT-01');
 
     expect(confirmed.ok && confirmed.value.number).toBe('FAC-000100');
-    expect(listed.ok && listed.value.some((row) => row.number === 'FAC-000100')).toBe(true);
+    expect(listed.ok && listed.value.items.some((row) => row.number === 'FAC-000100')).toBe(true);
     expect(detail.ok && detail.value.status).toBe('COMPLETED');
     expect(detail.ok && detail.value.actions.canPay).toBe(true);
     expect(detail.ok && detail.value.paymentState).toBe('UNPAID');

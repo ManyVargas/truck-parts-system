@@ -11,6 +11,15 @@ export function exchangeRateApiHistoryPath(asOf: Date): string {
   return `history/USD/${asOf.getUTCFullYear()}/${asOf.getUTCMonth() + 1}/${asOf.getUTCDate()}`;
 }
 
+/** Pair is the published rate for the current UTC day; History is only for past UTC days. */
+export function isSameUtcCalendarDay(left: Date, right: Date): boolean {
+  return (
+    left.getUTCFullYear() === right.getUTCFullYear() &&
+    left.getUTCMonth() === right.getUTCMonth() &&
+    left.getUTCDate() === right.getUTCDate()
+  );
+}
+
 export const EXCHANGE_RATE_API_KEY_ENV = 'EXCHANGE_RATE_API_KEY';
 
 /** Bounded so a hung provider cannot stall confirmation indefinitely. */

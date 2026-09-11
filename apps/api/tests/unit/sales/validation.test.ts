@@ -14,6 +14,7 @@ import {
   genericDraftLineSchema,
   serviceDraftLineSchema,
   lineNotesSchema,
+  listInvoicesSchema,
   setLinePriceSchema,
   updateDraftMetaSchema,
 } from '../../../src/features/sales/validation.js';
@@ -38,6 +39,15 @@ describe('draft HTTP validation', () => {
     expect(updateDraftMetaSchema.safeParse({}).success).toBe(false);
     expect(createDraftSchema.safeParse({ currency: 'EUR' }).success).toBe(false);
     expect(createDraftSchema.safeParse({ extra: true }).success).toBe(false);
+  });
+
+  it('accepts an optional trimmed list search query', () => {
+    expect(listInvoicesSchema.parse({})).toEqual({ page: 1, pageSize: 10 });
+    expect(listInvoicesSchema.parse({ q: '  FAC-000099  ', page: '2' })).toEqual({
+      q: 'FAC-000099',
+      page: 2,
+      pageSize: 10,
+    });
   });
 
   it('accepts an empty confirm body and rejects payment or unknown fields', () => {

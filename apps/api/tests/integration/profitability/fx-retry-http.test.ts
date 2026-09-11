@@ -18,6 +18,7 @@ import { disconnectPrisma, prisma } from '../../../src/infrastructure/database/i
 import { createTestApp } from '../../helpers/app.js';
 import { successfulUsdDopRate } from '../../helpers/fx.js';
 import { clearTestHistory } from '../../helpers/history.js';
+import { assignNamedCustomerForCredit } from '../../helpers/sales.js';
 
 const users = new UserRepository();
 const PASSWORD = 'personal-password';
@@ -72,6 +73,7 @@ async function confirmUsdGeneric(
       })
     ).status,
   ).toBe(201);
+  await assignNamedCustomerForCredit(agent, draft.body.id);
   const confirmed = await agent.post(`${SALES}/${draft.body.id}/confirm`).set(CSRF).send({});
   expect(confirmed.status).toBe(200);
   return confirmed.body;
@@ -205,6 +207,7 @@ describe('M16 Retry FX Administrator', () => {
       costProvenance: 'ACTUAL',
       acquisitionCostDop: '12300.00',
     });
+    await assignNamedCustomerForCredit(admin.agent, dopDraft.body.id);
     const dop = await admin.agent.post(`${SALES}/${dopDraft.body.id}/confirm`).set(CSRF).send({});
     const dopRetry = await admin.agent.post(`${PROFIT}/${dop.body.id}/retry`).set(CSRF).send({});
     expect(dopRetry.status).toBe(409);

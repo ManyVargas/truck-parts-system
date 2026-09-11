@@ -93,7 +93,7 @@ export function AppShell() {
   );
 
   return (
-    <div className="flex h-dvh">
+    <div className="flex h-dvh overflow-hidden">
       {showInlineSidebar ? (
         <CommercialSidebar
           role={user.role}
@@ -135,7 +135,7 @@ export function AppShell() {
           </div>
         </header>
 
-        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain">
           <div className="mx-auto min-w-0 max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
             <Outlet />
           </div>

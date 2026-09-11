@@ -5,6 +5,7 @@ export {
   EXCHANGE_RATE_API_SOURCE,
   EXCHANGE_RATE_API_TIMEOUT_MS,
   exchangeRateApiHistoryPath,
+  isSameUtcCalendarDay,
 } from './constants.js';
 export { createFxRateProvider } from './create-provider.js';
 export { ExchangeRateApiClient } from './exchange-rate-api.js';

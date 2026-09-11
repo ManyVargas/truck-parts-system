@@ -1,10 +1,10 @@
 import type { CustomerListRow, SaveCustomerContactInput, SaveCustomerInput } from '../contracts/customers';
 import type { Customer, CustomerContact } from '../contracts/entities';
+import { LIST_PAGE_SIZE, type ListPage } from '../contracts/pagination';
 import { err, ok, type Result } from '../../shared/auth/types';
 import { httpClient, toAppError } from './http-client';
 
 const CUSTOMERS_PATH = '/api/customers';
-const PAGE_SIZE = 100;
 const CSRF_HEADERS = { 'X-Requested-With': 'XMLHttpRequest' };
 
 type ApiCustomerContact = {
@@ -66,14 +66,14 @@ function toCustomer(customer: ApiCustomer): Customer {
 function customersCollectionPath(query: string | undefined, page: number): string {
   const params = new URLSearchParams({
     page: String(page),
-    pageSize: String(PAGE_SIZE),
+    pageSize: String(LIST_PAGE_SIZE),
   });
   const normalized = query?.trim();
   if (normalized) params.set('q', normalized);
   return `${CUSTOMERS_PATH}?${params.toString()}`;
 }
 
-/** Preserve the existing complete-list UI while respecting the paginated API. */
+/** Concatenate pages for POS lookups that still need the full directory. */
 async function loadAllPages(query?: string): Promise<CustomerListRow[]> {
   const items: CustomerListRow[] = [];
   let page = 1;
@@ -115,8 +115,19 @@ export function listCustomersWithHttp(): Promise<Result<CustomerListRow[]>> {
   return request(() => loadAllPages());
 }
 
-export function searchCustomersWithHttp(query: string): Promise<Result<CustomerListRow[]>> {
-  return request(() => loadAllPages(query));
+export function searchCustomersWithHttp(
+  query: string,
+  page = 1,
+): Promise<Result<ListPage<CustomerListRow>>> {
+  return request(async () => {
+    const response = await httpClient<Page<ApiCustomer>>(customersCollectionPath(query, page));
+    return {
+      items: response.items.map(toCustomer),
+      total: response.total,
+      page: response.page,
+      pageSize: response.pageSize,
+    };
+  });
 }
 
 export function getCustomerByIdWithHttp(id: string): Promise<Result<Customer>> {

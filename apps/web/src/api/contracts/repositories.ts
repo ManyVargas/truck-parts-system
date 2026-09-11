@@ -1,4 +1,5 @@
 import type { Result } from '../../shared/auth/types';
+import type { ListPage } from './pagination';
 import type { AuthSession, PublicUser } from './auth';
 import type { SaveCategoryInput, SaveServiceInput } from './catalogs';
 import type { CustomerListRow, SaveCustomerInput } from './customers';
@@ -92,7 +93,7 @@ export type AuthRepository = {
 };
 
 export type UserRepository = {
-  list(): Promise<Result<ManagedUser[]>>;
+  list(page?: number): Promise<Result<ListPage<ManagedUser>>>;
   save(input: SaveUserInput): Promise<Result<ManagedUser>>;
   listRecoveryRequests(): Promise<Result<PasswordRecoveryRequest[]>>;
   resolveRecovery(input: ResolveRecoveryInput): Promise<Result<ResolveRecoveryResult>>;
@@ -121,15 +122,20 @@ export type InventoryRepository = {
 };
 
 export type CustomerRepository = {
+  /** Full directory for POS lookups. The customers page uses `search` with paging. */
   list(): Promise<Result<CustomerListRow[]>>;
-  search(query: string): Promise<Result<CustomerListRow[]>>;
+  search(query: string, page?: number): Promise<Result<ListPage<CustomerListRow>>>;
   getById(id: string): Promise<Result<Customer>>;
   save(input: SaveCustomerInput): Promise<Result<Customer>>;
 };
 
 export type SalesRepository = {
-  listInvoices(tab?: SalesListTab): Promise<Result<SalesListRow[]>>;
-  listReceivables(): Promise<Result<ReceivablesSnapshot>>;
+  listInvoices(
+    tab?: SalesListTab,
+    page?: number,
+    q?: string,
+  ): Promise<Result<ListPage<SalesListRow>>>;
+  listReceivables(page?: number): Promise<Result<ReceivablesSnapshot>>;
   getInvoice(id: string): Promise<Result<InvoiceDetailView>>;
   getInvoicePdf(id: string): Promise<Result<InvoicePdfDownload>>;
   regenerateInvoicePdf(id: string): Promise<Result<InvoiceDetailView>>;

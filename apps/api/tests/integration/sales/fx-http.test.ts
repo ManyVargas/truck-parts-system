@@ -12,6 +12,7 @@ import { disconnectPrisma, prisma } from '../../../src/infrastructure/database/i
 import { createTestApp } from '../../helpers/app.js';
 import { successfulUsdDopRate, staticFxRateProvider } from '../../helpers/fx.js';
 import { clearTestHistory } from '../../helpers/history.js';
+import { assignNamedCustomerForCredit } from '../../helpers/sales.js';
 
 const users = new UserRepository();
 const PASSWORD = 'personal-password';
@@ -126,6 +127,7 @@ describe('M15 FX adapter + pending (COST-003 USD)', () => {
           })
         ).status,
       ).toBe(201);
+      await assignNamedCustomerForCredit(admin.agent, draft.body.id);
       const confirmed = await admin.agent
         .post(`${ROOT}/${draft.body.id}/confirm`)
         .set(CSRF)
@@ -161,6 +163,7 @@ describe('M15 FX adapter + pending (COST-003 USD)', () => {
         })
       ).status,
     ).toBe(201);
+    await assignNamedCustomerForCredit(admin.agent, draft.body.id);
     const confirmed = await admin.agent.post(`${ROOT}/${draft.body.id}/confirm`).set(CSRF).send({});
     expect(confirmed.status).toBe(200);
     expect(confirmed.body.profitability.profitDop).toBe('5700.00');
@@ -180,6 +183,7 @@ describe('M15 FX adapter + pending (COST-003 USD)', () => {
       unitPrice: '100.00',
       costProvenance: 'UNKNOWN',
     });
+    await assignNamedCustomerForCredit(admin.agent, draft.body.id);
     await admin.agent.post(`${ROOT}/${draft.body.id}/confirm`).set(CSRF).send({});
 
     const recorded = await admin.agent

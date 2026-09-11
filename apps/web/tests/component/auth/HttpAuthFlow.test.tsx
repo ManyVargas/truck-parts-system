@@ -69,10 +69,10 @@ beforeEach(() => {
     }
     const url = String(path);
     if (url.startsWith('/api/sales')) {
-      return json({ items: [], total: 0, page: 1, pageSize: 100 });
+      return json({ items: [], total: 0, page: 1, pageSize: 10 });
     }
     if (url.startsWith('/api/customers')) {
-      return json({ items: [], total: 0, page: 1, pageSize: 100 });
+      return json({ items: [], total: 0, page: 1, pageSize: 10 });
     }
     if (url === '/api/catalogs/services') return json({ items: [] });
     throw new Error(`Unexpected endpoint: ${path}`);

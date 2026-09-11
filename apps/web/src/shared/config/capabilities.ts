@@ -165,7 +165,7 @@ export function resolveCapabilities(
 ): AppCapabilities {
   // HTTP mode exposes modules whose API swap has landed, including payments/CxC.
   // `catalogs` is on for mechanical services; `/catalogs` hides inventory categories until R4.
-  // Profit stays off until M24. Dashboard KPIs are not swapped in R2.
+  // Dashboard KPIs are not swapped in R2.
   if (env.VITE_USE_MOCK_API !== 'true') {
     return {
       ...DISABLED,
@@ -173,6 +173,7 @@ export function resolveCapabilities(
       customers: true,
       catalogs: true,
       sales: true,
+      profitability: true,
       payments: true,
       invoiceCancellation: true,
     };

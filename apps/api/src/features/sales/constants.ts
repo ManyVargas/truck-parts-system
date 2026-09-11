@@ -29,6 +29,8 @@ export const PAYMENT_COMPLETED_ONLY_MESSAGE =
 export const PAYMENT_DATE_RANGE_MESSAGE =
   'La fecha del pago debe estar entre la confirmación y hoy';
 export const PAYMENT_EXCEEDS_BALANCE_MESSAGE = 'El pago no puede superar el saldo pendiente';
+export const CASH_CUSTOMER_CREDIT_FORBIDDEN_MESSAGE =
+  'A Cliente contado no se le puede vender a crédito';
 export const PAYMENT_IDEMPOTENCY_MISMATCH_MESSAGE =
   'La clave de idempotencia ya fue usada con datos de pago diferentes';
 export const CANCELLATION_COMPLETED_ONLY_MESSAGE = 'Solo se pueden cancelar facturas completadas';

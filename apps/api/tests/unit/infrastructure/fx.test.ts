@@ -120,9 +120,33 @@ describe('ExchangeRateApiClient', () => {
     expect(JSON.stringify(result.quote)).not.toContain(API_KEY);
   });
 
+  it('uses Pair for the same UTC confirmation day instead of History', async () => {
+    const asOf = new Date('2026-09-11T18:30:00.000Z');
+    const fetchImpl = vi.fn(async (url: string | URL) => {
+      expect(String(url)).toContain('pair/USD/DOP');
+      expect(String(url)).not.toContain('/history/');
+      return jsonResponse({
+        result: 'success',
+        conversion_rate: 61.5,
+        time_last_update_unix: Math.floor(asOf.getTime() / 1000),
+      });
+    });
+    const client = new ExchangeRateApiClient({
+      apiKey: API_KEY,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      now: () => new Date('2026-09-11T20:00:00.000Z'),
+    });
+
+    const result = await client.getUsdToDopRate({ asOf });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.quote.exchangeRateDopPerUsd.equals(new Prisma.Decimal('61.5'))).toBe(true);
+  });
+
   it('does not persist a live conversion_rate when historical lookup is required', async () => {
     const client = new ExchangeRateApiClient({
       apiKey: API_KEY,
+      now: () => new Date('2026-09-11T12:00:00.000Z'),
       fetchImpl: async () =>
         jsonResponse({
           result: 'success',
@@ -137,6 +161,7 @@ describe('ExchangeRateApiClient', () => {
   it('maps plan-upgrade-required to unavailable without inventing a rate', async () => {
     const client = new ExchangeRateApiClient({
       apiKey: API_KEY,
+      now: () => new Date('2026-09-11T12:00:00.000Z'),
       fetchImpl: async () =>
         jsonResponse({ result: 'error', 'error-type': 'plan-upgrade-required' }, false),
     });

@@ -26,9 +26,16 @@ describe('ProfitabilityPage', () => {
     renderWithProviders(<ProfitabilityPage />, { route: '/profitability' });
 
     expect(await screen.findByText('FAC-000096')).toBeVisible();
-    expect(screen.getByText('Ganancia bruta en pesos')).toBeVisible();
+    expect(screen.getAllByText('Ganancia bruta').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Cobrado neto').length).toBeGreaterThan(0);
+    expect(screen.getByRole('img', { name: 'Evolución financiera' })).toBeVisible();
+    expect(screen.getByRole('img', { name: 'Ganancia por mes' })).toBeVisible();
+    expect(screen.getByRole('img', { name: 'Cobrado neto por mes' })).toBeVisible();
+    expect(screen.getByText('Evolución financiera', { selector: 'caption' }).closest('.sr-only')).not.toBeNull();
     expect(screen.queryByText('Ganancia bruta en dólares')).not.toBeInTheDocument();
     expect(screen.getAllByText('Pendiente de tasa de cambio').length).toBeGreaterThan(0);
+    expect(screen.getByText('Ver facturas →')).toBeVisible();
+    expect(screen.getAllByText('Automática').length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole('button', { name: 'Activar tasa de cambio (demo)' }));
     expect(await screen.findByText('Tasa de cambio activada. Reintente las facturas pendientes.')).toBeVisible();
@@ -41,7 +48,7 @@ describe('ProfitabilityPage', () => {
     const profitUsd = Math.round((1_200 - 42_000 / 61.5 + Number.EPSILON) * 100) / 100;
     const profitDop = Math.round((profitUsd * 61.5 + Number.EPSILON) * 100) / 100;
     expect(screen.getAllByText(money(profitDop, 'DOP')).length).toBeGreaterThan(0);
-    expect(screen.getByText(money(8_900 + profitDop, 'DOP'))).toBeVisible();
+    expect(screen.getAllByText(money(8_900 + profitDop, 'DOP')).length).toBeGreaterThan(0);
   });
 
   it('lets an administrator record gross profit when the invoice shows unavailable', async () => {
@@ -56,9 +63,9 @@ describe('ProfitabilityPage', () => {
     await user.click(screen.getByRole('button', { name: 'Guardar ganancia' }));
 
     expect(await screen.findByText('Ganancia bruta registrada')).toBeVisible();
-    expect(screen.getByText(money(1_800, 'DOP'))).toBeVisible();
-    expect(screen.getByText(money(8_900 + 1_800, 'DOP'))).toBeVisible();
-    expect(screen.getByText('criterio admin')).toBeVisible();
+    expect(screen.getAllByText(money(1_800, 'DOP')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(money(8_900 + 1_800, 'DOP')).length).toBeGreaterThan(0);
+    expect(screen.getByText('Criterio admin')).toBeVisible();
     expect(screen.queryByText('No disponible')).not.toBeInTheDocument();
   });
 });

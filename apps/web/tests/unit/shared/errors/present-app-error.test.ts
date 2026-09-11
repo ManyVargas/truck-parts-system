@@ -49,6 +49,15 @@ describe('presentError', () => {
     expect(presented.summary).not.toMatch(/RNC or Cédula/i);
   });
 
+  it('maps Cliente contado credit rejection without exposing internals', () => {
+    expect(
+      presentError({
+        fallbackMessage: 'Los datos cambiaron. Actualice e intente nuevamente.',
+        serverMessage: 'A Cliente contado no se le puede vender a crédito',
+      }).summary,
+    ).toBe('A Cliente contado no se le puede vender a crédito');
+  });
+
   it('maps a duplicate fiscal identifier conflict onto the RNC field', () => {
     const presented = presentError({
       fallbackMessage: 'Los datos cambiaron. Actualice e intente nuevamente.',
@@ -101,5 +110,17 @@ describe('presentError', () => {
         serverMessage: 'La generación del PDF falló',
       }).summary,
     ).toBe('La generación del PDF falló');
+  });
+
+  it('keeps known profitability conflict messages in Spanish', () => {
+    expect(
+      presentError({
+        fallbackMessage: 'Los datos cambiaron. Actualice e intente nuevamente.',
+        serverMessage:
+          'Reintente primero el cálculo con la tasa de cambio; no registre un monto mientras esté pendiente',
+      }).summary,
+    ).toBe(
+      'Reintente primero el cálculo con la tasa de cambio; no registre un monto mientras esté pendiente',
+    );
   });
 });

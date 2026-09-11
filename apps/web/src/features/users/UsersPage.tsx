@@ -1,15 +1,18 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import type {
   ManagedUser,
   PasswordRecoveryRequest,
   SaveUserInput,
 } from '../../api/contracts/users';
+import { parseListPage, setListPageParam } from '../../api/contracts/pagination';
 import {
   Button,
   ConfirmActionModal,
   Info,
   Modal,
+  PaginationBar,
   SearchInput,
   Skeleton,
   toPageLoadMessage,
@@ -28,7 +31,9 @@ type RecoveryAction = {
 };
 
 export function UsersPage() {
-  const { query, setQuery, result, isSaving, save } = useUsers();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = parseListPage(searchParams.get('page'));
+  const { query, setQuery, result, isSaving, save } = useUsers(page);
   const recovery = useRecoveryRequests();
   const { pushToast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
@@ -146,23 +151,50 @@ export function UsersPage() {
           label="Buscar por nombre o usuario"
           placeholder="Nombre o usuario"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setSearchParams(
+              (prev) => {
+                const nextParams = new URLSearchParams(prev);
+                setListPageParam(nextParams, 1);
+                return nextParams;
+              },
+              { replace: true },
+            );
+          }}
         />
       </div>
 
       {result.status === 'loading' ? (
         <Skeleton label="Cargando usuarios" />
       ) : (
-        <UserTable
-          rows={result.rows}
-          togglingId={togglingId}
-          onEdit={(row) => {
-            setEditing(row);
-            setFormError(null);
-            setModalOpen(true);
-          }}
-          onToggleActive={setPendingToggle}
-        />
+        <>
+          <UserTable
+            rows={result.rows}
+            togglingId={togglingId}
+            onEdit={(row) => {
+              setEditing(row);
+              setFormError(null);
+              setModalOpen(true);
+            }}
+            onToggleActive={setPendingToggle}
+          />
+          <PaginationBar
+            page={result.page}
+            pageSize={result.pageSize}
+            total={result.total}
+            onPageChange={(nextPage) => {
+              setSearchParams(
+                (prev) => {
+                  const nextParams = new URLSearchParams(prev);
+                  setListPageParam(nextParams, nextPage);
+                  return nextParams;
+                },
+                { replace: true },
+              );
+            }}
+          />
+        </>
       )}
 
       <RecoveryRequestsPanel

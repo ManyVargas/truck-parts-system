@@ -85,7 +85,7 @@ beforeEach(() => {
           customer.name.toLowerCase().includes(query) ||
           (customer.rnc?.includes(query) ?? false),
       );
-      return json({ items, total: items.length, page: 1, pageSize: 100 });
+      return json({ items, total: items.length, page: 1, pageSize: 10 });
     }
     if (path === '/api/customers' && init?.method === 'POST') {
       const body = JSON.parse(init.body as string);

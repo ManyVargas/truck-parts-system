@@ -50,6 +50,7 @@ At invoice confirmation, copy the applicable customer data into an immutable inv
 
 - Seller/Administrator can find, create, and edit ordinary customer data.
 - Eligible nonfiscal sale can use `Cliente contado`.
+- `Cliente contado` cannot be sold on credit: confirmation requires a full initial payment equal to the invoice total.
 - Fiscal-value invoice rejects missing required customer identity.
 - Completed invoice preserves its customer snapshot when the source customer is later edited.
 - Mechanic has no customer access.
@@ -67,14 +68,14 @@ At invoice confirmation, copy the applicable customer data into an immutable inv
 ### Frontend
 
 - [x] Customer search/select/create inside Draft flow. _(WM8: selector en POS; alta sigue en `/customers`)_
-- [x] Default `Cliente contado` behavior. _(WM8 `createDraft` usa C0; fiscal lo rechaza)_
+- [x] Default `Cliente contado` behavior. _(WM8 `createDraft` usa C0; fiscal lo rechaza; confirmación HTTP/API exige pago inicial completo — owner 2026-09-11)_
 - [x] Fiscal-required field feedback. _(checkbox bloqueado + rechazo en servicio)_
 - [x] Basic customer maintenance. _(WM4 mock; API R2 M19 HTTP `/customers`)_
 - [x] Multiple contacts on a customer. _(prototipo mock — lista dinámica; `prepareCustomerSave`)_
 
 ### Tests
 
-- [x] Generic nonfiscal sale succeeds. _(prototipo mock — C0 + `fiscal: false`)_
+- [x] Generic nonfiscal sale succeeds. _(prototipo mock — C0 + `fiscal: false`; API: pago inicial completo)_
 - [x] Generic fiscal sale rejected. _(prototipo mock — WM8)_
 - [x] Later customer edit leaves completed invoice unchanged. _(prototipo mock — WM8 snapshot; API R2 M12 HTTP)_
 - [x] Mechanic access denied. _(WM4 mock `customers.manage`; API R2 M19 HTTP 403 y sin nav)_
@@ -106,10 +107,10 @@ The blocks below are the final reconciled requirements retained from the previou
 **Requirement:** The system must permit a generic default customer such as `Cliente contado` for eligible nonfiscal sales.  
 **Business Reason:** Many counter sales do not require named-customer registration.  
 **Main Flow:** User retains the default customer and completes a nonfiscal invoice.  
-**Business Rules:** Generic customer cannot satisfy a fiscal requirement for customer RNC/Cédula.  
-**Important Exceptions/Edge Cases:** A sale requiring fiscal identification must select or create a qualifying customer.  
+**Business Rules:** Generic customer cannot satisfy a fiscal requirement for customer RNC/Cédula. Generic customer cannot be sold on credit: confirmation must record an initial payment equal to the invoice total (owner decision 2026-09-11). Named customers may still confirm unpaid or partially paid.  
+**Important Exceptions/Edge Cases:** A sale requiring fiscal identification must select or create a qualifying customer. Confirming `Cliente contado` without a full initial payment is rejected and does not assign a `FAC-` number.  
 **Dependencies:** CUST-001, SALE-003.  
-**Acceptance Notes:** Nonfiscal generic sale succeeds; fiscal validation rejects missing required identity.
+**Acceptance Notes:** Nonfiscal generic sale succeeds when paid in full at confirmation; fiscal validation rejects missing required identity; credit terms on `Cliente contado` are rejected.
 
 ---
 

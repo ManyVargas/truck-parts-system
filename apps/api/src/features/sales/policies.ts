@@ -1,7 +1,8 @@
-import type { InvoiceLineType, Role } from '@prisma/client';
+import { Prisma, type InvoiceLineType, type Role } from '@prisma/client';
 
 import { AppError } from '../../infrastructure/errors/app-error.js';
 import {
+  CASH_CUSTOMER_CREDIT_FORBIDDEN_MESSAGE,
   FIXED_LINE_QUANTITY_MESSAGE,
   LINE_COST_NOT_EDITABLE_MESSAGE,
   LINE_DESCRIPTION_NOT_EDITABLE_MESSAGE,
@@ -71,5 +72,19 @@ export function assertDraftLineDescriptionEditable(type: InvoiceLineType): void 
 export function assertDraftLineCostEditable(type: InvoiceLineType): void {
   if (!COST_EDITABLE_DRAFT_LINE_TYPES.has(type)) {
     throw AppError.conflict(LINE_COST_NOT_EDITABLE_MESSAGE, { type });
+  }
+}
+
+/** Cliente contado is cash-only: confirmation must settle the invoice in full. */
+export function assertCashCustomerPaidInFull(
+  customer: { isDefault: boolean },
+  invoiceGross: Prisma.Decimal,
+  initialPaymentAmount: Prisma.Decimal | null,
+): void {
+  if (!customer.isDefault || invoiceGross.isZero()) {
+    return;
+  }
+  if (initialPaymentAmount == null || !initialPaymentAmount.equals(invoiceGross)) {
+    throw AppError.conflict(CASH_CUSTOMER_CREDIT_FORBIDDEN_MESSAGE);
   }
 }

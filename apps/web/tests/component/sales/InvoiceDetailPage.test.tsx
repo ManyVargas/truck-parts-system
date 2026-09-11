@@ -38,11 +38,12 @@ describe('InvoiceDetailPage', () => {
     });
 
     expect(await screen.findByRole('heading', { name: 'FAC-000098' })).toBeVisible();
-    const backToSales = screen.getByRole('link', { name: 'Volver a Ventas y Facturas' });
-    expect(backToSales).toHaveAttribute('href', '/sales');
-    expect(backToSales).toHaveTextContent('');
+    const backButton = screen.getByRole('button', { name: 'Volver atrás' });
+    expect(backButton).toHaveTextContent('');
     expect(screen.queryByText('Volver al listado')).not.toBeInTheDocument();
-    expect(screen.getByText('Sin pagar')).toBeVisible();
+    expect(screen.getByText('Completada')).toBeVisible();
+    expect(screen.queryByText('Sin pagar')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pendiente')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cancelar factura' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Corregir moneda' })).not.toBeInTheDocument();
     expect(screen.queryByText('Rentabilidad')).not.toBeInTheDocument();

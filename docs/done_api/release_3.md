@@ -13,7 +13,7 @@ Este archivo documenta **qué ya está en el código** para que un plan R3 futur
 
 - Modelo `InvoicePayment` (ledger aditivo: `PAYMENT` / reembolso de cancelación), moneda de la factura, método `CASH`/`TRANSFER`/`CHECK`, `effectiveDate`, referencia, actor, `idempotencyKey`.
 - `dueDate` fija a 30 días calendario (`America/Santo_Domingo`) al confirmar.
-- Confirmación puede registrar pago inicial (opcional) en la misma transacción que `FAC-`.
+- Confirmación puede registrar pago inicial (opcional) en la misma transacción que `FAC-`. **Excepción owner 2026-09-11:** `Cliente contado` no admite crédito; el pago inicial debe igualar el total o la confirmación responde 409 y no emite `FAC-`.
 - `POST /api/sales/:id/payments` — pagos adicionales; misma moneda; sin sobrecobro; idempotencia.
 - Estados derivados Pending / Overdue / Paid / Paid-late / Cancelled (sin columna mutable de status de pago).
 - `GET /api/sales/receivables` — abiertas + resumen por cliente y moneda. Query opcional: `customerId`, `currency`, `paymentState` = `PENDING` | `OVERDUE`.

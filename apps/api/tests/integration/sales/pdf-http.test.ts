@@ -19,6 +19,7 @@ import {
 import { disconnectPrisma, prisma } from '../../../src/infrastructure/database/index.js';
 import { createTestApp } from '../../helpers/app.js';
 import { clearTestHistory } from '../../helpers/history.js';
+import { assignNamedCustomerForCredit } from '../../helpers/sales.js';
 
 const users = new UserRepository();
 const PASSWORD = 'personal-password';
@@ -69,6 +70,7 @@ async function confirmGeneric(agent: request.Agent) {
       })
     ).status,
   ).toBe(201);
+  await assignNamedCustomerForCredit(agent, draft.body.id);
   const confirmed = await agent.post(`${SALES}/${draft.body.id}/confirm`).set(CSRF).send({});
   expect(confirmed.status).toBe(200);
   return confirmed.body;

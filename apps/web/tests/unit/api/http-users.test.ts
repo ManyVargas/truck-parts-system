@@ -23,21 +23,22 @@ function json(body: unknown, status = 200) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('HTTP user management contract', () => {
-  it('loads every API page and maps only public user fields', async () => {
+  it('loads one API page and maps only public user fields', async () => {
     const second = { ...userResponse, id: 'second-id', username: 'ana', name: 'Ana' };
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(json({ items: [userResponse], total: 2, page: 1, pageSize: 100 }))
-      .mockResolvedValueOnce(json({ items: [second], total: 2, page: 2, pageSize: 100 }));
+    const fetchMock = vi.fn().mockResolvedValue(
+      json({ items: [userResponse, second], total: 12, page: 1, pageSize: 10 }),
+    );
     vi.stubGlobal('fetch', fetchMock);
 
     const result = await repository.list();
 
-    expect(result).toMatchObject({ ok: true, value: [{ id: 'user-id' }, { id: 'second-id' }] });
-    if (result.ok) expect(result.value[0]).not.toHaveProperty('passwordHash');
+    expect(result).toMatchObject({
+      ok: true,
+      value: { items: [{ id: 'user-id' }, { id: 'second-id' }], total: 12, page: 1, pageSize: 10 },
+    });
+    if (result.ok) expect(result.value.items[0]).not.toHaveProperty('passwordHash');
     expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
-      '/api/admin/users?page=1&pageSize=100',
-      '/api/admin/users?page=2&pageSize=100',
+      '/api/admin/users?page=1&pageSize=10',
     ]);
     expect(fetchMock.mock.calls[0][1].credentials).toBe('include');
   });
@@ -89,7 +90,7 @@ describe('HTTP user management contract', () => {
     };
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(json({ items: [recovery], total: 1, page: 1, pageSize: 100 })),
+      vi.fn().mockResolvedValue(json({ items: [recovery], total: 1, page: 1, pageSize: 10 })),
     );
 
     const result = await repository.listRecoveryRequests();

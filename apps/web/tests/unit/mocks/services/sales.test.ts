@@ -9,6 +9,7 @@ import {
   correctCurrency,
   createDraft,
   setDraftLinePrice,
+  setDraftMeta,
 } from '../../../../src/mocks/services/sales-commands';
 import { buildInvoiceDetail, buildSalesList } from '../../../../src/mocks/services/sales-catalog';
 import {
@@ -221,6 +222,7 @@ describe('cancelInvoice', () => {
     expect(addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'MOT-003' }).ok).toBe(true);
     const lineId = state.invoices.find((entry) => entry.id === draftId)!.lines[0]!.id;
     expect(setDraftLinePrice(state, seller, { draftId, lineId, unitPrice: 350_000 }).ok).toBe(true);
+    expect(setDraftMeta(state, seller, { draftId, customerId: 'C1' }).ok).toBe(true);
     expect(confirmInvoice(state, seller, draftId).ok).toBe(true);
 
     const engineAfterSale = state.items.find((item) => item.id === 'MOT-003')!;
@@ -323,6 +325,7 @@ describe('cancelInvoice', () => {
     expect(addDraftLine(state, seller, { draftId, type: 'ITEM', itemId: 'TUR-009' }).ok).toBe(true);
     const lineId = state.invoices.find((entry) => entry.id === draftId)!.lines[0]!.id;
     expect(setDraftLinePrice(state, seller, { draftId, lineId, unitPrice: 85_000 }).ok).toBe(true);
+    expect(setDraftMeta(state, seller, { draftId, customerId: 'C1' }).ok).toBe(true);
     expect(confirmInvoice(state, seller, draftId).ok).toBe(true);
 
     const wo = state.workOrders.find((order) => order.id === 'OD-DEMO-060')!;

@@ -8,6 +8,8 @@ import { Button, Field, GuardedModal, Info, Input, Select, money, isFormDirty } 
 import { PAYMENT_METHOD_LABELS } from './labels';
 
 const METHODS: PaymentMethod[] = ['CASH', 'TRANSFER', 'CHECK'];
+const CASH_CUSTOMER_CREDIT_FORBIDDEN_MESSAGE =
+  'A Cliente contado no se le puede vender a crédito';
 
 type ConfirmSaleModalProps = {
   open: boolean;
@@ -17,6 +19,14 @@ type ConfirmSaleModalProps = {
   onClose: () => void;
   onConfirm: (payment?: ConfirmInvoicePayment) => void;
 };
+
+function amountMatchesGross(amount: string, gross: number): boolean {
+  const parsed = Number(amount);
+  if (!Number.isFinite(parsed)) {
+    return false;
+  }
+  return Math.round(parsed * 100) === Math.round(gross * 100);
+}
 
 export function ConfirmSaleModal({
   open,
@@ -30,19 +40,22 @@ export function ConfirmSaleModal({
   const amountId = useId();
   const includeId = useId();
   const installed = draft.lines.filter((line) => line.installed);
+  const cashCustomerRequiresFullPayment = draft.customerIsDefault;
   const [includeInitialPayment, setIncludeInitialPayment] = useState(false);
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('CASH');
   const [reference, setReference] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
   const fields = { includeInitialPayment, amount, method, reference };
   const [baseline, setBaseline] = useState(fields);
   const submitLock = useRef(false);
 
   useEffect(() => {
     if (open) {
+      const requiresFullPayment = draft.customerIsDefault;
       const next = {
-        includeInitialPayment: false,
-        amount: '',
+        includeInitialPayment: requiresFullPayment,
+        amount: requiresFullPayment ? draft.totals.gross.toFixed(2) : '',
         method: 'CASH' as PaymentMethod,
         reference: '',
       };
@@ -51,9 +64,10 @@ export function ConfirmSaleModal({
       setMethod(next.method);
       setReference(next.reference);
       setBaseline(next);
+      setLocalError(null);
       submitLock.current = false;
     }
-  }, [open]);
+  }, [open, draft.customerIsDefault, draft.totals.gross]);
 
   useEffect(() => {
     if (!isConfirming) {
@@ -66,6 +80,21 @@ export function ConfirmSaleModal({
       return;
     }
     submitLock.current = true;
+
+    if (cashCustomerRequiresFullPayment) {
+      const trimmed = amount.trim() || draft.totals.gross.toFixed(2);
+      if (!amountMatchesGross(trimmed, draft.totals.gross)) {
+        setLocalError(CASH_CUSTOMER_CREDIT_FORBIDDEN_MESSAGE);
+        submitLock.current = false;
+        return;
+      }
+      onConfirm({
+        amount: Number(trimmed),
+        method,
+        reference: reference.trim() || undefined,
+      });
+      return;
+    }
 
     const trimmed = amount.trim();
     if (!capabilities.payments || !includeInitialPayment || trimmed === '') {
@@ -80,6 +109,9 @@ export function ConfirmSaleModal({
     });
   }
 
+  const displayedError = localError ?? error;
+  const showPaymentFields = capabilities.payments || cashCustomerRequiresFullPayment;
+
   return (
     <GuardedModal
       open={open}
@@ -90,9 +122,9 @@ export function ConfirmSaleModal({
     >
       {({ requestClose }) => (
       <div className="flex flex-col gap-4 text-sm text-navy">
-        {error && (
+        {displayedError && (
           <Info tone="error" title="No se pudo confirmar">
-            {error}
+            {displayedError}
           </Info>
         )}
         <p>
@@ -118,22 +150,24 @@ export function ConfirmSaleModal({
           </ul>
         )}
 
-        {capabilities.payments && (
+        {showPaymentFields && (
           <>
             <label htmlFor={includeId} className="flex items-center gap-2 font-medium">
               <input
                 id={includeId}
                 type="checkbox"
-                checked={includeInitialPayment}
+                checked={cashCustomerRequiresFullPayment || includeInitialPayment}
                 onChange={(event) => setIncludeInitialPayment(event.target.checked)}
-                disabled={isConfirming}
+                disabled={isConfirming || cashCustomerRequiresFullPayment}
               />
               Pago inicial
             </label>
             <p className="text-xs text-navy-400">
-              Sin marcar o sin monto, la venta queda a crédito (sin pago).
+              {cashCustomerRequiresFullPayment
+                ? 'Cliente contado debe pagarse completo al confirmar. No se vende a crédito.'
+                : 'Sin marcar o sin monto, la venta queda a crédito (sin pago).'}
             </p>
-            {includeInitialPayment && (
+            {(cashCustomerRequiresFullPayment || includeInitialPayment) && (
               <div className="space-y-3">
                 <Field
                   label="Monto"
@@ -146,7 +180,10 @@ export function ConfirmSaleModal({
                     step="0.01"
                     min="0.01"
                     value={amount}
-                    onChange={(event) => setAmount(event.target.value)}
+                    onChange={(event) => {
+                      setAmount(event.target.value);
+                      setLocalError(null);
+                    }}
                     autoFocus
                   />
                 </Field>

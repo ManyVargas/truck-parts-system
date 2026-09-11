@@ -188,8 +188,8 @@ The blocks below are the final reconciled requirements retained from the previou
 **Requirement:** An invoice may be sold for immediate payment or on credit, including delivery before full payment, and must track its outstanding balance in the invoice's single currency.  
 **Business Reason:** Credit is normal business operation.  
 **Main Flow:** User records sale terms and initial payments; confirmation calculates the remaining balance.  
-**Business Rules:** Invoice state, payment state, and inventory state remain separate; all payments and balances use the invoice currency, while the preserved acquisition-cost basis remains in `DOP` under COST-001.  
-**Important Exceptions/Edge Cases:** A completed unpaid invoice still has Sold inventory. A valid sale also stands when a `USD` invoice's profitability is pending an exchange rate under COST-003.  
+**Business Rules:** Invoice state, payment state, and inventory state remain separate; all payments and balances use the invoice currency, while the preserved acquisition-cost basis remains in `DOP` under COST-001. `Cliente contado` (`isDefault`) is cash-only: confirmation must settle the gross total in the initial payment (owner decision 2026-09-11). Credit (zero or partial initial payment) remains valid only for named customers.  
+**Important Exceptions/Edge Cases:** A completed unpaid invoice still has Sold inventory. A valid sale also stands when a `USD` invoice's profitability is pending an exchange rate under COST-003. Confirming `Cliente contado` without a full initial payment is rejected.  
 **Dependencies:** SALE-002, PAY-001, PAY-002.  
 **Acceptance Notes:** Fully paid, partially paid, and unpaid completed invoices show correct balances.
 

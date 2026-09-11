@@ -152,9 +152,12 @@ export function InvoiceDetailPage() {
 
       <div className="mb-6 flex flex-wrap items-center gap-2">
         <InvoiceStatusChip status={detail.status} />
-        {detail.status === 'COMPLETED' && capabilities.payments && (
-          <PaymentChip state={detail.paymentState} />
-        )}
+        {detail.status === 'COMPLETED' &&
+          capabilities.payments &&
+          detail.paymentState !== 'PENDING' &&
+          detail.paymentState !== 'UNPAID' && (
+            <PaymentChip state={detail.paymentState} />
+          )}
         {detail.fiscal ? <Chip tone="brand">Fiscal</Chip> : <Chip>Sin comprobante fiscal</Chip>}
         <Chip>{detail.currency}</Chip>
       </div>

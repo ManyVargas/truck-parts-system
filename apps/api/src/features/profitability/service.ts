@@ -96,8 +96,9 @@ export class ProfitabilityService {
   }
 
   /**
-   * Retry COST-003 with the historical USD→DOP rate for confirmedAt's UTC day.
-   * Live Pair is never stored as the sale-time rate. FX stays outside sale mutation.
+   * Retry COST-003 for confirmedAt's UTC day. Past days use History; the same UTC day
+   * uses Pair (that day's published rate). A later day's live rate is never stored.
+   * FX stays outside sale mutation.
    */
   async retryUsdProfitability(actorId: string, invoiceId: string) {
     profitabilityInvoiceIdSchema.parse({ invoiceId });

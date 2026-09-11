@@ -25,7 +25,7 @@ describe('capability presets follow the Development Plan', () => {
     expect(capabilities.customers).toBe(true);
     expect(capabilities.catalogs).toBe(true);
     expect(capabilities.sales).toBe(true);
-    expect(capabilities.profitability).toBe(false);
+    expect(capabilities.profitability).toBe(true);
     expect(capabilities.payments).toBe(true);
     expect(capabilities.invoiceCancellation).toBe(true);
     expect(capabilities.inventory).toBe(false);
@@ -40,6 +40,14 @@ describe('capability presets follow the Development Plan', () => {
     expect(navItemsForRole('SELLER', capabilities).map((item) => item.id)).toEqual(
       expect.arrayContaining(['sales', 'customers']),
     );
+    expect(navItemsForRole('SELLER', capabilities).map((item) => item.id)).not.toContain(
+      'profitability',
+    );
+    expect(navItemsForRole('ADMINISTRATOR', capabilities).map((item) => item.id)).toContain(
+      'profitability',
+    );
+    expect(isRouteAllowedForRole('/profitability', 'ADMINISTRATOR', capabilities)).toBe(true);
+    expect(isRouteAllowedForRole('/profitability', 'SELLER', capabilities)).toBe(false);
     expect(navItemsForRole('SELLER', capabilities).map((item) => item.id)).not.toContain('inventory');
     expect(enabledPosLineTypes(capabilities).map((entry) => entry.value)).toEqual([
       'GENERIC',

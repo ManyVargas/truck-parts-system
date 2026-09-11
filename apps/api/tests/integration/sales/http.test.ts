@@ -24,6 +24,7 @@ import { UserRepository } from '../../../src/features/users/repository.js';
 import { disconnectPrisma, prisma } from '../../../src/infrastructure/database/index.js';
 import { createTestApp } from '../../helpers/app.js';
 import { clearTestHistory } from '../../helpers/history.js';
+import { assignNamedCustomerForCredit, cashSaleFullPayment } from '../../helpers/sales.js';
 
 const app = createTestApp();
 const users = new UserRepository();
@@ -199,6 +200,64 @@ describe('M7 draft HTTP shell (SALE-001 draft)', () => {
       base: '118.00',
       itbis: '0.00',
     });
+  });
+
+  it('searches invoices by number or customer across pages', async () => {
+    const admin = await fixture();
+    const generic = await prisma.customer.findFirst({ where: { isDefault: true } });
+    expect(generic).not.toBeNull();
+    const older = await prisma.invoice.create({
+      data: {
+        status: 'COMPLETED',
+        currency: 'DOP',
+        fiscal: false,
+        customerId: generic!.id,
+        number: 'FAC-000881',
+        confirmedAt: new Date('2026-01-01T00:00:00.000Z'),
+        dueDate: new Date('2026-01-15T00:00:00.000Z'),
+        customerName: 'Taller Alpha',
+        gross: '100.00',
+        base: '100.00',
+        itbis: '0.00',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+    });
+    await prisma.invoice.create({
+      data: {
+        status: 'COMPLETED',
+        currency: 'DOP',
+        fiscal: false,
+        customerId: generic!.id,
+        number: 'FAC-000882',
+        confirmedAt: new Date('2026-02-01T00:00:00.000Z'),
+        dueDate: new Date('2026-02-15T00:00:00.000Z'),
+        customerName: 'Flota Beta',
+        gross: '200.00',
+        base: '200.00',
+        itbis: '0.00',
+        createdAt: new Date('2026-02-01T00:00:00.000Z'),
+      },
+    });
+
+    const firstPage = await admin.agent.get(`${ROOT}?page=1&pageSize=1&status=COMPLETED`);
+    expect(firstPage.status).toBe(200);
+    expect(firstPage.body.total).toBe(2);
+    expect(firstPage.body.items[0].number).toBe('FAC-000882');
+    expect(firstPage.body.items.some((item: { id: string }) => item.id === older.id)).toBe(false);
+
+    const byNumber = await admin.agent.get(
+      `${ROOT}?page=1&pageSize=1&status=COMPLETED&q=FAC-000881`,
+    );
+    expect(byNumber.status).toBe(200);
+    expect(byNumber.body).toMatchObject({ total: 1, page: 1, pageSize: 1 });
+    expect(byNumber.body.items).toEqual([
+      expect.objectContaining({ id: older.id, number: 'FAC-000881' }),
+    ]);
+
+    const byCustomer = await admin.agent.get(`${ROOT}?page=1&pageSize=10&q=alpha`);
+    expect(byCustomer.status).toBe(200);
+    expect(byCustomer.body.total).toBe(1);
+    expect(byCustomer.body.items[0].id).toBe(older.id);
   });
 
   it('returns 403 for Mechanic and 400 for unknown fields', async () => {
@@ -378,7 +437,7 @@ describe('M8 draft GENERIC lines (LINE-003)', () => {
     const confirmed = await seller.agent
       .post(`${ROOT}/${draft.body.id}/confirm`)
       .set(CSRF)
-      .send({});
+      .send(cashSaleFullPayment(added.body.totals.gross));
     expect(confirmed.status).toBe(200);
     expect(confirmed.body.lines[0].notes).toBe('Nota final');
 
@@ -967,7 +1026,10 @@ describe('M12 confirmation FAC- snapshot (SALE-001, CUST-003)', () => {
     const dopDraft = await seller.agent.post(ROOT).set(CSRF).send({});
     expect(dopDraft.status).toBe(201);
     await addGenericLine(seller.agent, dopDraft.body.id);
-    const dop = await seller.agent.post(`${ROOT}/${dopDraft.body.id}/confirm`).set(CSRF).send({});
+    const dop = await seller.agent
+      .post(`${ROOT}/${dopDraft.body.id}/confirm`)
+      .set(CSRF)
+      .send(cashSaleFullPayment('118.00'));
     expect(dop.status).toBe(200);
     expect(dop.body).toMatchObject({
       status: 'COMPLETED',
@@ -1018,6 +1080,7 @@ describe('M12 confirmation FAC- snapshot (SALE-001, CUST-003)', () => {
     const admin = await fixture();
     const draft = await admin.agent.post(ROOT).set(CSRF).send({});
     await addGenericLine(admin.agent, draft.body.id);
+    await assignNamedCustomerForCredit(admin.agent, draft.body.id);
     const first = await admin.agent.post(`${ROOT}/${draft.body.id}/confirm`).set(CSRF).send({});
     expect(first.status).toBe(200);
     expect(first.body.number).toBe('FAC-000001');
@@ -1042,6 +1105,8 @@ describe('M12 confirmation FAC- snapshot (SALE-001, CUST-003)', () => {
     const secondDraft = await admin.agent.post(ROOT).set(CSRF).send({});
     await addGenericLine(admin.agent, firstDraft.body.id);
     await addGenericLine(admin.agent, secondDraft.body.id);
+    await assignNamedCustomerForCredit(admin.agent, firstDraft.body.id);
+    await assignNamedCustomerForCredit(admin.agent, secondDraft.body.id);
 
     const [first, second] = await Promise.all([
       admin.agent.post(`${ROOT}/${firstDraft.body.id}/confirm`).set(CSRF).send({}),
@@ -1140,6 +1205,7 @@ describe('M12 confirmation FAC- snapshot (SALE-001, CUST-003)', () => {
     ).toBe(403);
     expect((await admin.agent.post(`${ROOT}/${draft.body.id}/confirm`).send({})).status).toBe(403);
 
+    await assignNamedCustomerForCredit(admin.agent, draft.body.id);
     const confirmed = await admin.agent.post(`${ROOT}/${draft.body.id}/confirm`).set(CSRF).send({});
     expect(confirmed.status).toBe(200);
     const blockedEdit = await admin.agent
@@ -1168,6 +1234,7 @@ describe('M12 confirmation FAC- snapshot (SALE-001, CUST-003)', () => {
     const admin = await fixture();
     const draft = await admin.agent.post(ROOT).set(CSRF).send({});
     await addGenericLine(admin.agent, draft.body.id);
+    await assignNamedCustomerForCredit(admin.agent, draft.body.id);
     vi.spyOn(HistoryRepository.prototype, 'append').mockImplementation(async () => {
       throw new Error('history-unavailable');
     });
@@ -1259,6 +1326,7 @@ describe('M13 DOP profitability Administrator boundary (COST-001..004)', () => {
       ).status,
     ).toBe(201);
 
+    await assignNamedCustomerForCredit(admin.agent, draft.body.id);
     const confirmed = await admin.agent.post(`${ROOT}/${draft.body.id}/confirm`).set(CSRF).send({});
     expect(confirmed.status).toBe(200);
     expect(confirmed.body.profitability).toEqual({
@@ -1319,6 +1387,8 @@ describe('M13 DOP profitability Administrator boundary (COST-001..004)', () => {
     const sellerList = await seller.agent.get(`${ROOT}?status=COMPLETED`);
     expect(sellerList.status).toBe(200);
     expect(sellerList.body.items[0].profitability).toBeUndefined();
+    expect(sellerList.body.items[0].exchangeRateDopPerUsd).toBeUndefined();
+    expect(listed.body.items[0].payments).toEqual([]);
 
     const mechanic = await fixture('MECHANIC');
     expect((await mechanic.agent.get(`${ROOT}/${draft.body.id}`)).status).toBe(403);
@@ -1379,6 +1449,7 @@ describe('M13 DOP profitability Administrator boundary (COST-001..004)', () => {
         })
       ).status,
     ).toBe(201);
+    await assignNamedCustomerForCredit(admin.agent, draft.body.id);
     const confirmed = await admin.agent.post(`${ROOT}/${draft.body.id}/confirm`).set(CSRF).send({});
     expect(confirmed.status).toBe(200);
     expect(confirmed.body.profitability).toEqual({

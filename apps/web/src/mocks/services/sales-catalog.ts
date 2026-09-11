@@ -7,6 +7,7 @@ import type {
   SalesListRow,
   SalesListTab,
 } from '../../api/contracts/sales';
+import { LIST_PAGE_SIZE } from '../../api/contracts/pagination';
 import { can } from '../../shared/auth/policies';
 import {
   invoiceBalance,
@@ -66,7 +67,24 @@ export function matchesSalesTab(invoice: Invoice, tab: SalesListTab): boolean {
   return invoice.status === tab;
 }
 
-export function buildSalesList(state: AppState, tab: SalesListTab = 'ALL'): SalesListRow[] {
+export function matchesSalesSearch(row: SalesListRow, query: string): boolean {
+  const normalized = query.trim().toLowerCase();
+  if (normalized.length === 0) {
+    return true;
+  }
+
+  return (
+    row.number.toLowerCase().includes(normalized) ||
+    row.customerName.toLowerCase().includes(normalized) ||
+    row.id.toLowerCase().includes(normalized)
+  );
+}
+
+export function buildSalesList(
+  state: AppState,
+  tab: SalesListTab = 'ALL',
+  q = '',
+): SalesListRow[] {
   return [...state.invoices]
     .filter((invoice) => matchesSalesTab(invoice, tab))
     .sort((left, right) => {
@@ -74,7 +92,8 @@ export function buildSalesList(state: AppState, tab: SalesListTab = 'ALL'): Sale
       const rightKey = right.confirmedAt ?? right.createdAt;
       return rightKey.localeCompare(leftKey);
     })
-    .map((invoice) => toSalesListRow(state, invoice));
+    .map((invoice) => toSalesListRow(state, invoice))
+    .filter((row) => matchesSalesSearch(row, q));
 }
 
 export function buildReceivables(state: AppState): ReceivablesSnapshot {
@@ -111,6 +130,9 @@ export function buildReceivables(state: AppState): ReceivablesSnapshot {
       const name = left.customerName.localeCompare(right.customerName, 'es');
       return name !== 0 ? name : left.currency.localeCompare(right.currency);
     }),
+    total: invoices.length,
+    page: 1,
+    pageSize: LIST_PAGE_SIZE,
   };
 }
 

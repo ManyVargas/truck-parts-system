@@ -71,11 +71,11 @@ beforeEach(() => {
         updatedAt: '2026-09-07T01:00:00.000Z',
       });
     }
-    if (path === '/api/admin/users?page=1&pageSize=100') {
-      return json({ items: users, total: users.length, page: 1, pageSize: 100 });
+    if (path === '/api/admin/users?page=1&pageSize=10') {
+      return json({ items: users, total: users.length, page: 1, pageSize: 10 });
     }
-    if (path === '/api/admin/users/recovery-requests?page=1&pageSize=100') {
-      return json({ items: recoveries, total: recoveries.length, page: 1, pageSize: 100 });
+    if (path === '/api/admin/users/recovery-requests?page=1&pageSize=10') {
+      return json({ items: recoveries, total: recoveries.length, page: 1, pageSize: 10 });
     }
     if (path === '/api/admin/users' && init?.method === 'POST') {
       const body = JSON.parse(init.body as string);

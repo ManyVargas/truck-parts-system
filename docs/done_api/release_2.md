@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M23 completados; **M24–M25 pendientes**)
+**Estado:** en curso (M1–M24 completados; **M25 pendiente**)
 
 El slice financiero de Release 3 se adelantó en el mismo árbol de código; el registro está en [`release_3.md`](release_3.md), no como milestones M26+ de este archivo.
 
@@ -848,18 +848,39 @@ Rentabilidad (M24). Harness de fallo PDF en UI de demo. S3 / DGII / NCF real.
 
 ## Milestone 24 — Web: rentabilidad HTTP
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-11
 
 ### Objetivo cumplido
 
+Superficie Administrator de profit DOP, COST-005 y retry FX contra la API, con `VITE_USE_MOCK_API=false`. Seller no ve profit.
+
 ### Qué se entregó
+
+- `profitability-api.ts` y `HttpProfitabilityRepository`: snapshot compuesto de `GET /api/sales?status=COMPLETED` (paginado), `POST /api/profitability/:invoiceId/retry`, `POST /api/profitability/:invoiceId/manual-gross-profit`.
+- Cookie same-origin y CSRF `X-Requested-With` en los POST.
+- `VITE_USE_MOCK_API=false` activa capability `profitability`. El detalle HTTP mapea `profitability` del GET de sales al panel Admin.
+- El botón/KPI de tasa de cambio de demostración no existe en HTTP (`setFxAvailable` sigue stub). El mock lo conserva.
 
 ### Decisiones técnicas
 
+- No hay `GET /api/profitability`: el snapshot se arma en el cliente a partir del listado completed (decisión del owner).
+- El mapeo `CALCULATED`/`UNAVAILABLE`/`MANUAL` → vista web ocurre en el adaptador; no se recalcula profit en el browser.
+- Seller/Mechanic: `/profitability` es acceso no autorizado y no llama al listado. El API sigue omitiendo profit para Seller en GET/list.
+- Dashboard KPIs de ganancia y recovery retry permanecen sin swap.
+
 ### Validación
 
+- Unit: `apps/web/tests/unit/api/http-profitability.test.ts`
+- Unit: `apps/web/tests/unit/api/http-sales.test.ts` (mapeo de profit en detalle)
+- Unit: `apps/web/tests/unit/shared/config/capabilities.test.ts` (modo HTTP)
+- Unit: `apps/web/tests/unit/shared/errors/present-app-error.test.ts`
+- Component: `apps/web/tests/component/profitability/HttpProfitabilityFlow.test.tsx`
+- Component: `apps/web/tests/component/sales/HttpSalesFlow.test.tsx` (panel Admin; Seller sin profit)
+
 ### Fuera de alcance (intencional)
+
+Exit gate (M25). Dashboard. `setFxAvailable`. Corrección de costo INV-006. Recovery HTTP.
 
 ---
 

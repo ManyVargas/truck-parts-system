@@ -7,6 +7,7 @@ import {
   EXCHANGE_RATE_API_SOURCE,
   EXCHANGE_RATE_API_TIMEOUT_MS,
   exchangeRateApiHistoryPath,
+  isSameUtcCalendarDay,
 } from './constants.js';
 import type { FxRateLookupQuery, FxRateLookupResult, FxRateProvider, FxRateQuote } from './types.js';
 
@@ -115,7 +116,11 @@ export class ExchangeRateApiClient implements FxRateProvider {
       return { ok: false, reason: 'missing-api-key' };
     }
 
-    const path = query?.asOf ? exchangeRateApiHistoryPath(query.asOf) : EXCHANGE_RATE_API_PAIR_PATH;
+    // History is paid-plan-only and is for past calendar days. Same UTC day uses Pair:
+    // that is today's published USD/DOP rate, not a later day's live rate.
+    const asOf = query?.asOf;
+    const historical = asOf != null && !isSameUtcCalendarDay(asOf, this.now());
+    const path = historical ? exchangeRateApiHistoryPath(asOf) : EXCHANGE_RATE_API_PAIR_PATH;
     const url = `${EXCHANGE_RATE_API_BASE_URL}/${this.apiKey}/${path}`;
     try {
       const response = await this.fetchImpl(url, {
@@ -124,7 +129,7 @@ export class ExchangeRateApiClient implements FxRateProvider {
         signal: AbortSignal.timeout(this.timeoutMs),
       });
       const payload = asRecord(await response.json());
-      return this.parsePayload(payload, query?.asOf != null);
+      return this.parsePayload(payload, historical);
     } catch (error) {
       if (isTimeoutError(error)) {
         return { ok: false, reason: 'timeout' };

@@ -1,4 +1,5 @@
 import type { UserRepository } from '../../api/contracts/repositories';
+import { toListPage } from '../../api/contracts/pagination';
 import type { ResolveRecoveryInput, SaveUserInput } from '../../api/contracts/users';
 import { err, ok } from '../../shared/auth/types';
 import { requirePermission } from '../services/require-permission';
@@ -6,13 +7,13 @@ import { prepareUserSave, sortManagedUsers, toManagedUser } from '../services/us
 import { cloneForRead, getMockState } from '../state';
 
 export class MockUserRepository implements UserRepository {
-  async list() {
+  async list(page = 1) {
     const permission = requirePermission('users.manage');
     if (!permission.ok) {
       return permission;
     }
 
-    return ok(cloneForRead(sortManagedUsers(getMockState().users.map(toManagedUser))));
+    return ok(toListPage(cloneForRead(sortManagedUsers(getMockState().users.map(toManagedUser))), page));
   }
 
   async save(input: SaveUserInput) {

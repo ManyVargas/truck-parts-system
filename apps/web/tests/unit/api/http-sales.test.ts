@@ -59,38 +59,37 @@ function json(body: unknown, status = 200) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('HTTP sales draft contract', () => {
-  it('lists drafts and completed invoices and leaves cancelled empty', async () => {
+  it('lists one API page for ALL without concatenating status filters', async () => {
+    const completed = {
+      ...invoiceWithTotal,
+      id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      status: 'COMPLETED' as const,
+      balance: '118.00',
+      number: 'FAC-000001',
+      customer: { ...cashCustomer, name: 'Nombre al confirmar' },
+      confirmedAt: '2026-09-09T13:00:00.000Z',
+      createdAt: '2026-09-09T13:00:00.000Z',
+    };
     const fetchMock = vi.fn(async (path: string) => {
       const url = String(path);
-      if (url.startsWith('/api/sales?status=DRAFT')) {
+      if (url === '/api/sales?page=1&pageSize=10') {
         return json({
-          items: [invoiceWithTotal],
-          total: 1,
+          items: [completed, invoiceWithTotal],
+          total: 12,
           page: 1,
-          pageSize: 100,
+          pageSize: 10,
         });
       }
       if (url.startsWith('/api/sales?status=COMPLETED')) {
         return json({
-          items: [
-            {
-              ...invoiceWithTotal,
-              id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
-              status: 'COMPLETED',
-              balance: '118.00',
-              number: 'FAC-000001',
-              customer: { ...cashCustomer, name: 'Nombre al confirmar' },
-              confirmedAt: '2026-09-09T13:00:00.000Z',
-              createdAt: '2026-09-09T13:00:00.000Z',
-            },
-          ],
+          items: [completed],
           total: 1,
           page: 1,
-          pageSize: 100,
+          pageSize: 10,
         });
       }
       if (url.startsWith('/api/sales?status=CANCELLED')) {
-        return json({ items: [], total: 0, page: 1, pageSize: 100 });
+        return json({ items: [], total: 0, page: 1, pageSize: 10 });
       }
       throw new Error(`Unexpected ${path}`);
     });
@@ -99,37 +98,64 @@ describe('HTTP sales draft contract', () => {
     const all = await repository.listInvoices('ALL');
     expect(all.ok).toBe(true);
     if (all.ok) {
-      expect(all.value.map((row) => row.number)).toEqual(['FAC-000001', `Borrador ${draftId}`]);
-      expect(all.value[0]).toMatchObject({
+      expect(all.value).toMatchObject({
+        total: 12,
+        page: 1,
+        pageSize: 10,
+      });
+      expect(all.value.items.map((row) => row.number)).toEqual(['FAC-000001', `Borrador ${draftId}`]);
+      expect(all.value.items[0]).toMatchObject({
         status: 'COMPLETED',
         href: '/sales/cccccccc-cccc-4ccc-8ccc-cccccccccccc',
         customerName: 'Nombre al confirmar',
         balance: 118,
       });
-      expect(all.value[1]).toMatchObject({
-        status: 'DRAFT',
-        href: `/sales/draft/${draftId}`,
-        balance: 0,
-      });
     }
-    expect(fetchMock.mock.calls.map(([requestPath]) => requestPath)).toEqual(
-      expect.arrayContaining([
-        '/api/sales?status=DRAFT&page=1&pageSize=100',
-        '/api/sales?status=COMPLETED&page=1&pageSize=100',
-      ]),
-    );
+    expect(fetchMock.mock.calls.map(([requestPath]) => requestPath)).toEqual([
+      '/api/sales?page=1&pageSize=10',
+    ]);
 
     fetchMock.mockClear();
-    const completed = await repository.listInvoices('COMPLETED');
-    expect(completed).toMatchObject({
+    const completedPage = await repository.listInvoices('COMPLETED');
+    expect(completedPage).toMatchObject({
       ok: true,
-      value: [{ number: 'FAC-000001', status: 'COMPLETED' }],
+      value: { items: [{ number: 'FAC-000001', status: 'COMPLETED' }], total: 1 },
     });
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/sales?status=COMPLETED&page=1&pageSize=100');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/sales?status=COMPLETED&page=1&pageSize=10');
 
     fetchMock.mockClear();
-    expect(await repository.listInvoices('CANCELLED')).toEqual({ ok: true, value: [] });
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/sales?status=CANCELLED&page=1&pageSize=100');
+    expect(await repository.listInvoices('CANCELLED')).toEqual({
+      ok: true,
+      value: { items: [], total: 0, page: 1, pageSize: 10 },
+    });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/sales?status=CANCELLED&page=1&pageSize=10');
+  });
+
+  it('sends the search query so a match is not limited to the current page', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      json({
+        items: [
+          {
+            ...invoiceWithTotal,
+            id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+            status: 'COMPLETED',
+            number: 'FAC-000099',
+            customer: { ...cashCustomer, name: 'Flota Este' },
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 10,
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await repository.listInvoices('ALL', 1, '  FAC-000099  ');
+    expect(result).toMatchObject({
+      ok: true,
+      value: { items: [{ number: 'FAC-000099' }], total: 1 },
+    });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/sales?page=1&pageSize=10&q=FAC-000099');
   });
 
   it('creates a draft with CSRF and loads lookups on getDraft', async () => {
@@ -142,7 +168,7 @@ describe('HTTP sales draft contract', () => {
           items: [{ ...cashCustomer, address: null, notes: null, contacts: [] }],
           total: 1,
           page: 1,
-          pageSize: 100,
+          pageSize: 10,
         });
       }
       if (url === '/api/catalogs/services') return json({ items: [installation] });
@@ -249,7 +275,7 @@ describe('HTTP sales draft contract', () => {
           items: [{ ...cashCustomer, address: null, notes: null, contacts: [] }],
           total: 1,
           page: 1,
-          pageSize: 100,
+          pageSize: 10,
         });
       }
       if (url === '/api/catalogs/services') return json({ items: [installation] });
@@ -309,7 +335,7 @@ describe('HTTP sales draft contract', () => {
           items: [{ ...cashCustomer, address: null, notes: null, contacts: [] }],
           total: 1,
           page: 1,
-          pageSize: 100,
+          pageSize: 10,
         });
       }
       if (String(path) === '/api/catalogs/services') return json({ items: [installation] });
@@ -450,7 +476,7 @@ describe('HTTP sales draft contract', () => {
           items: [{ ...cashCustomer, address: null, notes: null, contacts: [] }],
           total: 1,
           page: 1,
-          pageSize: 100,
+          pageSize: 10,
         });
       }
       if (String(path) === '/api/catalogs/services') return json({ items: [installation] });
@@ -479,7 +505,7 @@ describe('HTTP sales draft contract', () => {
     });
   });
 
-  it('loads completed invoice detail from the snapshot with PDF ready and without profit', async () => {
+  it('loads completed invoice detail from the snapshot with PDF ready and mapped profit', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(
@@ -491,7 +517,12 @@ describe('HTTP sales draft contract', () => {
           currency: 'USD',
           customer: { ...cashCustomer, name: 'Snapshot', rnc: '131098765' },
           confirmedAt: '2026-09-09T13:00:00.000Z',
-          profitability: { status: 'AVAILABLE', profitDop: '10.00' },
+          profitability: {
+            status: 'CALCULATED',
+            reason: null,
+            profitDop: '10.00',
+            margin: '8.47',
+          },
           document: { status: 'READY' },
           history: [
             {
@@ -546,6 +577,12 @@ describe('HTTP sales draft contract', () => {
           },
         ],
         document: { status: 'READY' },
+        profitability: {
+          currency: 'DOP',
+          profit: 10,
+          pendingFx: false,
+          source: 'CALCULATED',
+        },
         actions: {
           canPay: true,
           canCancel: true,
@@ -556,7 +593,12 @@ describe('HTTP sales draft contract', () => {
       },
     });
     if (result.ok) {
-      expect(result.value.profitability).toBeUndefined();
+      expect(result.value.profitability).toEqual({
+        currency: 'DOP',
+        profit: 10,
+        pendingFx: false,
+        source: 'CALCULATED',
+      });
     }
   });
 

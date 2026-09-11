@@ -44,6 +44,9 @@ export type CustomerOutstandingRow = {
 export type ReceivablesSnapshot = {
   invoices: SalesListRow[];
   customers: CustomerOutstandingRow[];
+  total: number;
+  page: number;
+  pageSize: number;
 };
 
 export type InvoiceLineView = {

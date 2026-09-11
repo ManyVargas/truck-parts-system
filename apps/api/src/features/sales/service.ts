@@ -44,6 +44,7 @@ import {
   sumInvoiceMoney,
 } from './money/index.js';
 import {
+  assertCashCustomerPaidInFull,
   assertDraftLineCostEditable,
   assertDraftLineDescriptionEditable,
   assertDraftLineQuantityEditable,
@@ -435,6 +436,7 @@ export class SalesService {
         if (initialPaymentAmount?.greaterThan(totals.gross)) {
           throw AppError.conflict(PAYMENT_EXCEEDS_BALANCE_MESSAGE);
         }
+        assertCashCustomerPaidInFull(customer, totals.gross, initialPaymentAmount);
         const number = await sales.allocateNextNumber();
         const confirmedAt = new Date();
         const primaryPhone = customer.contacts.find((contact) => contact.isPrimary)?.phone ?? null;

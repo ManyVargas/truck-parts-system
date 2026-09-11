@@ -57,12 +57,17 @@ import {
   resolveRecoveryWithHttp,
   saveUserWithHttp,
 } from '../client/users-api';
+import {
+  getProfitabilitySnapshotWithHttp,
+  recordManualGrossProfitWithHttp,
+  retryUsdProfitabilityWithHttp,
+} from '../client/profitability-api';
 import { httpNotImplemented } from '../client/http-not-implemented';
 
 /**
  * Access/profile (R1), customers (M19), services (M20), POS drafts (M21),
- * confirmation (M22) and PDF (M23) use the real API. Profit and later-release
- * repositories stay stubbed; capability guards keep those screens out of HTTP mode.
+ * confirmation (M22), PDF (M23) and profitability (M24) use the real API.
+ * Dashboard KPIs, recovery and inventory remain stubbed.
  */
 export class HttpAuthRepository implements AuthRepository {
   async login(username: string, password: string) {
@@ -91,8 +96,8 @@ export class HttpAuthRepository implements AuthRepository {
 }
 
 export class HttpUserRepository implements UserRepository {
-  async list() {
-    return listUsersWithHttp();
+  async list(page = 1) {
+    return listUsersWithHttp(page);
   }
 
   async save(input: Parameters<UserRepository['save']>[0]) {
@@ -191,8 +196,8 @@ export class HttpCustomerRepository implements CustomerRepository {
     return listCustomersWithHttp();
   }
 
-  async search(query: string) {
-    return searchCustomersWithHttp(query);
+  async search(query: string, page = 1) {
+    return searchCustomersWithHttp(query, page);
   }
 
   async getById(id: string) {
@@ -205,12 +210,16 @@ export class HttpCustomerRepository implements CustomerRepository {
 }
 
 export class HttpSalesRepository implements SalesRepository {
-  async listInvoices(tab?: Parameters<SalesRepository['listInvoices']>[0]) {
-    return listInvoicesWithHttp(tab);
+  async listInvoices(
+    tab?: Parameters<SalesRepository['listInvoices']>[0],
+    page = 1,
+    q?: string,
+  ) {
+    return listInvoicesWithHttp(tab, page, q);
   }
 
-  async listReceivables() {
-    return listReceivablesWithHttp();
+  async listReceivables(page = 1) {
+    return listReceivablesWithHttp(page);
   }
 
   async getInvoice(id: string) {
@@ -358,19 +367,21 @@ export class HttpDashboardRepository implements DashboardRepository {
 
 export class HttpProfitabilityRepository implements ProfitabilityRepository {
   async getSnapshot() {
-    return httpNotImplemented('HttpProfitabilityRepository', 'getSnapshot');
+    return getProfitabilitySnapshotWithHttp();
   }
 
-  async setFxAvailable() {
+  async setFxAvailable(_input: Parameters<ProfitabilityRepository['setFxAvailable']>[0]) {
     return httpNotImplemented('HttpProfitabilityRepository', 'setFxAvailable');
   }
 
-  async retryUsd() {
-    return httpNotImplemented('HttpProfitabilityRepository', 'retryUsd');
+  async retryUsd(input: Parameters<ProfitabilityRepository['retryUsd']>[0]) {
+    return retryUsdProfitabilityWithHttp(input);
   }
 
-  async recordManualGrossProfit() {
-    return httpNotImplemented('HttpProfitabilityRepository', 'recordManualGrossProfit');
+  async recordManualGrossProfit(
+    input: Parameters<ProfitabilityRepository['recordManualGrossProfit']>[0],
+  ) {
+    return recordManualGrossProfitWithHttp(input);
   }
 }
 

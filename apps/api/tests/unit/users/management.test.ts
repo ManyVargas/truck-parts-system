@@ -45,7 +45,7 @@ describe('M8 input boundaries and service policies', () => {
   });
 
   it('bounds pagination and requires explicit verification only for approval', () => {
-    expect(paginationSchema.parse({})).toEqual({ page: 1, pageSize: 20 });
+    expect(paginationSchema.parse({})).toEqual({ page: 1, pageSize: 10 });
     for (const input of [{ page: 0 }, { page: 'NaN' }, { page: 1.5 }, { pageSize: 101 }]) {
       expect(paginationSchema.safeParse(input).success).toBe(false);
     }

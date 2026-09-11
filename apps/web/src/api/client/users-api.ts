@@ -5,11 +5,11 @@ import type {
   ResolveRecoveryResult,
   SaveUserInput,
 } from '../contracts/users';
+import { LIST_PAGE_SIZE, type ListPage } from '../contracts/pagination';
 import { err, ok, type Result } from '../../shared/auth/types';
 import { httpClient, toAppError } from './http-client';
 
 const USERS_PATH = '/api/admin/users';
-const PAGE_SIZE = 100;
 const CSRF_HEADERS = { 'X-Requested-With': 'XMLHttpRequest' };
 
 type ApiUser = Omit<ManagedUser, 'phone' | 'email'> & {
@@ -70,7 +70,7 @@ async function loadAllPages<T>(path: string): Promise<T[]> {
   let total = 0;
 
   do {
-    const response = await httpClient<Page<T>>(`${path}?page=${page}&pageSize=${PAGE_SIZE}`);
+    const response = await httpClient<Page<T>>(`${path}?page=${page}&pageSize=${LIST_PAGE_SIZE}`);
     items.push(...response.items);
     total = response.total;
     if (response.items.length === 0) break;
@@ -80,8 +80,18 @@ async function loadAllPages<T>(path: string): Promise<T[]> {
   return items;
 }
 
-export function listUsersWithHttp(): Promise<Result<ManagedUser[]>> {
-  return request(async () => (await loadAllPages<ApiUser>(USERS_PATH)).map(toManagedUser));
+export function listUsersWithHttp(page = 1): Promise<Result<ListPage<ManagedUser>>> {
+  return request(async () => {
+    const response = await httpClient<Page<ApiUser>>(
+      `${USERS_PATH}?page=${page}&pageSize=${LIST_PAGE_SIZE}`,
+    );
+    return {
+      items: response.items.map(toManagedUser),
+      total: response.total,
+      page: response.page,
+      pageSize: response.pageSize,
+    };
+  });
 }
 
 function toAdministrativeProfile(input: SaveUserInput) {

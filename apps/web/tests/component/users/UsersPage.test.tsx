@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { UsersPage } from '../../../src/features/users/UsersPage';
 import { mockAuthRepository } from '../../../src/mocks/repositories/MockAuthRepository';
-import { resetMockState } from '../../../src/mocks/state';
+import { getMockState, resetMockState } from '../../../src/mocks/state';
 import { renderWithProviders } from '../../support/render';
 import { signInAs } from '../../support/session';
 import '../../support/dom';
@@ -61,6 +61,30 @@ describe('UsersPage', () => {
     await user.type(screen.getByLabelText('Buscar por nombre o usuario'), 'pedro');
     expect(await screen.findByText('Pedro Santana')).toBeVisible();
     expect(screen.queryByText('Laura Pérez')).not.toBeInTheDocument();
+  });
+
+  it('finds a user outside the current page', async () => {
+    const state = getMockState();
+    for (let index = 0; index < 10; index += 1) {
+      state.users.push({
+        id: `U-PAGE-${index}`,
+        name: index === 9 ? 'Zeta Remoto' : `Usuario ${String(index).padStart(2, '0')}`,
+        username: index === 9 ? 'zeta' : `usuario-${index}`,
+        password: 'demo1234',
+        role: 'SELLER',
+        active: true,
+      });
+    }
+
+    const user = userEvent.setup();
+    renderWithProviders(<UsersPage />, { route: '/users' });
+    expect(await screen.findByText('Mostrando 1–10 de 14')).toBeVisible();
+    expect(screen.queryByText('Zeta Remoto')).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Buscar por nombre o usuario'), 'zeta');
+
+    expect(await screen.findByText('Zeta Remoto')).toBeVisible();
+    expect(screen.getByText('Mostrando 1–1 de 1')).toBeVisible();
   });
 
   it('asks before deactivating and keeps the account if cancelled', async () => {

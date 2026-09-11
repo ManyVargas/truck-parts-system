@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import type { CustomerOutstandingRow, SalesListRow } from '../../api/contracts/sales';
-import { Info, SearchInput, Skeleton, toPageLoadMessage } from '../../shared/ui';
+import { parseListPage, setListPageParam } from '../../api/contracts/pagination';
+import { Info, PaginationBar, SearchInput, Skeleton, toPageLoadMessage } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
 import { CustomerOutstandingTable, OpenReceivablesTable } from './ReceivablesTables';
 import { useReceivables } from './useReceivables';
@@ -15,8 +17,10 @@ function matchesCustomerName(name: string, query: string): boolean {
 }
 
 export function ReceivablesPage() {
-  const result = useReceivables();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = parseListPage(searchParams.get('page'));
   const [query, setQuery] = useState('');
+  const result = useReceivables(page, query);
   const hasQuery = query.trim().length > 0;
 
   const customers = useMemo((): CustomerOutstandingRow[] => {
@@ -59,7 +63,17 @@ export function ReceivablesPage() {
           label="Filtrar por nombre del cliente"
           placeholder="Nombre del cliente…"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setSearchParams(
+              (prev) => {
+                const nextParams = new URLSearchParams(prev);
+                setListPageParam(nextParams, 1);
+                return nextParams;
+              },
+              { replace: true },
+            );
+          }}
         />
       </div>
       <section className="mb-8">
@@ -70,6 +84,21 @@ export function ReceivablesPage() {
         <section>
           <h2 className="mb-3 text-sm font-semibold text-navy">Facturas abiertas</h2>
           <OpenReceivablesTable rows={invoices} hasQuery={hasQuery} />
+          <PaginationBar
+            page={result.snapshot.page}
+            pageSize={result.snapshot.pageSize}
+            total={result.snapshot.total}
+            onPageChange={(nextPage) => {
+              setSearchParams(
+                (prev) => {
+                  const nextParams = new URLSearchParams(prev);
+                  setListPageParam(nextParams, nextPage);
+                  return nextParams;
+                },
+                { replace: true },
+              );
+            }}
+          />
         </section>
       )}
     </>

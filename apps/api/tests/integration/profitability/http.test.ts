@@ -15,6 +15,7 @@ import { UserRepository } from '../../../src/features/users/repository.js';
 import { disconnectPrisma, prisma } from '../../../src/infrastructure/database/index.js';
 import { createTestApp } from '../../helpers/app.js';
 import { clearTestHistory } from '../../helpers/history.js';
+import { assignNamedCustomerForCredit } from '../../helpers/sales.js';
 
 const app = createTestApp();
 const users = new UserRepository();
@@ -70,6 +71,7 @@ describe('M14 COST-005 judged gross profit', () => {
         })
       ).status,
     ).toBe(201);
+    await assignNamedCustomerForCredit(agent, draft.body.id);
     const confirmed = await agent.post(`${SALES}/${draft.body.id}/confirm`).set(CSRF).send({});
     expect(confirmed.status).toBe(200);
     return confirmed.body;
@@ -163,6 +165,7 @@ describe('M14 COST-005 judged gross profit', () => {
         })
       ).status,
     ).toBe(201);
+    await assignNamedCustomerForCredit(admin.agent, estimatedDraft.body.id);
     const estimated = await admin.agent
       .post(`${SALES}/${estimatedDraft.body.id}/confirm`)
       .set(CSRF)
@@ -186,6 +189,7 @@ describe('M14 COST-005 judged gross profit', () => {
         })
       ).status,
     ).toBe(201);
+    await assignNamedCustomerForCredit(admin.agent, usdDraft.body.id);
     const usd = await admin.agent.post(`${SALES}/${usdDraft.body.id}/confirm`).set(CSRF).send({});
     const usdDenied = await admin.agent
       .post(`${PROFIT}/${usd.body.id}/manual-gross-profit`)

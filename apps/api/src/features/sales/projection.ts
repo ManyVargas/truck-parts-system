@@ -29,6 +29,7 @@ import type {
   PublicInvoiceLine,
   PublicCustomerOutstanding,
   PublicInvoiceListItem,
+  PublicInvoiceListPayment,
   PublicProfitability,
   PublicReceivableInvoice,
   PublicReceivables,
@@ -317,12 +318,25 @@ export function toPublicInvoice(
   };
 }
 
+function toPublicListPayments(invoice: InvoiceListRecord): PublicInvoiceListPayment[] {
+  return invoice.payments.map((entry) => ({
+    kind: entry.kind,
+    amount: moneyString(entry.amount),
+    method: entry.method,
+    effectiveDate: databaseDateString(entry.effectiveDate),
+  }));
+}
+
 export function toPublicInvoiceListItem(
   invoice: InvoiceListRecord,
   viewer: InvoiceViewer,
 ): PublicInvoiceListItem {
   const profitability = administratorProfitability(invoice, viewer);
   const payment = summarizePayments(invoice);
+  const storedRate =
+    viewer.role === 'ADMINISTRATOR' && invoice.exchangeRateDopPerUsd != null
+      ? invoice.exchangeRateDopPerUsd.toString()
+      : undefined;
   return {
     id: invoice.id,
     status: invoice.status,
@@ -334,9 +348,11 @@ export function toPublicInvoiceListItem(
     confirmedAt: invoice.confirmedAt?.toISOString() ?? null,
     dueDate: invoice.dueDate ? databaseDateString(invoice.dueDate) : null,
     paymentState: payment.state,
+    payments: toPublicListPayments(invoice),
     balance: moneyString(payment.balance),
     totals: invoiceTotals(invoice),
     ...(profitability ? { profitability: profitability.invoice } : {}),
+    ...(storedRate ? { exchangeRateDopPerUsd: storedRate } : {}),
     createdAt: invoice.createdAt.toISOString(),
     updatedAt: invoice.updatedAt.toISOString(),
   };

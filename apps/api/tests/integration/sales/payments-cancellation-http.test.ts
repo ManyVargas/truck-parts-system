@@ -13,9 +13,11 @@ import {
   invoiceDueDate,
 } from '../../../src/features/payments/dates.js';
 import { UserRepository } from '../../../src/features/users/repository.js';
+import { CASH_CUSTOMER_CREDIT_FORBIDDEN_MESSAGE } from '../../../src/features/sales/constants.js';
 import { disconnectPrisma, prisma } from '../../../src/infrastructure/database/index.js';
 import { createTestApp } from '../../helpers/app.js';
 import { clearTestHistory } from '../../helpers/history.js';
+import { assignNamedCustomerForCredit } from '../../helpers/sales.js';
 
 const users = new UserRepository();
 const PASSWORD = 'personal-password';
@@ -51,6 +53,9 @@ async function confirmInvoice(agent: request.Agent, body: Record<string, unknown
     unitPrice: '1000.00',
     costProvenance: 'UNKNOWN',
   });
+  if (!body.payment) {
+    await assignNamedCustomerForCredit(agent, draft.body.id);
+  }
   const confirmed = await agent.post(`${SALES}/${draft.body.id}/confirm`).set(CSRF).send(body);
   expect(confirmed.status).toBe(200);
   return confirmed.body;
@@ -62,6 +67,8 @@ async function cleanup() {
   await prisma.invoicePayment.deleteMany();
   await prisma.invoice.deleteMany();
   await prisma.invoiceSequence.update({ where: { name: 'FAC' }, data: { nextValue: 1 } });
+  await prisma.customerContact.deleteMany({ where: { customer: { isDefault: false } } });
+  await prisma.customer.deleteMany({ where: { isDefault: false } });
   await prisma.session.deleteMany();
   await prisma.user.deleteMany();
 }
@@ -88,6 +95,32 @@ describe('payments, due date, and cancellation HTTP', () => {
     expect(invoice).toMatchObject({ paymentState: 'PAID', paid: '1000.00', balance: '0.00' });
     expect(retry.status).toBe(200);
     expect(await prisma.invoicePayment.count({ where: { invoiceId: invoice.id } })).toBe(1);
+  });
+
+  it('rejects confirming Cliente contado without a full initial payment', async () => {
+    const seller = await fixture(request.agent(createTestApp()), 'SELLER');
+    const draft = await seller.agent.post(SALES).set(CSRF).send({});
+    await seller.agent.post(`${SALES}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'GENERIC',
+      description: 'Filtro de aceite',
+      unitPrice: '1000.00',
+      costProvenance: 'UNKNOWN',
+    });
+
+    const unpaid = await seller.agent.post(`${SALES}/${draft.body.id}/confirm`).set(CSRF).send({});
+    expect(unpaid.status).toBe(409);
+    expect(unpaid.body.error.message).toBe(CASH_CUSTOMER_CREDIT_FORBIDDEN_MESSAGE);
+
+    const partial = await seller.agent.post(`${SALES}/${draft.body.id}/confirm`).set(CSRF).send({
+      payment: { amount: '250.00', method: 'CASH' },
+    });
+    expect(partial.status).toBe(409);
+    expect(partial.body.error.message).toBe(CASH_CUSTOMER_CREDIT_FORBIDDEN_MESSAGE);
+
+    expect(await prisma.invoice.findUnique({ where: { id: draft.body.id } })).toMatchObject({
+      status: 'DRAFT',
+      number: null,
+    });
   });
 
   it('snapshots seller and fixed due date, then records an idempotent partial payment', async () => {

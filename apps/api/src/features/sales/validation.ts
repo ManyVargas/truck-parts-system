@@ -13,7 +13,7 @@ export const invoiceIdSchema = z.strictObject({ id: z.uuid() });
 
 export const paginationSchema = z.strictObject({
   page: z.coerce.number().int().min(1).max(1000000).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  pageSize: z.coerce.number().int().min(1).max(100).default(10),
 });
 
 export const invoiceCurrencySchema = z.enum(['DOP', 'USD']);
@@ -32,6 +32,7 @@ export const updateDraftMetaSchema = createDraftSchema.refine(
 
 export const listInvoicesSchema = paginationSchema.extend({
   status: invoiceStatusSchema.optional(),
+  q: z.string().trim().optional(),
 });
 
 export const listReceivablesSchema = paginationSchema.extend({

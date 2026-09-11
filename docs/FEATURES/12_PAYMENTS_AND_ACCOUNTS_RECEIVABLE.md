@@ -60,7 +60,7 @@ Advanced AR such as aging buckets, credit limits, interest, collection promises/
 
 ## Feature-level acceptance criteria
 
-- Completed invoice supports zero, partial, or full payment.
+- Completed invoice supports zero, partial, or full payment for named customers; `Cliente contado` requires full payment at confirmation.
 - Multiple payments and mixed payment methods are preserved as separate records.
 - Duplicate submission cannot record the same payment twice.
 - Overpayment is rejected under current policy.
@@ -78,7 +78,7 @@ Advanced AR such as aging buckets, credit limits, interest, collection promises/
 - [x] Payment idempotency/retry protection.
 - [x] Same-currency and positive-balance validation.
 - [x] Derived payment state/balance service.
-- [x] Initial payment at confirmation coordination.
+- [x] Initial payment at confirmation coordination. _(`Cliente contado` must pay the full total; named customers remain optional/partial)_
 - [x] Additional/partial/mixed-method payment commands.
 - [x] Fixed 30-calendar-day due date and calculated Pending/Overdue/Paid/Paid-late states.
 - [x] Effective-date range and chronological settlement rules.
@@ -101,7 +101,7 @@ Advanced AR such as aging buckets, credit limits, interest, collection promises/
 
 ### Tests
 
-- [x] Zero/partial/full payment cases.
+- [x] Zero/partial/full payment cases. _(`Cliente contado` rejects zero/partial at confirm)_
 - [x] Multiple/mixed-method cases.
 - [x] Duplicate/concurrent payment tests.
 - [x] Overpayment and cross-currency rejection.
@@ -119,8 +119,8 @@ The blocks below are the final reconciled requirements retained from the previou
 **Requirement:** A completed invoice may be fully paid, partially paid, or unpaid on credit, with a calculated outstanding balance in exactly the invoice currency.  
 **Business Reason:** Both cash and credit sales are normal.  
 **Main Flow:** User records sale terms and any initial payment; the system calculates paid and outstanding amounts.  
-**Business Rules:** Inventory is Sold at invoice confirmation regardless of payment completion; payments and balance must use the invoice currency.  
-**Important Exceptions/Edge Cases:** Cross-currency payment and any conversion of an operational payment or balance amount are rejected. This does not restrict the profitability-only cost conversion in COST-003, which never changes a payment, balance, or refund.  
+**Business Rules:** Inventory is Sold at invoice confirmation regardless of payment completion; payments and balance must use the invoice currency. Exception (owner 2026-09-11): `Cliente contado` cannot remain unpaid or partially paid at confirmation; the initial payment must equal the invoice total. Named customers may still be unpaid, partial, or paid.  
+**Important Exceptions/Edge Cases:** Cross-currency payment and any conversion of an operational payment or balance amount are rejected. This does not restrict the profitability-only cost conversion in COST-003, which never changes a payment, balance, or refund. Confirming `Cliente contado` without a full initial payment returns a conflict and does not complete the sale.  
 **Dependencies:** SALE-005, PAY-002.  
 **Acceptance Notes:** Payment state and balance match zero, partial, and full initial payments.
 

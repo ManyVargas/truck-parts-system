@@ -1,4 +1,5 @@
 import type { SalesRepository } from '../../api/contracts/repositories';
+import { toListPage } from '../../api/contracts/pagination';
 import type {
   AddDraftLineInput,
   AddPaymentInput,
@@ -31,22 +32,30 @@ import { requirePermission } from '../services/require-permission';
 import { cloneForRead, getMockState } from '../state';
 
 export class MockSalesRepository implements SalesRepository {
-  async listInvoices(tab: SalesListTab = 'ALL') {
+  async listInvoices(tab: SalesListTab = 'ALL', page = 1, q = '') {
     const permission = requirePermission('sales.manage');
     if (!permission.ok) {
       return permission;
     }
 
-    return ok(cloneForRead(buildSalesList(getMockState(), tab)));
+    return ok(toListPage(cloneForRead(buildSalesList(getMockState(), tab, q)), page));
   }
 
-  async listReceivables() {
+  async listReceivables(page = 1) {
     const permission = requirePermission('sales.manage');
     if (!permission.ok) {
       return permission;
     }
 
-    return ok(cloneForRead(buildReceivables(getMockState())));
+    const snapshot = cloneForRead(buildReceivables(getMockState()));
+    const paged = toListPage(snapshot.invoices, page);
+    return ok({
+      invoices: paged.items,
+      customers: snapshot.customers,
+      total: paged.total,
+      page: paged.page,
+      pageSize: paged.pageSize,
+    });
   }
 
   async getInvoice(id: string) {

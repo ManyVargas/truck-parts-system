@@ -43,7 +43,7 @@ Owner pulled **Release 3 financial work** into the local codebase before Release
 
 **Owner decisions (2026-09-10):**
 
-1. Release 2 stays **ACTIVE** until **M24** (profitability HTTP) and **M25** (exit gate) are closed. Do not mark Billing Core COMPLETED yet.
+1. Release 2 stays **ACTIVE** until **M25** (exit gate) is closed. **M24** profitability HTTP is done. Do not mark Billing Core COMPLETED yet.
 2. Release 3 stays **open**. The pulled-forward slice is not the full spec: remaining Feature 12/13 checklist items that belong to this release must still be implemented. Do not skip them.
 3. No `plans_api/plan_release_3.md` for now; `docs/done_api/release_3.md` is the delivery record.
 4. Prototype-mock `[x]` items stay `[x]` with mock/API notes; do not uncheck them.
@@ -52,8 +52,8 @@ Owner pulled **Release 3 financial work** into the local codebase before Release
 | Slice | Production API + tests | HTTP UI (`VITE_USE_MOCK_API` ≠ `true`) | Prototype mock only |
 |---|---|---|---|
 | Release 1 Access/Users | Done | Done | Done |
-| Release 2 Billing Core (customers, service catalog, non-inventory lines, confirm/`FAC-`, PDF, cost/FX/profit **API**) | Done | Customers, `/catalogs` services, POS non-inventory, confirm, PDF. **Profitability capability off**; `HttpProfitabilityRepository` is still stub (`httpNotImplemented`) | Full demo including profit |
-| Release 2 remaining | — | **M24** profitability HTTP swap; **M25** exit-gate verification | — |
+| Release 2 Billing Core (customers, service catalog, non-inventory lines, confirm/`FAC-`, PDF, cost/FX/profit **API**) | Done | Customers, `/catalogs` services, POS non-inventory, confirm, PDF, **profitability HTTP (M24)** | Full demo including profit |
+| Release 2 remaining | — | **M25** exit-gate verification | — |
 | Release 3 payments, balances, basic CxC, non-inventory cancel/refund | **Pulled forward — done** (`InvoicePayment`, due date, `POST /payments`, `GET /receivables`, `POST /cancel`) | **Pulled forward — done** (pay, CxC `/receivables`, cancel). Confirm may record an initial payment | Done |
 | Release 3 remaining | **Still required** after R2 M24/M25: Feature 12 open checklist (receivables filters by customer, invoice, payment state including Paid/Paid-late, date, and currency; UI must use API query params). Aging/collections stay deferred as specified. Inventory/WO cancellation is R5/R7, not this remainder. | Same filters on `/receivables` HTTP UI | — |
 | Release 3B Accounts Payable | Not started | Not started | Not in confirmed scope |
@@ -61,13 +61,13 @@ Owner pulled **Release 3 financial work** into the local codebase before Release
 | Release 5 reservations and ITEM/QTY sales | **Not started**; ITEM/QTY draft lines return business **409** | Capabilities off | Lines, reserve, consume |
 | Release 6 hierarchy / baseline | **Not started** | Off | Checklist, tree, No desarmar |
 | Release 7 Work Orders / installed-assembly sale | **Not started** | Off | Desktop + mechanic flows |
-| Release 8 protected corrections, recovery, diagnostics | PDF regenerate **done**. USD profit retry is **`POST /api/profitability/:invoiceId/retry`**, not a recovery module. Cost/currency/baseline corrections **not** in API | PDF regenerate in invoice detail. Profit retry/manual gross-profit HTTP **not** wired | Currency correction, recovery screens, WO/reservation recovery |
+| Release 8 protected corrections, recovery, diagnostics | PDF regenerate **done**. USD profit retry is **`POST /api/profitability/:invoiceId/retry`**, not a recovery module. Cost/currency/baseline corrections **not** in API | PDF regenerate in invoice detail. Profit retry/manual gross-profit **HTTP wired (M24)** on `/profitability`. Recovery module still mock | Currency correction, recovery screens, WO/reservation recovery |
 
 **Partial modules (do not “finish” by duplicating the done half):**
 
-- **Profitability:** API (DOP, COST-005, FX pending/retry) exists; HTTP UI swap is M24.
+- **Profitability:** API (DOP, COST-005, FX pending/retry) and HTTP UI swap (M24) exist. Dashboard KPIs are not swapped.
 - **Catalogs:** mechanical **services** are Release 2 HTTP; **inventory categories/attributes** remain Release 4.
-- **Sales confirmation:** Billing Core plus pulled-forward optional initial payment and `dueDate` (Release 3).
+- **Sales confirmation:** Billing Core plus pulled-forward optional initial payment and `dueDate` (Release 3). `Cliente contado` requires a full initial payment (owner 2026-09-11).
 - **Cancellation:** financial/non-inventory API+HTTP done; inventory restoration and Work-Order branches are mock-only until Releases 5/7.
 - **History:** envelope + user/customer/catalog/invoice confirmation/payment/PDF/cancellation events in the writing transaction; invoice detail GET + HTTP UI project that timeline (profit/FX Administrator-only). Draft meta and line add/update/remove are not appended and are hidden if already stored. No standalone history API; no per-item/order projections; ADMIN-002 mostly open.
 - **CxC:** ledger + open-receivables read model done; remaining Feature 12 filters are **still in scope** (implement after M24/M25).
@@ -226,7 +226,7 @@ Release 1 work must not be blocked waiting for these decisions, but Release 2 mu
 
 # Release 2 — Billing Core
 
-**Status: ACTIVE.** Remaining planned local work: **M24** (profitability HTTP) then **M25** (exit gate). Do not mark this release COMPLETED until those milestones close. Payments, CxC, and non-inventory cancellation were **pulled into this codebase** (see Release 3); they are no longer “later forbidden work.”
+**Status: ACTIVE.** Remaining planned local work: **M25** (exit gate). Profitability HTTP (M24) is done. Do not mark this release COMPLETED until the exit gate closes. Payments, CxC, and non-inventory cancellation were **pulled into this codebase** (see Release 3); they are no longer “later forbidden work.”
 
 ## Business outcome
 

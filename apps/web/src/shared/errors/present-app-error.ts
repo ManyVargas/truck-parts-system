@@ -13,11 +13,20 @@ const COPY = {
   contactPrimary: 'Solo un contacto puede ser principal.',
   emailInvalid: 'El correo no es válido.',
   genericLocked: 'Cliente Contado es el predeterminado y no se puede editar.',
+  cashCustomerCreditForbidden: 'A Cliente contado no se le puede vender a crédito',
   fiscalInvoiceIdentity: 'Una factura fiscal requiere un cliente con RNC o cédula.',
   pdfFailed: 'La generación del PDF falló',
   pdfNotReady: 'El PDF de la factura no está disponible',
   pdfCompletedOnly: 'Solo las facturas confirmadas tienen PDF',
   pdfRegenerateFailedOnly: 'Solo se puede regenerar el PDF de una factura con generación fallida',
+  profitDopFormat: 'La ganancia bruta debe ser un decimal con como máximo 2 decimales.',
+  manualProfitCompletedOnly: 'Solo se puede registrar ganancia bruta en facturas completadas',
+  calculatedProfitExists: 'Esta factura ya tiene ganancia bruta calculada a partir del costo',
+  pendingFxManualProfit:
+    'Reintente primero el cálculo con la tasa de cambio; no registre un monto mientras esté pendiente',
+  fxRetryCompletedUsdOnly: 'Solo se puede reintentar rentabilidad en facturas en dólares completadas',
+  fxRetryNotPending: 'Esta factura no tiene rentabilidad pendiente de tasa de cambio',
+  fxRetryRateUnavailable: 'Tasa de cambio histórica no disponible para la fecha de confirmación',
   inventoryLinesUnavailable:
     'Las líneas de inventario no están disponibles. Esta factura no puede crear, reservar ni consumir stock.',
   fixedLineQuantity: 'Este tipo de línea no permite cambiar la cantidad.',
@@ -47,6 +56,7 @@ const KNOWN_TEXT: Record<string, { text: string; field?: string }> = {
   'Only one contact can be primary': { text: COPY.contactPrimary, field: 'contacts' },
   'At least one field is required': { text: COPY.atLeastOneField },
   'Cliente contado cannot be edited': { text: COPY.genericLocked },
+  'A Cliente contado no se le puede vender a crédito': { text: COPY.cashCustomerCreditForbidden },
   'Current password is incorrect': { text: COPY.currentPassword },
   'New password must differ from current password': { text: COPY.passwordMustDiffer },
   'El nombre es obligatorio': { text: COPY.nameRequired, field: 'name' },
@@ -64,6 +74,28 @@ const KNOWN_TEXT: Record<string, { text: string; field?: string }> = {
   'Solo se puede regenerar el PDF de una factura con generación fallida': {
     text: COPY.pdfRegenerateFailedOnly,
   },
+  'Must be a decimal with at most 2 decimal places': {
+    text: COPY.profitDopFormat,
+    field: 'profitDop',
+  },
+  'Solo se puede registrar ganancia bruta en facturas completadas': {
+    text: COPY.manualProfitCompletedOnly,
+  },
+  'Esta factura ya tiene ganancia bruta calculada a partir del costo': {
+    text: COPY.calculatedProfitExists,
+  },
+  'Reintente primero el cálculo con la tasa de cambio; no registre un monto mientras esté pendiente': {
+    text: COPY.pendingFxManualProfit,
+  },
+  'Solo se puede reintentar rentabilidad en facturas en dólares completadas': {
+    text: COPY.fxRetryCompletedUsdOnly,
+  },
+  'Esta factura no tiene rentabilidad pendiente de tasa de cambio': {
+    text: COPY.fxRetryNotPending,
+  },
+  'Tasa de cambio histórica no disponible para la fecha de confirmación': {
+    text: COPY.fxRetryRateUnavailable,
+  },
   'Inventory-backed lines are not available; this invoice cannot create, reserve, or consume stock': {
     text: COPY.inventoryLinesUnavailable,
   },
@@ -77,6 +109,7 @@ const FIELD_LABELS: Array<{ pattern: RegExp; label: string }> = [
   { pattern: /^rnc$/, label: 'identificación fiscal / cédula' },
   { pattern: /^address$/, label: 'dirección' },
   { pattern: /^notes$/, label: 'notas' },
+  { pattern: /^profitDop$/, label: 'ganancia bruta' },
   { pattern: /^contacts$/, label: 'contactos' },
   { pattern: /^contacts\.\d+$/, label: 'contacto' },
   { pattern: /^contacts\.\d+\.email$/, label: 'correo del contacto' },

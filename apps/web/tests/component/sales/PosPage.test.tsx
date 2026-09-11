@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Route, Routes } from 'react-router-dom';
@@ -73,9 +73,8 @@ describe('PosPage', () => {
     expect(confirmSale.className).toEqual(expect.stringContaining('bg-brand'));
     expect(screen.getByTestId('pos-total')).toBeVisible();
 
-    const backToSales = screen.getByRole('link', { name: 'Volver a Ventas y Facturas' });
-    expect(backToSales).toHaveAttribute('href', '/sales');
-    expect(backToSales).toHaveTextContent('');
+    const backButton = screen.getByRole('button', { name: 'Volver atrás' });
+    expect(backButton).toHaveTextContent('');
   });
 
   it('asks before discarding a draft and restores it from the undo toast', async () => {
@@ -170,6 +169,35 @@ describe('PosPage', () => {
 
     expect(await screen.findByText('Venta confirmada')).toBeVisible();
     expect(screen.getByText(/Orden de desmonte: OD-DEMO-064/)).toBeVisible();
+  });
+
+  it('requires a full initial payment to confirm Cliente contado', async () => {
+    const created = await mockSalesRepository.createDraft();
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    const user = userEvent.setup();
+    renderPos(created.value.draftId, CAPABILITY_PRESETS['release-2']);
+    expect(await screen.findByDisplayValue(/Cliente Contado/i)).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
+    const addDialog = await screen.findByRole('dialog');
+    await user.type(within(addDialog).getByLabelText('Descripción'), 'Filtro contado');
+    await user.clear(within(addDialog).getByLabelText('Precio'));
+    await user.type(within(addDialog).getByLabelText('Precio'), '100');
+    await user.click(within(addDialog).getByRole('button', { name: 'Agregar' }));
+    expect(await screen.findByText('Filtro contado')).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Confirmar venta' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Confirmar venta' });
+    expect(screen.getByText(/No se vende a crédito/)).toBeVisible();
+    const amount = screen.getByLabelText('Monto');
+    await user.clear(amount);
+    await user.type(amount, '40');
+    await user.click(within(dialog).getByRole('button', { name: 'Confirmar venta' }));
+
+    expect(await screen.findByText('A Cliente contado no se le puede vender a crédito')).toBeVisible();
   });
 
   it('lists a newly created customer in the selector', async () => {

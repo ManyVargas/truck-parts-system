@@ -20,14 +20,15 @@ import type {
   SetDraftLineQuantityInput,
   SetDraftMetaInput,
 } from '../contracts/sales';
+import { LIST_PAGE_SIZE, type ListPage } from '../contracts/pagination';
 import { err, ok, type Result } from '../../shared/auth/types';
 import { listCustomersWithHttp } from './customers-api';
 import { listServicesWithHttp } from './catalogs-api';
 import { httpClient, httpClientBlob, toAppError } from './http-client';
 import { httpNotImplemented } from './http-not-implemented';
+import { toInvoiceProfitabilityView, type ApiProfitability } from './map-invoice-profitability';
 
 const SALES_PATH = '/api/sales';
-const PAGE_SIZE = 100;
 const CSRF_HEADERS = { 'X-Requested-With': 'XMLHttpRequest' };
 const DEFAULT_DELIVERY_DESCRIPTION = 'Entrega';
 
@@ -96,6 +97,7 @@ type ApiInvoice = {
   balance: string;
   lines: ApiInvoiceLine[];
   totals: { gross: string; base: string; itbis: string };
+  profitability?: ApiProfitability;
   document?: ApiInvoiceDocument;
   history?: ApiHistoryEntry[];
 };
@@ -302,7 +304,9 @@ function toInvoiceDetail(invoice: ApiInvoice): InvoiceDetailView {
       actorName: optionalText(event.actorName),
     })),
     document,
-    // Profit stays off until M24 even if the API already returns profitability.
+    ...(invoice.profitability
+      ? { profitability: toInvoiceProfitabilityView(invoice.profitability) }
+      : {}),
     actions: {
       canPay: invoice.status === 'COMPLETED' && moneyNumber(invoice.balance) > 0,
       canCancel: invoice.status === 'COMPLETED',
@@ -365,40 +369,18 @@ export function toHttpAddLineBody(input: AddDraftLineInput): Record<string, unkn
   return { type: input.type, ...notes };
 }
 
-function invoicesCollectionPath(status: 'DRAFT' | 'COMPLETED' | 'CANCELLED', page: number): string {
-  const params = new URLSearchParams({
-    status,
-    page: String(page),
-    pageSize: String(PAGE_SIZE),
-  });
+function invoicesCollectionPath(
+  page: number,
+  status?: 'DRAFT' | 'COMPLETED' | 'CANCELLED',
+  q?: string,
+): string {
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  params.set('page', String(page));
+  params.set('pageSize', String(LIST_PAGE_SIZE));
+  const normalized = q?.trim();
+  if (normalized) params.set('q', normalized);
   return `${SALES_PATH}?${params.toString()}`;
-}
-
-function compareListRows(left: SalesListRow, right: SalesListRow): number {
-  if (left.createdAt !== right.createdAt) {
-    return left.createdAt < right.createdAt ? 1 : -1;
-  }
-  return left.id.localeCompare(right.id);
-}
-
-async function loadAllInvoicePages(
-  status: 'DRAFT' | 'COMPLETED' | 'CANCELLED',
-): Promise<SalesListRow[]> {
-  const items: SalesListRow[] = [];
-  let page = 1;
-  let total = 0;
-
-  do {
-    const response = await httpClient<Page<ApiInvoiceListItem>>(
-      invoicesCollectionPath(status, page),
-    );
-    items.push(...response.items.map(toSalesListRow));
-    total = response.total;
-    if (response.items.length === 0) break;
-    page += 1;
-  } while (items.length < total);
-
-  return items;
 }
 
 async function loadPosLookups(): Promise<
@@ -472,51 +454,39 @@ async function mutateDraft(operation: () => Promise<ApiInvoice>): Promise<Result
   );
 }
 
-export function listInvoicesWithHttp(tab?: SalesListTab): Promise<Result<SalesListRow[]>> {
-  if (tab === 'CANCELLED') {
-    return request(() => loadAllInvoicePages('CANCELLED'));
-  }
-  if (tab === 'COMPLETED') {
-    return request(() => loadAllInvoicePages('COMPLETED'));
-  }
-  if (tab === 'DRAFT') {
-    return request(() => loadAllInvoicePages('DRAFT'));
-  }
+export function listInvoicesWithHttp(
+  tab: SalesListTab = 'ALL',
+  page = 1,
+  q?: string,
+): Promise<Result<ListPage<SalesListRow>>> {
   return request(async () => {
-    const [drafts, completed, cancelled] = await Promise.all([
-      loadAllInvoicePages('DRAFT'),
-      loadAllInvoicePages('COMPLETED'),
-      loadAllInvoicePages('CANCELLED'),
-    ]);
-    return [...drafts, ...completed, ...cancelled].sort(compareListRows);
+    const status = tab === 'ALL' ? undefined : tab;
+    const response = await httpClient<Page<ApiInvoiceListItem>>(
+      invoicesCollectionPath(page, status, q),
+    );
+    return {
+      items: response.items.map(toSalesListRow),
+      total: response.total,
+      page: response.page,
+      pageSize: response.pageSize,
+    };
   });
 }
 
-export function listReceivablesWithHttp(): Promise<Result<ReceivablesSnapshot>> {
+export function listReceivablesWithHttp(page = 1): Promise<Result<ReceivablesSnapshot>> {
   return request(async () => {
-    const invoices: SalesListRow[] = [];
-    const customers: CustomerOutstandingRow[] = [];
-    let page = 1;
-    let total = 0;
-
-    do {
-      const params = new URLSearchParams({
-        page: String(page),
-        pageSize: String(PAGE_SIZE),
-      });
-      const response = await httpClient<ApiReceivables>(`${SALES_PATH}/receivables?${params}`);
-      invoices.push(
-        ...response.invoices.map((item) => toSalesListRow(item)),
-      );
-      if (page === 1) {
-        customers.push(...response.customers.map(toCustomerOutstanding));
-      }
-      total = response.total;
-      if (response.invoices.length === 0) break;
-      page += 1;
-    } while (invoices.length < total);
-
-    return { invoices, customers };
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(LIST_PAGE_SIZE),
+    });
+    const response = await httpClient<ApiReceivables>(`${SALES_PATH}/receivables?${params}`);
+    return {
+      invoices: response.invoices.map((item) => toSalesListRow(item)),
+      customers: response.customers.map(toCustomerOutstanding),
+      total: response.total,
+      page: response.page,
+      pageSize: response.pageSize,
+    };
   });
 }
 

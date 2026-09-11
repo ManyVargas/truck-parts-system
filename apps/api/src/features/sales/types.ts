@@ -44,6 +44,7 @@ export type UpdateDraftInvoiceRecord = {
 
 export type ListInvoicesQuery = {
   status?: InvoiceStatus;
+  q?: string;
   page: number;
   pageSize: number;
 };
@@ -254,6 +255,13 @@ export type PublicInvoice = {
   updatedAt: string;
 };
 
+export type PublicInvoiceListPayment = {
+  kind: InvoicePayment['kind'];
+  amount: string;
+  method: InvoicePayment['method'];
+  effectiveDate: string;
+};
+
 export type PublicInvoiceListItem = {
   id: string;
   status: InvoiceStatus;
@@ -265,9 +273,12 @@ export type PublicInvoiceListItem = {
   confirmedAt: string | null;
   dueDate: string | null;
   paymentState: PublicPaymentState;
+  payments: PublicInvoiceListPayment[];
   balance: string;
   totals: { gross: string; base: string; itbis: string };
   profitability?: PublicProfitability;
+  /** Stored profitability FX rate. Administrator-only; used to report USD receipts in DOP. */
+  exchangeRateDopPerUsd?: string;
   createdAt: string;
   updatedAt: string;
 };

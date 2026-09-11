@@ -10,7 +10,7 @@ vi.hoisted(() => vi.stubEnv('VITE_USE_MOCK_API', 'false'));
 import { router as appRouter } from '../../../src/router';
 import { AuthProvider } from '../../../src/features/auth/AuthContext';
 import { CapabilitiesProvider } from '../../../src/shared/config/CapabilitiesProvider';
-import { ToastProvider, Toaster } from '../../../src/shared/ui';
+import { ToastProvider, Toaster, money } from '../../../src/shared/ui';
 import type { Role } from '../../../src/api/contracts/entities';
 import '../../support/dom';
 
@@ -89,6 +89,12 @@ type ApiInvoice = {
   createdAt: string;
   updatedAt: string;
   document?: { status: 'READY' } | { status: 'FAILED'; errorId: string };
+  profitability?: {
+    status: 'CALCULATED' | 'UNAVAILABLE' | 'MANUAL';
+    reason: 'UNKNOWN_COST' | 'PENDING_FX_RATE' | null;
+    profitDop: string | null;
+    margin: string | null;
+  };
 };
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
@@ -170,7 +176,7 @@ beforeEach(() => {
     const url = String(path);
     if (path === '/api/auth/session' || path === '/api/auth/me') return json(identity(role));
     if (url.startsWith('/api/customers?') && !init?.method) {
-      return json({ items: customers, total: customers.length, page: 1, pageSize: 100 });
+      return json({ items: customers, total: customers.length, page: 1, pageSize: 10 });
     }
     if (url.startsWith('/api/customers/') && !init?.method) {
       const id = url.slice('/api/customers/'.length);
@@ -191,15 +197,18 @@ beforeEach(() => {
     if (url === '/api/catalogs/services') return json({ items: [installation] });
     if (url.startsWith('/api/sales?status=DRAFT')) {
       const items = invoices.filter((item) => item.status === 'DRAFT');
-      return json({ items, total: items.length, page: 1, pageSize: 100 });
+      return json({ items, total: items.length, page: 1, pageSize: 10 });
     }
     if (url.startsWith('/api/sales?status=COMPLETED')) {
       const items = invoices.filter((item) => item.status === 'COMPLETED');
-      return json({ items, total: items.length, page: 1, pageSize: 100 });
+      return json({ items, total: items.length, page: 1, pageSize: 10 });
     }
     if (url.startsWith('/api/sales?status=CANCELLED')) {
       const items = invoices.filter((item) => item.status === 'CANCELLED');
-      return json({ items, total: items.length, page: 1, pageSize: 100 });
+      return json({ items, total: items.length, page: 1, pageSize: 10 });
+    }
+    if (url.startsWith('/api/sales?page=') && !init?.method) {
+      return json({ items: invoices, total: invoices.length, page: 1, pageSize: 10 });
     }
     if (url === '/api/sales' && init?.method === 'POST') {
       const created = emptyInvoice(
@@ -218,14 +227,18 @@ beforeEach(() => {
       if (!current) return json({ error: { code: 'NOT_FOUND' } }, 404);
 
       if (action === 'confirm' && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body ?? '{}')) as {
+          payment?: { amount: string; method: string };
+        };
         if (
-          JSON.parse(String(init.body)) !== null &&
-          JSON.stringify(JSON.parse(String(init.body))) !== '{}'
+          body.payment == null &&
+          JSON.stringify(body) !== '{}'
         ) {
           throw new Error(`Unexpected confirm body: ${String(init.body)}`);
         }
         const number = `FAC-${String(nextFacNumber).padStart(6, '0')}`;
         nextFacNumber += 1;
+        const paidInFull = body.payment?.amount === current.totals.gross;
         const confirmed: ApiInvoice = {
           ...current,
           status: 'COMPLETED',
@@ -234,8 +247,18 @@ beforeEach(() => {
           confirmedAt: '2026-09-09T13:00:00.000Z',
           dueDate: '2026-10-09',
           sellerName: role,
-          balance: current.totals.gross,
+          balance: paidInFull ? '0.00' : current.totals.gross,
           document: { status: 'READY' },
+          ...(role === 'ADMINISTRATOR'
+            ? {
+                profitability: {
+                  status: 'CALCULATED' as const,
+                  reason: null,
+                  profitDop: '50.00',
+                  margin: '42.37',
+                },
+              }
+            : {}),
         };
         replaceInvoice(confirmed);
         return json(confirmed);
@@ -639,5 +662,50 @@ describe('M22 HTTP confirmation UI', () => {
           init?.method === 'POST',
       ),
     ).toBe(true);
+  });
+
+  it('shows administrator profitability on a completed invoice', async () => {
+    role = 'ADMINISTRATOR';
+    const completedId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    invoices = [
+      {
+        ...emptyInvoice(completedId),
+        status: 'COMPLETED',
+        number: 'FAC-000010',
+        document: { status: 'READY' },
+        customerSnapshot: { name: cashCustomer.name, rnc: null, phone: null },
+        confirmedAt: '2026-09-09T13:00:00.000Z',
+        profitability: {
+          status: 'CALCULATED',
+          reason: null,
+          profitDop: '5700.00',
+          margin: '31.67',
+        },
+      },
+    ];
+    mount(`/sales/${completedId}`);
+
+    expect(await screen.findByRole('heading', { name: 'FAC-000010' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Rentabilidad' })).toBeVisible();
+    expect(screen.getByText(money(5_700, 'DOP'))).toBeVisible();
+  });
+
+  it('hides profitability from the seller even when the capability is on', async () => {
+    role = 'SELLER';
+    const completedId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    invoices = [
+      {
+        ...emptyInvoice(completedId),
+        status: 'COMPLETED',
+        number: 'FAC-000010',
+        document: { status: 'READY' },
+        customerSnapshot: { name: cashCustomer.name, rnc: null, phone: null },
+        confirmedAt: '2026-09-09T13:00:00.000Z',
+      },
+    ];
+    mount(`/sales/${completedId}`);
+
+    expect(await screen.findByRole('heading', { name: 'FAC-000010' })).toBeVisible();
+    expect(screen.queryByText('Rentabilidad')).not.toBeInTheDocument();
   });
 });

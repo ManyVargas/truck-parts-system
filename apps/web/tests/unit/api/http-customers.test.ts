@@ -45,8 +45,8 @@ describe('HTTP customer management contract', () => {
   it('loads every API page and maps null optional fields', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(json({ items: [cashCustomer], total: 2, page: 1, pageSize: 100 }))
-      .mockResolvedValueOnce(json({ items: [namedCustomer], total: 2, page: 2, pageSize: 100 }));
+      .mockResolvedValueOnce(json({ items: [cashCustomer], total: 2, page: 1, pageSize: 10 }))
+      .mockResolvedValueOnce(json({ items: [namedCustomer], total: 2, page: 2, pageSize: 10 }));
     vi.stubGlobal('fetch', fetchMock);
 
     const result = await repository.list();
@@ -63,8 +63,8 @@ describe('HTTP customer management contract', () => {
       expect(result.value[0]?.rnc).toBeUndefined();
     }
     expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
-      '/api/customers?page=1&pageSize=100',
-      '/api/customers?page=2&pageSize=100',
+      '/api/customers?page=1&pageSize=10',
+      '/api/customers?page=2&pageSize=10',
     ]);
     expect(fetchMock.mock.calls[0][1].credentials).toBe('include');
   });
@@ -72,19 +72,19 @@ describe('HTTP customer management contract', () => {
   it('searches with q and loads a customer by id', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(json({ items: [namedCustomer], total: 1, page: 1, pageSize: 100 }))
+      .mockResolvedValueOnce(json({ items: [namedCustomer], total: 1, page: 1, pageSize: 10 }))
       .mockResolvedValueOnce(json(namedCustomer));
     vi.stubGlobal('fetch', fetchMock);
 
     expect(await repository.search('  Este  ')).toMatchObject({
       ok: true,
-      value: [{ id: namedCustomer.id }],
+      value: { items: [{ id: namedCustomer.id }], total: 1, page: 1 },
     });
     expect(await repository.getById(namedCustomer.id)).toMatchObject({
       ok: true,
       value: { id: namedCustomer.id, name: 'Flota Este' },
     });
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/customers?page=1&pageSize=100&q=Este');
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/customers?page=1&pageSize=10&q=Este');
     expect(fetchMock.mock.calls[1][0]).toBe(`/api/customers/${namedCustomer.id}`);
   });
 

@@ -42,6 +42,32 @@ const invoiceListInclude = {
   payments: { orderBy: [{ effectiveDate: 'asc' as const }, { createdAt: 'asc' as const }] },
 };
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function listInvoiceWhere(query: ListInvoicesQuery): Prisma.InvoiceWhereInput {
+  const clauses: Prisma.InvoiceWhereInput[] = [];
+  if (query.status) {
+    clauses.push({ status: query.status });
+  }
+
+  const q = query.q?.trim();
+  if (q) {
+    const search: Prisma.InvoiceWhereInput[] = [
+      { number: { contains: q, mode: 'insensitive' } },
+      { customerName: { contains: q, mode: 'insensitive' } },
+      { customer: { name: { contains: q, mode: 'insensitive' } } },
+    ];
+    if (UUID_PATTERN.test(q)) {
+      search.push({ id: q });
+    }
+    clauses.push({ OR: search });
+  }
+
+  if (clauses.length === 0) return {};
+  if (clauses.length === 1) return clauses[0]!;
+  return { AND: clauses };
+}
 type ReceivablePageRow = { id: string };
 type ReceivableCustomerRow = Omit<ReceivablesCustomerAggregate, 'invoiceCount'> & {
   invoiceCount: bigint;
@@ -118,7 +144,7 @@ export class SalesRepository {
     page: number;
     pageSize: number;
   }> {
-    const where = query.status ? { status: query.status } : {};
+    const where = listInvoiceWhere(query);
     const [items, total] = await Promise.all([
       this.database.invoice.findMany({
         where,

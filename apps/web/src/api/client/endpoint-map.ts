@@ -39,7 +39,7 @@ export const REPOSITORY_ENDPOINT_MAP = {
     update: 'PATCH /api/customers/:id',
   },
   SalesRepository: {
-    listInvoices: 'GET /api/sales?status=DRAFT',
+    listInvoices: 'GET /api/sales?page=&pageSize=',
     listReceivables: 'GET /api/sales/receivables',
     getInvoice: 'GET /api/sales/:id',
     createDraft: 'POST /api/sales',
@@ -71,7 +71,8 @@ export const REPOSITORY_ENDPOINT_MAP = {
     save: 'POST /api/catalogs/services | PATCH /api/catalogs/services/:id',
   },
   ProfitabilityRepository: {
-    getSnapshot: 'GET /api/profitability',
+    getSnapshot:
+      'GET /api/sales?status=COMPLETED and GET /api/sales?status=CANCELLED (composed snapshot; no GET /api/profitability)',
     setFxAvailable: 'POST /api/profitability/fx (demo only — not a production endpoint)',
     retryUsd: 'POST /api/profitability/:invoiceId/retry',
     recordManualGrossProfit: 'POST /api/profitability/:invoiceId/manual-gross-profit',
