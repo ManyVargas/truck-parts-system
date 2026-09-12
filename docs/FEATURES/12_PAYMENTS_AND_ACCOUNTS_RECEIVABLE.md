@@ -10,7 +10,7 @@ The old consolidated requirements/validation files are intentionally no longer r
 
 **Release 3 — Immediate financial priority after Billing Core**
 
-**Implementation (2026-09-10):** Pulled forward into the Release 2 local codebase. Production API + HTTP UI for the financial slice are in place (`InvoicePayment`, confirm-time optional payment, `POST /api/sales/:id/payments`, `GET /api/sales/receivables`, invoice payment history). **Do not treat this feature as complete.** Remaining checklist items that belong to Release 3 must still be implemented (after R2 M24/M25). Aging and collections stay deferred as specified in this file.
+**Implementation (2026-09-10):** Pulled forward into the Release 2 local codebase. Production API + HTTP UI for the financial slice are in place (`InvoicePayment`, confirm-time optional payment, `POST /api/sales/:id/payments`, `GET /api/sales/receivables`, invoice payment history). **Do not treat this feature as complete.** Remaining checklist items that belong to Release 3 must still be implemented (Release 2 is closed). Aging and collections stay deferred as specified in this file.
 
 ## What this feature does
 
@@ -88,7 +88,7 @@ Advanced AR such as aging buckets, credit limits, interest, collection promises/
 - [x] Open receivables query.
 - [x] Customer outstanding summary grouped by currency.
 - [x] Invoice receivable/payment-history detail.
-- [ ] Filters by customer, invoice, payment state, date, and currency as justified. _(Still required Release 3 work — not optional. Partial today: API `GET /receivables` accepts `customerId`, `currency`, and `paymentState` `PENDING`/`OVERDUE` only. HTTP UI filters customer **name** on the loaded snapshot and does not yet send those query params. Invoice id, date range, and Paid/Paid-late query filters are not implemented. Finish after R2 M24/M25.)_
+- [ ] Filters by customer, invoice, payment state, date, and currency as justified. _(Still required Release 3 work — not optional. Partial today: API `GET /receivables` accepts `customerId`, `currency`, and `paymentState` `PENDING`/`OVERDUE` only. HTTP UI filters customer **name** on the loaded snapshot and does not yet send those query params. Invoice id, date range, and Paid/Paid-late query filters are not implemented. Finish now that R2 M25 is closed.)_
 - [x] Overdue behavior uses the validated fixed due-date policy; aging remains deferred.
 
 ### Frontend

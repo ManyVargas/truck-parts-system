@@ -4,6 +4,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../features/auth/useAuth';
 import { useAppCapabilities } from '../config/CapabilitiesProvider';
 import { BrandMark, Button } from '../ui';
+import { ChevronLeftIcon, XIcon } from '../ui/icons';
 import { COMMERCIAL_SIDEBAR_ID } from './breakpoints';
 import { CommercialSidebar } from './CommercialSidebar';
 import { DemoControls } from './DemoControls';
@@ -74,9 +75,7 @@ export function AppShell() {
       aria-expanded
       onClick={() => setCompactCollapsed(true)}
     >
-      <span aria-hidden className="text-lg leading-none">
-        ‹
-      </span>
+      <ChevronLeftIcon />
     </Button>
   );
 
@@ -88,7 +87,7 @@ export function AppShell() {
       aria-label="Cerrar menú"
       onClick={closeOverlayNav}
     >
-      ✕
+      <XIcon />
     </Button>
   );
 

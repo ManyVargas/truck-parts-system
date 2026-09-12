@@ -100,13 +100,15 @@ Release 1 automated closure coverage revalidates user creation, deactivation and
 - [ ] Work-Order release/reassign/cancel.
 - [x] PDF regeneration. _(API R2 M18: `POST /api/sales/:id/pdf/regenerate` solo Administrator y `pdfStatus FAILED`; UI HTTP M23 en el detalle; el resto de ADMIN-002 sigue Release 8)_
 - [ ] Evidence recovery where safe.
-- [ ] Pending USD profitability retry. _(Command exists as API R2 M16 `POST /api/profitability/:invoiceId/retry`. Recovery module/UI and ADMIN-002 packaging remain Release 8. HTTP profitability repository still stub.)_
+- [ ] Pending USD profitability retry. _(Command exists as API R2 M16 `POST /api/profitability/:invoiceId/retry`. HTTP UI is R2 M24 on `/profitability`, not the recovery module. Recovery packaging and ADMIN-002 remain Release 8.)_
 
-The abandoned-reservation, Work-Order and profitability items previously marked as
+The abandoned-reservation and Work-Order items previously marked as
 complete are available only in the mock prototype. Their HTTP repositories remain
 explicitly unimplemented; mock behavior does not complete ADMIN-002. Failed invoice
 PDF regeneration is implemented in the production API as Release 2 M18 and wired in
-the invoice detail UI as M23; the rest of ADMIN-002 remains Release 8.
+the invoice detail UI as M23. Pending USD retry is implemented on the profitability
+API and HTTP profitability page (M16/M24), not as a recovery-module command.
+The rest of ADMIN-002 remains Release 8.
 
 ### Diagnostics
 

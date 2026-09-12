@@ -37,13 +37,13 @@ For every task:
 
 ---
 
-# Current implementation snapshot (2026-09-10)
+# Current implementation snapshot (2026-09-11)
 
 Owner pulled **Release 3 financial work** into the local codebase before Release 2’s web profitability swap and exit gate. Future tasks must not re-build payments, CxC, or non-inventory cancellation, and must not treat inventory/Work-Order `[x]` mock items as PostgreSQL/API.
 
-**Owner decisions (2026-09-10):**
+**Owner decisions (2026-09-10 / exit gate 2026-09-11):**
 
-1. Release 2 stays **ACTIVE** until **M25** (exit gate) is closed. **M24** profitability HTTP is done. Do not mark Billing Core COMPLETED yet.
+1. Release 2 **Billing Core is COMPLETED** locally (M25 closed 2026-09-11: browser walkthrough + full test suites). First production deploy still requires the operational gate in this file.
 2. Release 3 stays **open**. The pulled-forward slice is not the full spec: remaining Feature 12/13 checklist items that belong to this release must still be implemented. Do not skip them.
 3. No `plans_api/plan_release_3.md` for now; `docs/done_api/release_3.md` is the delivery record.
 4. Prototype-mock `[x]` items stay `[x]` with mock/API notes; do not uncheck them.
@@ -52,10 +52,9 @@ Owner pulled **Release 3 financial work** into the local codebase before Release
 | Slice | Production API + tests | HTTP UI (`VITE_USE_MOCK_API` ≠ `true`) | Prototype mock only |
 |---|---|---|---|
 | Release 1 Access/Users | Done | Done | Done |
-| Release 2 Billing Core (customers, service catalog, non-inventory lines, confirm/`FAC-`, PDF, cost/FX/profit **API**) | Done | Customers, `/catalogs` services, POS non-inventory, confirm, PDF, **profitability HTTP (M24)** | Full demo including profit |
-| Release 2 remaining | — | **M25** exit-gate verification | — |
+| Release 2 Billing Core (customers, service catalog, non-inventory lines, confirm/`FAC-`, PDF, cost/FX/profit, profitability HTTP) | Done | Done (M25 closed 2026-09-11) | Full demo including profit |
 | Release 3 payments, balances, basic CxC, non-inventory cancel/refund | **Pulled forward — done** (`InvoicePayment`, due date, `POST /payments`, `GET /receivables`, `POST /cancel`) | **Pulled forward — done** (pay, CxC `/receivables`, cancel). Confirm may record an initial payment | Done |
-| Release 3 remaining | **Still required** after R2 M24/M25: Feature 12 open checklist (receivables filters by customer, invoice, payment state including Paid/Paid-late, date, and currency; UI must use API query params). Aging/collections stay deferred as specified. Inventory/WO cancellation is R5/R7, not this remainder. | Same filters on `/receivables` HTTP UI | — |
+| Release 3 remaining | **Still required** now that R2 is closed: Feature 12 open checklist (receivables filters by customer, invoice, payment state including Paid/Paid-late, date, and currency; UI must use API query params). Aging/collections stay deferred as specified. Inventory/WO cancellation is R5/R7, not this remainder. | Same filters on `/receivables` HTTP UI | — |
 | Release 3B Accounts Payable | Not started | Not started | Not in confirmed scope |
 | Release 4 inventory / quantity / inventory categories | **Not started** (no Item/Qty models) | Service catalog only; inventory category UI hidden | Registration, qty, category attributes |
 | Release 5 reservations and ITEM/QTY sales | **Not started**; ITEM/QTY draft lines return business **409** | Capabilities off | Lines, reserve, consume |
@@ -70,7 +69,7 @@ Owner pulled **Release 3 financial work** into the local codebase before Release
 - **Sales confirmation:** Billing Core plus pulled-forward optional initial payment and `dueDate` (Release 3). `Cliente contado` requires a full initial payment (owner 2026-09-11).
 - **Cancellation:** financial/non-inventory API+HTTP done; inventory restoration and Work-Order branches are mock-only until Releases 5/7.
 - **History:** envelope + user/customer/catalog/invoice confirmation/payment/PDF/cancellation events in the writing transaction; invoice detail GET + HTTP UI project that timeline (profit/FX Administrator-only). Draft meta and line add/update/remove are not appended and are hidden if already stored. No standalone history API; no per-item/order projections; ADMIN-002 mostly open.
-- **CxC:** ledger + open-receivables read model done; remaining Feature 12 filters are **still in scope** (implement after M24/M25).
+- **CxC:** ledger + open-receivables read model done; remaining Feature 12 filters are **still in scope** (implement now that R2 M25 is closed).
 
 ---
 
@@ -226,7 +225,7 @@ Release 1 work must not be blocked waiting for these decisions, but Release 2 mu
 
 # Release 2 — Billing Core
 
-**Status: ACTIVE.** Remaining planned local work: **M25** (exit gate). Profitability HTTP (M24) is done. Do not mark this release COMPLETED until the exit gate closes. Payments, CxC, and non-inventory cancellation were **pulled into this codebase** (see Release 3); they are no longer “later forbidden work.”
+**Status: COMPLETED (local, 2026-09-11).** M25 exit gate closed: owner browser walkthrough plus unit, web, and API integration suites. Payments, CxC, and non-inventory cancellation were **pulled into this codebase** (see Release 3); they are not remaining R2 work. First production use still requires the operational gate above. This completion does **not** complete Release 3 or the Final MVP.
 
 ## Business outcome
 
@@ -338,7 +337,7 @@ without any fake inventory side effect.
 
 # Release 3 — Payments and Basic Accounts Receivable
 
-**Status: PARTIALLY IMPLEMENTED (pulled forward during Release 2).** Do not re-implement the financial slice that already exists. **This release is not done:** remaining Feature 12 checklist items (and any other R3-owned open items) must still be implemented after Release 2 M24/M25. Inventory/Work-Order cancellation is **not** part of this remainder (Releases 5/7).
+**Status: PARTIALLY IMPLEMENTED (pulled forward during Release 2).** Do not re-implement the financial slice that already exists. **This release is not done:** remaining Feature 12 checklist items (and any other R3-owned open items) must still be implemented now that Release 2 is closed. Inventory/Work-Order cancellation is **not** part of this remainder (Releases 5/7).
 
 ## Business outcome
 

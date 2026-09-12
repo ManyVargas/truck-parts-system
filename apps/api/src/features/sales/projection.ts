@@ -22,6 +22,7 @@ import type {
   InvoiceListRecord,
   InvoiceRecord,
   InvoiceViewer,
+  InvoiceUsdFxRecordedHistorySnapshot,
   InvoiceUsdFxRetryHistorySnapshot,
   PublicFxProvenance,
   PublicInvoice,
@@ -191,6 +192,26 @@ export function toUsdFxRetryHistorySnapshot(input: {
             rateUpdatedAt: input.after.rateUpdatedAt.toISOString(),
             obtainedAt: input.after.obtainedAt.toISOString(),
           },
+  };
+}
+
+export function toUsdFxRecordedHistorySnapshot(input: {
+  asOf: Date;
+  after: {
+    exchangeRateDopPerUsd: { toString(): string };
+    source: string;
+    rateUpdatedAt: Date;
+    obtainedAt: Date;
+  };
+}): InvoiceUsdFxRecordedHistorySnapshot {
+  return {
+    asOf: input.asOf.toISOString(),
+    after: {
+      exchangeRateDopPerUsd: input.after.exchangeRateDopPerUsd.toString(),
+      source: input.after.source,
+      rateUpdatedAt: input.after.rateUpdatedAt.toISOString(),
+      obtainedAt: input.after.obtainedAt.toISOString(),
+    },
   };
 }
 

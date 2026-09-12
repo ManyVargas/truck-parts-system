@@ -1,5 +1,6 @@
 {
   "name": "truck-parts-system",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "packageManager": "npm@11.19.1",

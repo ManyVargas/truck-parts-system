@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   COST_AMOUNT_REQUIRED_MESSAGE,
+  COST_PROVENANCE_REQUIRED_MESSAGE,
   formatInvoiceNumber,
   UNKNOWN_COST_AMOUNT_MESSAGE,
 } from '../../../src/features/sales/constants.js';
@@ -89,6 +90,15 @@ describe('draft GENERIC line validation', () => {
       unitPrice: '50.00',
       quantity: '2.00',
     });
+    expect(
+      setLinePriceSchema.parse({
+        acquisitionCostDop: '75.00',
+        costProvenance: 'ESTIMATED',
+      }),
+    ).toEqual({ acquisitionCostDop: '75.00', costProvenance: 'ESTIMATED' });
+    expect(
+      setLinePriceSchema.parse({ acquisitionCostDop: null, costProvenance: 'UNKNOWN' }),
+    ).toEqual({ acquisitionCostDop: null, costProvenance: 'UNKNOWN' });
   });
 
   it('rejects numeric money, UNKNOWN with amount, missing actual cost, and extra fields', () => {
@@ -121,6 +131,22 @@ describe('draft GENERIC line validation', () => {
     expect(setLinePriceSchema.safeParse({ unitPrice: '10', extra: true }).success).toBe(false);
     expect(setLinePriceSchema.safeParse({}).success).toBe(false);
     expect(setLinePriceSchema.safeParse({ quantity: '0.00' }).success).toBe(false);
+    expect(
+      setLinePriceSchema.safeParse({ acquisitionCostDop: '75.00' }).error?.issues[0]?.message,
+    ).toBe(COST_PROVENANCE_REQUIRED_MESSAGE);
+    expect(
+      setLinePriceSchema.safeParse({ costProvenance: 'ACTUAL' }).error?.issues[0]?.message,
+    ).toBe(COST_AMOUNT_REQUIRED_MESSAGE);
+    expect(
+      setLinePriceSchema.safeParse({
+        acquisitionCostDop: '75.00',
+        costProvenance: 'UNKNOWN',
+      }).error?.issues[0]?.message,
+    ).toBe(UNKNOWN_COST_AMOUNT_MESSAGE);
+    expect(
+      setLinePriceSchema.safeParse({ acquisitionCostDop: null, costProvenance: 'ESTIMATED' }).error
+        ?.issues[0]?.message,
+    ).toBe(COST_AMOUNT_REQUIRED_MESSAGE);
     expect(lineNotesSchema.safeParse('x'.repeat(101)).success).toBe(false);
     expect(lineNotesSchema.parse('a\nb')).toBe('a\nb');
     expect(lineNotesSchema.parse('  \n  ')).toBe(null);

@@ -6,6 +6,7 @@ import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 
 import { hashPassword } from '../../../src/features/access/password.js';
 import { resetLoginRateLimit } from '../../../src/features/access/login-rate-limit.js';
+import { HistoryRepository } from '../../../src/features/history/repository.js';
 import { EXCHANGE_RATE_API_SOURCE } from '../../../src/infrastructure/fx/index.js';
 import { UserRepository } from '../../../src/features/users/repository.js';
 import { disconnectPrisma, prisma } from '../../../src/infrastructure/database/index.js';
@@ -19,10 +20,7 @@ const PASSWORD = 'personal-password';
 const CSRF = { 'X-Requested-With': 'XMLHttpRequest' };
 const ROOT = '/api/sales';
 
-async function fixture(
-  agent: request.Agent,
-  role: Role = 'ADMINISTRATOR',
-) {
+async function fixture(agent: request.Agent, role: Role = 'ADMINISTRATOR') {
   const user = await users.create({
     name: 'Fixture',
     username: randomUUID(),
@@ -99,6 +97,37 @@ describe('M15 FX adapter + pending (COST-003 USD)', () => {
     expect(stored?.exchangeRateDopPerUsd?.equals(new Prisma.Decimal('61.5'))).toBe(true);
     expect(JSON.stringify(confirmed.body)).not.toMatch(/EXCHANGE_RATE_API_KEY|test-key/i);
 
+    expect(
+      await prisma.historyEvent.findMany({
+        where: { subjectId: draft.body.id, eventType: 'INVOICE_USD_FX_RECORDED' },
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        actorUserId: admin.user.id,
+        payload: {
+          asOf: confirmed.body.confirmedAt,
+          after: {
+            exchangeRateDopPerUsd: '61.5',
+            source: EXCHANGE_RATE_API_SOURCE,
+            rateUpdatedAt: '2026-09-08T00:00:00.000Z',
+            obtainedAt: '2026-09-08T12:00:00.000Z',
+          },
+        },
+      }),
+    ]);
+
+    const adminView = await admin.agent.get(`${ROOT}/${draft.body.id}`);
+    expect(adminView.status).toBe(200);
+    expect(
+      adminView.body.history.find(
+        (event: { type: string }) => event.type === 'INVOICE_USD_FX_RECORDED',
+      ),
+    ).toMatchObject({
+      type: 'INVOICE_USD_FX_RECORDED',
+      description: `Tasa USD 61.5 DOP/USD registrada (${EXCHANGE_RATE_API_SOURCE})`,
+      actorName: admin.user.name,
+    });
+
     const seller = await fixture(request.agent(app), 'SELLER');
     const sellerView = await seller.agent.get(`${ROOT}/${draft.body.id}`);
     expect(sellerView.status).toBe(200);
@@ -106,6 +135,11 @@ describe('M15 FX adapter + pending (COST-003 USD)', () => {
     expect(sellerView.body.lines[0].profitability).toBeUndefined();
     expect(sellerView.body.fx).toBeUndefined();
     expect(JSON.stringify(sellerView.body)).not.toContain('61.5');
+    expect(
+      sellerView.body.history.some(
+        (event: { type: string }) => event.type === 'INVOICE_USD_FX_RECORDED',
+      ),
+    ).toBe(false);
   });
 
   it('confirms the USD sale when FX times out or returns quota-reached', async () => {
@@ -141,10 +175,59 @@ describe('M15 FX adapter + pending (COST-003 USD)', () => {
         profitDop: null,
         margin: null,
       });
-      expect(
-        await prisma.invoice.findUnique({ where: { id: draft.body.id } }),
-      ).toMatchObject({ status: 'COMPLETED', exchangeRateDopPerUsd: null });
+      expect(await prisma.invoice.findUnique({ where: { id: draft.body.id } })).toMatchObject({
+        status: 'COMPLETED',
+        exchangeRateDopPerUsd: null,
+      });
     }
+  });
+
+  it('keeps the confirmed sale pending and rolls back the rate when initial FX history fails', async () => {
+    const originalAppend = HistoryRepository.prototype.append;
+    vi.spyOn(HistoryRepository.prototype, 'append').mockImplementation(function (
+      this: HistoryRepository,
+      input,
+    ) {
+      if (input.eventType === 'INVOICE_USD_FX_RECORDED') {
+        throw new Error('simulated initial FX history failure');
+      }
+      return originalAppend.call(this, input);
+    });
+    const app = createTestApp({
+      fxRateProvider: staticFxRateProvider(successfulUsdDopRate('61.50')),
+    });
+    const admin = await fixture(request.agent(app));
+    const draft = await admin.agent.post(ROOT).set(CSRF).send({ currency: 'USD' });
+    await admin.agent.post(`${ROOT}/${draft.body.id}/lines`).set(CSRF).send({
+      type: 'GENERIC',
+      description: 'Filtro',
+      unitPrice: '118.00',
+      costProvenance: 'ACTUAL',
+      acquisitionCostDop: '80.00',
+    });
+    await assignNamedCustomerForCredit(admin.agent, draft.body.id);
+
+    const confirmed = await admin.agent.post(`${ROOT}/${draft.body.id}/confirm`).set(CSRF).send({});
+
+    expect(confirmed.status).toBe(200);
+    expect(confirmed.body).toMatchObject({
+      status: 'COMPLETED',
+      profitability: {
+        status: 'UNAVAILABLE',
+        reason: 'PENDING_FX_RATE',
+        profitDop: null,
+        margin: null,
+      },
+    });
+    expect(await prisma.invoice.findUnique({ where: { id: draft.body.id } })).toMatchObject({
+      status: 'COMPLETED',
+      exchangeRateDopPerUsd: null,
+    });
+    expect(
+      await prisma.historyEvent.count({
+        where: { subjectId: draft.body.id, eventType: 'INVOICE_USD_FX_RECORDED' },
+      }),
+    ).toBe(0);
   });
 
   it('does not call FX for a DOP confirmation', async () => {

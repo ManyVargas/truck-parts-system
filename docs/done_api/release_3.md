@@ -3,7 +3,7 @@
 **Release:** Payments and Basic Accounts Receivable (slice financiero)  
 **Plan de producto:** [`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) §Release 3  
 **Specs:** [`../FEATURES/12_PAYMENTS_AND_ACCOUNTS_RECEIVABLE.md`](../FEATURES/12_PAYMENTS_AND_ACCOUNTS_RECEIVABLE.md), slice financiero de [`../FEATURES/13_CANCELLATION_AND_REFUNDS.md`](../FEATURES/13_CANCELLATION_AND_REFUNDS.md)  
-**Estado:** slice financiero **implementado** en API + UI HTTP; Release 3 **sigue abierta**. El owner confirmó (2026-09-10): hay que implementar **todo lo que piden** los specs R3 que sigan en checklist abierto (hoy: filtros CxC de Feature 12). Eso va **después** de cerrar R2 M24 y M25. No hay `plans_api/plan_release_3.md`; este archivo es el registro.
+**Estado:** slice financiero **implementado** en API + UI HTTP; Release 3 **sigue abierta**. El owner confirmó (2026-09-10): hay que implementar **todo lo que piden** los specs R3 que sigan en checklist abierto (hoy: filtros CxC de Feature 12). Eso va **después de cerrar Release 2** (M25 cerrado 2026-09-11). No hay `plans_api/plan_release_3.md`; este archivo es el registro.
 
 Este archivo documenta **qué ya está en el código** para que un plan R3 futuro no lo vuelva a construir. No sustituye los feature specs.
 
@@ -34,4 +34,4 @@ Capabilities: `payments` y `invoiceCancellation` encendidas. Registrar pago, his
 
 ## Cómo se conecta con Release 2
 
-Billing Core (M1–M23) sigue ACTIVE hasta M24 (rentabilidad HTTP) y M25 (exit gate). Los pagos no son un milestone R2; conviven en `sales` / `payments` con el agregado Invoice.
+Billing Core (M1–M25) está **COMPLETED** en local. Los pagos no son un milestone R2; conviven en `sales` / `payments` con el agregado Invoice.

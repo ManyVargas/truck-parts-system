@@ -32,7 +32,7 @@ export function PaginationBar({
         Mostrando {from}–{to} de {total}
       </p>
       {pageCount > 1 ? (
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Button
             variant="secondary"
             size="sm"
@@ -41,6 +41,9 @@ export function PaginationBar({
           >
             Anterior
           </Button>
+          <span className="min-w-[3ch] text-center text-sm font-medium tabular-nums text-navy">
+            {page} / {pageCount}
+          </span>
           <Button
             variant="secondary"
             size="sm"

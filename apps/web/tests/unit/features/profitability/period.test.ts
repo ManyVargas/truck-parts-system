@@ -10,6 +10,10 @@ import {
 
 describe('profitability period', () => {
   it('resolves rolling and calendar presets in Santo Domingo calendar dates', () => {
+    expect(resolvePeriodRange({ preset: 'today', today: '2026-09-11' })).toEqual({
+      from: '2026-09-11',
+      to: '2026-09-11',
+    });
     expect(resolvePeriodRange({ preset: 'last_7', today: '2026-09-11' })).toEqual({
       from: '2026-09-05',
       to: '2026-09-11',
@@ -29,6 +33,9 @@ describe('profitability period', () => {
   });
 
   it('pads the evolution chart four days past today for presets that end today', () => {
+    expect(
+      evolutionChartRange({ from: '2026-09-11', to: '2026-09-11' }, 'today', '2026-09-11'),
+    ).toEqual({ from: '2026-09-11', to: '2026-09-15' });
     expect(
       evolutionChartRange({ from: '2026-08-13', to: '2026-09-11' }, 'last_30', '2026-09-11'),
     ).toEqual({ from: '2026-08-13', to: '2026-09-15' });
@@ -58,6 +65,10 @@ describe('profitability period', () => {
   });
 
   it('builds an equal-length previous window and percent change', () => {
+    expect(previousRange({ from: '2026-09-11', to: '2026-09-11' })).toEqual({
+      from: '2026-09-10',
+      to: '2026-09-10',
+    });
     expect(previousRange({ from: '2026-09-01', to: '2026-09-11' })).toEqual({
       from: '2026-08-21',
       to: '2026-08-31',

@@ -12,6 +12,7 @@ import { AuthProvider } from '../../../src/features/auth/AuthContext';
 import { CapabilitiesProvider } from '../../../src/shared/config/CapabilitiesProvider';
 import { ToastProvider, Toaster, money } from '../../../src/shared/ui';
 import type { Role } from '../../../src/api/contracts/entities';
+import { chooseSelectOption } from '../../support/select-menu';
 import '../../support/dom';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
@@ -188,6 +189,7 @@ describe('HTTP profitability flow', () => {
     mount();
 
     expect(await screen.findByRole('heading', { name: 'Rentabilidad' })).toBeVisible();
+    await chooseSelectOption(user, 'Período', '30 días');
     expect(screen.getByRole('img', { name: 'Evolución financiera' })).toBeVisible();
     expect(screen.getAllByText('Cobrado neto').length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: 'Rentabilidad' })).toBeVisible();

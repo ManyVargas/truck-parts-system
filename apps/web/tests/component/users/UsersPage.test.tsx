@@ -8,6 +8,7 @@ import { UsersPage } from '../../../src/features/users/UsersPage';
 import { mockAuthRepository } from '../../../src/mocks/repositories/MockAuthRepository';
 import { getMockState, resetMockState } from '../../../src/mocks/state';
 import { renderWithProviders } from '../../support/render';
+import { chooseSelectOption } from '../../support/select-menu';
 import { signInAs } from '../../support/session';
 import '../../support/dom';
 
@@ -31,7 +32,7 @@ describe('UsersPage', () => {
     await user.type(screen.getByLabelText('Usuario'), 'maria');
     expect(screen.queryByLabelText('Contraseña')).not.toBeInTheDocument();
     expect(screen.getByText('solocamiones')).toBeVisible();
-    await user.selectOptions(screen.getByLabelText('Rol'), 'SELLER');
+    await chooseSelectOption(user, 'Rol', 'SELLER');
     await user.click(screen.getByRole('button', { name: 'Crear usuario' }));
 
     expect(await screen.findByText('Usuario creado')).toBeVisible();

@@ -11,6 +11,7 @@ import { mockCustomerRepository } from '../../../src/mocks/repositories/MockCust
 import { mockSalesRepository } from '../../../src/mocks/repositories/MockSalesRepository';
 import { reloadMockStateFromStorage, resetMockState } from '../../../src/mocks/state';
 import { renderWithProviders } from '../../support/render';
+import { chooseSelectOption } from '../../support/select-menu';
 import { signInAs } from '../../support/session';
 import '../../support/dom';
 
@@ -117,10 +118,10 @@ describe('PosPage', () => {
     ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
-    const type = screen.getByLabelText('Tipo de línea');
-    expect(type).not.toHaveTextContent('Pieza');
-    expect(type).not.toHaveTextContent('Producto por cantidad');
-    expect(type).toHaveTextContent('Mercancía genérica');
+    await user.click(screen.getByLabelText('Tipo de línea'));
+    expect(screen.queryByRole('option', { name: 'Pieza' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Producto por cantidad' })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Mercancía genérica' })).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Cancelar' }));
     await user.click(screen.getByRole('button', { name: 'Confirmar venta' }));
@@ -179,7 +180,7 @@ describe('PosPage', () => {
     }
     const user = userEvent.setup();
     renderPos(created.value.draftId, CAPABILITY_PRESETS['release-2']);
-    expect(await screen.findByDisplayValue(/Cliente Contado/i)).toBeVisible();
+    expect(await screen.findByLabelText('Cliente')).toHaveTextContent(/Cliente Contado/i);
 
     await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
     const addDialog = await screen.findByRole('dialog');
@@ -197,13 +198,17 @@ describe('PosPage', () => {
     await user.type(amount, '40');
     await user.click(within(dialog).getByRole('button', { name: 'Confirmar venta' }));
 
-    expect(await screen.findByText('A Cliente contado no se le puede vender a crédito')).toBeVisible();
+    expect(
+      await screen.findByText('A Cliente contado no se le puede vender a crédito'),
+    ).toBeVisible();
   });
 
   it('lists a newly created customer in the selector', async () => {
+    const user = userEvent.setup();
     await mockCustomerRepository.save({ name: 'Flota Este', rnc: '1-23-45678-9' });
 
     renderPos();
+    await user.click(await screen.findByLabelText('Cliente'));
 
     expect(await screen.findByRole('option', { name: /Flota Este/ })).toBeVisible();
   });
@@ -222,7 +227,7 @@ describe('PosPage', () => {
     expect(await screen.findByText('Filtro de aceite')).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
-    expect(screen.getByLabelText('Tipo de línea')).toHaveValue('GENERIC');
+    expect(screen.getByLabelText('Tipo de línea')).toHaveAttribute('data-value', 'GENERIC');
     expect(screen.getByLabelText('Descripción')).toHaveValue('');
     expect(screen.getByLabelText('Cantidad')).toHaveValue(1);
     expect(screen.getByLabelText('Precio')).toHaveValue(0);
@@ -235,7 +240,8 @@ describe('PosPage', () => {
     await screen.findByText('Alternador 24V');
 
     await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
-    await user.selectOptions(screen.getByLabelText('Tipo de línea'), 'SERVICE');
+    await chooseSelectOption(user, 'Tipo de línea', 'SERVICE');
+    await user.click(screen.getByLabelText('Servicio'));
 
     expect(screen.getByRole('option', { name: 'Instalación mecánica' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Desarme especializado' })).toBeInTheDocument();
@@ -372,6 +378,45 @@ describe('PosPage', () => {
     expect(screen.queryByText('Caja suelta')).not.toBeInTheDocument();
     expect(screen.queryByText('Tornillo suelto')).not.toBeInTheDocument();
     expect(screen.getByText('4')).toBeVisible();
+  });
+
+  it('allows an estimated acquisition cost when adding a free-form line', async () => {
+    const created = await mockSalesRepository.createDraft();
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const addLine = vi.spyOn(mockSalesRepository, 'addLine');
+    const setLinePrice = vi.spyOn(mockSalesRepository, 'setLinePrice');
+    const user = userEvent.setup();
+    renderPos(created.value.draftId);
+    await screen.findByRole('button', { name: 'Agregar línea' });
+
+    await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
+    await chooseSelectOption(user, 'Tipo de línea', 'GENERIC');
+    await user.type(screen.getByLabelText('Descripción'), 'Pieza de procedencia estimada');
+    await chooseSelectOption(user, 'Origen del costo', 'ESTIMATED');
+    await user.type(screen.getByLabelText('Costo de adquisición en pesos (opcional)'), '25');
+    await user.clear(screen.getByLabelText('Precio'));
+    await user.type(screen.getByLabelText('Precio'), '50');
+    await user.click(screen.getByRole('button', { name: 'Agregar' }));
+
+    expect(addLine).toHaveBeenCalledWith(
+      expect.objectContaining({
+        acquisitionCostDop: 25,
+        costProvenance: 'ESTIMATED',
+      }),
+    );
+
+    expect(await screen.findByText('Pieza de procedencia estimada')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Editar Pieza de procedencia estimada' }));
+    expect(screen.getByLabelText('Origen del costo')).toHaveAttribute('data-value', 'ESTIMATED');
+    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+    expect(setLinePrice).toHaveBeenCalledWith(
+      expect.objectContaining({
+        acquisitionCostDop: 25,
+        costProvenance: 'ESTIMATED',
+      }),
+    );
   });
 
   it('renders line cards below the lg breakpoint', async () => {

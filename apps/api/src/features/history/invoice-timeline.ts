@@ -18,6 +18,7 @@ export type InvoiceHistoryEntryView = {
 
 const ADMINISTRATOR_ONLY_EVENTS = new Set([
   'INVOICE_GROSS_PROFIT_RECORDED',
+  'INVOICE_USD_FX_RECORDED',
   'INVOICE_USD_FX_RETRIED',
 ]);
 
@@ -50,6 +51,14 @@ function paymentMethodLabel(method: string | undefined): string {
   return PAYMENT_METHOD_LABELS[method] ?? method.toLowerCase();
 }
 
+function fxRecordedDescription(payload: unknown): string {
+  const after = asRecord(asRecord(payload)?.after);
+  const rate = stringField(after, 'exchangeRateDopPerUsd');
+  const source = stringField(after, 'source');
+  if (!rate || !source) return 'Tasa USD registrada';
+  return `Tasa USD ${rate} DOP/USD registrada (${source})`;
+}
+
 function describeInvoiceHistoryEvent(row: InvoiceHistoryRow): string | null {
   const payload = row.payload;
   switch (row.eventType) {
@@ -71,6 +80,8 @@ function describeInvoiceHistoryEvent(row: InvoiceHistoryRow): string | null {
       return 'Factura anulada';
     case 'INVOICE_GROSS_PROFIT_RECORDED':
       return 'Ganancia bruta registrada';
+    case 'INVOICE_USD_FX_RECORDED':
+      return fxRecordedDescription(payload);
     case 'INVOICE_USD_FX_RETRIED':
       return stringField(payload, 'outcome') === 'UNAVAILABLE'
         ? 'Reintento de tasa USD no disponible'

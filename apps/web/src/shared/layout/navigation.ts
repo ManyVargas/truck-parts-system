@@ -300,8 +300,8 @@ export function defaultPathForRole(
 
 /**
  * Whether this identity may land on the URL after login.
- * Logout preserves the previous path as login `state.from`; that path belongs to
- * the previous user and must not send a different role to UnauthorizedPage.
+ * Session expiry may restore `state.from`; explicit logout discards it. A path
+ * from another role must not send the new user to UnauthorizedPage.
  */
 export function isPathAllowedForRole(
   pathname: string,

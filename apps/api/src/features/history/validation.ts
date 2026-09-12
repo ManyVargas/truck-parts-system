@@ -55,6 +55,14 @@ const invoiceConfirmedSnapshot = z
     confirmedByName: z.string().min(1),
   })
   .strict();
+const invoiceFxProvenanceSnapshot = z
+  .object({
+    exchangeRateDopPerUsd: z.string(),
+    source: z.string(),
+    rateUpdatedAt: z.string(),
+    obtainedAt: z.string(),
+  })
+  .strict();
 const invoiceLineSnapshot = z
   .object({
     id: z.uuid(),
@@ -324,21 +332,25 @@ export const historyEventSchema = z
     z
       .object({
         ...invoiceBase,
+        eventType: z.literal('INVOICE_USD_FX_RECORDED'),
+        payload: z
+          .object({
+            asOf: z.string(),
+            after: invoiceFxProvenanceSnapshot,
+          })
+          .strict(),
+      })
+      .strict(),
+    z
+      .object({
+        ...invoiceBase,
         eventType: z.literal('INVOICE_USD_FX_RETRIED'),
         payload: z
           .object({
             outcome: z.enum(['RECORDED', 'UNAVAILABLE']),
             reason: z.string().nullable(),
             asOf: z.string(),
-            after: z
-              .object({
-                exchangeRateDopPerUsd: z.string(),
-                source: z.string(),
-                rateUpdatedAt: z.string(),
-                obtainedAt: z.string(),
-              })
-              .strict()
-              .nullable(),
+            after: invoiceFxProvenanceSnapshot.nullable(),
           })
           .strict(),
       })

@@ -1,4 +1,5 @@
 export const PERIOD_PRESETS = [
+  { id: 'today', label: 'Hoy' },
   { id: 'last_7', label: 'Últimos 7 días' },
   { id: 'last_30', label: '30 días' },
   { id: 'this_month', label: 'Este mes' },
@@ -13,7 +14,7 @@ export type DateRange = {
   to: string;
 };
 
-export const DEFAULT_PERIOD_PRESET: PeriodPreset = 'last_30';
+export const DEFAULT_PERIOD_PRESET: PeriodPreset = 'today';
 
 /** Extra empty days after today on the evolution chart so the current day is not glued to the right edge. */
 export const EVOLUTION_CHART_FORWARD_DAYS = 4;
@@ -56,6 +57,9 @@ export function resolvePeriodRange(input: {
 }): DateRange {
   const month = input.today.slice(0, 7);
 
+  if (input.preset === 'today') {
+    return { from: input.today, to: input.today };
+  }
   if (input.preset === 'last_7') {
     return { from: shiftDay(input.today, -6), to: input.today };
   }

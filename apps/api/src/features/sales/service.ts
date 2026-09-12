@@ -57,6 +57,7 @@ import {
   toPublicInvoice,
   toPublicInvoiceListItem,
   toPublicReceivables,
+  toUsdFxRecordedHistorySnapshot,
 } from './projection.js';
 import { SalesRepository } from './repository.js';
 import { salesTransaction, type SalesTransaction } from './transaction.js';
@@ -171,7 +172,7 @@ export class SalesService {
   constructor(
     private readonly transaction: SalesTransaction = salesTransaction,
     private readonly fxRateProvider: FxRateProvider = unavailableFxRateProvider,
-    private readonly sales: SalesRepository = new SalesRepository(),
+    _sales: SalesRepository = new SalesRepository(),
     private readonly invoiceDocuments: InvoiceDocumentService = new InvoiceDocumentService(),
   ) {}
 
@@ -346,7 +347,7 @@ export class SalesService {
       if (patch.description !== undefined) {
         assertDraftLineDescriptionEditable(line.type);
       }
-      if (patch.acquisitionCostDop !== undefined) {
+      if (patch.acquisitionCostDop !== undefined || patch.costProvenance !== undefined) {
         assertDraftLineCostEditable(line.type);
       }
 
@@ -360,11 +361,18 @@ export class SalesService {
       });
 
       const costPatch =
-        patch.acquisitionCostDop === undefined
+        patch.costProvenance === undefined
           ? {}
-          : patch.acquisitionCostDop == null
-            ? { acquisitionCostDop: null, costProvenance: 'UNKNOWN' as const }
-            : { acquisitionCostDop: patch.acquisitionCostDop, costProvenance: 'ACTUAL' as const };
+          : (() => {
+              const cost = normalizeAcquisitionCost({
+                provenance: patch.costProvenance,
+                amount: patch.acquisitionCostDop,
+              });
+              return {
+                acquisitionCostDop: cost.amount,
+                costProvenance: cost.provenance,
+              };
+            })();
 
       const updated = await sales.updateLine({
         invoiceId,
@@ -497,7 +505,9 @@ export class SalesService {
         return { invoice: completed, actor, alreadyCompleted: false };
       },
     );
-    const enriched = alreadyCompleted ? invoice : await this.enrichUsdProfitability(invoice);
+    const enriched = alreadyCompleted
+      ? invoice
+      : await this.enrichUsdProfitability(actorId, invoice);
     const withDocument = alreadyCompleted
       ? enriched
       : await this.generateInvoicePdf(actorId, enriched);
@@ -667,10 +677,18 @@ export class SalesService {
    * FX is outside the commercial transaction. Failure leaves the sale committed
    * and profitability PENDING_FX_RATE.
    */
-  private async enrichUsdProfitability(invoice: InvoiceRecord): Promise<InvoiceRecord> {
-    if (invoice.currency !== 'USD' || invoice.exchangeRateDopPerUsd != null) {
+  private async enrichUsdProfitability(
+    actorId: string,
+    invoice: InvoiceRecord,
+  ): Promise<InvoiceRecord> {
+    if (
+      invoice.currency !== 'USD' ||
+      invoice.confirmedAt == null ||
+      invoice.exchangeRateDopPerUsd != null
+    ) {
       return invoice;
     }
+    const confirmedAt = invoice.confirmedAt;
 
     try {
       const result = await this.fxRateProvider.getUsdToDopRate();
@@ -678,14 +696,39 @@ export class SalesService {
         logger.warn({ invoiceId: invoice.id, reason: result.reason }, 'USD FX rate unavailable');
         return invoice;
       }
-      const persisted = await this.sales.recordUsdFxRate({
-        id: invoice.id,
-        exchangeRateDopPerUsd: result.quote.exchangeRateDopPerUsd,
-        source: result.quote.source,
-        rateUpdatedAt: result.quote.rateUpdatedAt,
-        obtainedAt: result.quote.obtainedAt,
+      return await this.transaction(async ({ sales, history }) => {
+        await sales.lockById(invoice.id);
+        const existing = await sales.findById(invoice.id);
+        if (
+          existing == null ||
+          existing.status !== 'COMPLETED' ||
+          existing.currency !== 'USD' ||
+          existing.exchangeRateDopPerUsd != null
+        ) {
+          return existing ?? invoice;
+        }
+
+        const persisted = await sales.recordUsdFxRate({
+          id: invoice.id,
+          exchangeRateDopPerUsd: result.quote.exchangeRateDopPerUsd,
+          source: result.quote.source,
+          rateUpdatedAt: result.quote.rateUpdatedAt,
+          obtainedAt: result.quote.obtainedAt,
+        });
+        if (!persisted.recorded) return persisted.invoice ?? existing;
+
+        await history.append({
+          actor: { actorType: 'USER', actorUserId: actorId },
+          subjectType: 'INVOICE',
+          subjectId: invoice.id,
+          eventType: 'INVOICE_USD_FX_RECORDED',
+          payload: toUsdFxRecordedHistorySnapshot({
+            asOf: confirmedAt,
+            after: result.quote,
+          }),
+        });
+        return persisted.invoice ?? existing;
       });
-      return persisted.invoice ?? invoice;
     } catch (error) {
       logger.warn(
         { invoiceId: invoice.id, reason: error instanceof Error ? error.name : 'unknown' },

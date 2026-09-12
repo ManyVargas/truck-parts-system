@@ -8,6 +8,7 @@ import { ProfitabilityPage } from '../../../src/features/profitability/Profitabi
 import { resetMockState } from '../../../src/mocks/state';
 import { money } from '../../../src/shared/ui';
 import { renderWithProviders } from '../../support/render';
+import { chooseSelectOption } from '../../support/select-menu';
 import { signInAs } from '../../support/session';
 import '../../support/dom';
 
@@ -24,6 +25,8 @@ describe('ProfitabilityPage', () => {
   it('keeps FAC-000096 pending until FX is enabled and retried', async () => {
     const user = userEvent.setup();
     renderWithProviders(<ProfitabilityPage />, { route: '/profitability' });
+    await screen.findByLabelText('Período');
+    await chooseSelectOption(user, 'Período', '30 días');
 
     expect(await screen.findByText('FAC-000096')).toBeVisible();
     expect(screen.getAllByText('Ganancia bruta').length).toBeGreaterThan(0);
@@ -51,9 +54,22 @@ describe('ProfitabilityPage', () => {
     expect(screen.getAllByText(money(8_900 + profitDop, 'DOP')).length).toBeGreaterThan(0);
   });
 
+  it('lets the administrator change the period from the styled selector', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ProfitabilityPage />, { route: '/profitability' });
+
+    const period = await screen.findByLabelText('Período');
+    expect(period).toHaveTextContent('Hoy');
+
+    await chooseSelectOption(user, 'Período', '30 días');
+    expect(screen.getByLabelText('Período')).toHaveTextContent('30 días');
+  });
+
   it('lets an administrator record gross profit when the invoice shows unavailable', async () => {
     const user = userEvent.setup();
     renderWithProviders(<ProfitabilityPage />, { route: '/profitability' });
+    await screen.findByLabelText('Período');
+    await chooseSelectOption(user, 'Período', '30 días');
 
     expect(await screen.findByText('FAC-000097')).toBeVisible();
     expect(screen.getByText('No disponible')).toBeVisible();

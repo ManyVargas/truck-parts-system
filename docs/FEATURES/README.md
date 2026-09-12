@@ -62,7 +62,7 @@ Checklist `[x]` in a feature file may mean **prototype mock**, **production API*
 | `09_RESERVATIONS.md` | Draft-linked inventory reservations | Release 5 | **Not started** in API; some mock recovery UI `[x]` |
 | `10_SALES_AND_INVOICES.md` | Invoice lifecycle, line types, taxes, PDF, sale confirmation | Release 2/5/7 | **R2 done** (non-inventory + PDF). ITEM/QTY/installed **API not started** (409 / capabilities off). Confirm may include pulled-forward initial payment |
 | `11_COST_AND_PROFITABILITY.md` | DOP cost, profit, USD FX enrichment | Release 2/4/5 | **API done** for invoice-line cost/FX/profit. **HTTP UI done (R2 M24)**. Inventory cost correction **not** in API |
-| `12_PAYMENTS_AND_ACCOUNTS_RECEIVABLE.md` | Payments, balances, basic CxC | Release 3 | **Pulled forward — core API + HTTP done. Release still open:** remaining checklist filters must still be implemented after R2 M24/M25 |
+| `12_PAYMENTS_AND_ACCOUNTS_RECEIVABLE.md` | Payments, balances, basic CxC | Release 3 | **Pulled forward — core API + HTTP done. Release still open:** remaining checklist filters must still be implemented now that R2 is closed |
 | `13_CANCELLATION_AND_REFUNDS.md` | Cancellation, refunds, restoration | Release 3/5/7 | **Financial/non-inventory pulled forward — API + HTTP done**. Inventory/WO branches **mock only** |
 | `14_HISTORY_ADMIN_AND_RECOVERY.md` | History, protected corrections, recovery, diagnostics | Cross-cutting/Release 8 | Envelope + owning-feature events **partial**. Invoice detail activity timeline **done** (document-level only). PDF regenerate **done**. FX retry on profitability API. Rest of ADMIN-002/diagnostics **open** |
 | `15_ACCOUNTS_PAYABLE_PENDING_VALIDATION.md` | Basic CxP proposal | Pending validation | Do not implement |

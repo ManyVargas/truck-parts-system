@@ -5,7 +5,7 @@ import { useAuth } from '../auth/useAuth';
 import { InvoiceStatusChip, PaymentChip } from '../../shared/domain';
 import { can } from '../../shared/auth/policies';
 import { useAppCapabilities } from '../../shared/config/CapabilitiesProvider';
-import { Button, Card, Chip, Info, money, Mono } from '../../shared/ui';
+import { Button, Card, Chip, Info, money, Mono, Skeleton } from '../../shared/ui';
 import { PageHeader } from '../../shared/layout/PageHeader';
 import { BackToSalesLink } from './BackToSalesLink';
 import { CancelInvoiceModal } from './CancelInvoiceModal';
@@ -54,11 +54,7 @@ export function InvoiceDetailPage() {
   }
 
   if (result.status === 'loading') {
-    return (
-      <p className="text-sm text-navy-400" aria-live="polite">
-        Cargando factura…
-      </p>
-    );
+    return <Skeleton label="Cargando factura" lines={6} />;
   }
 
   const detail = result.detail;

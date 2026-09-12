@@ -233,6 +233,32 @@ describe('invoice draft history validation', () => {
     ).toBe(false);
   });
 
+  it('accepts INVOICE_USD_FX_RECORDED with the initial rate provenance', () => {
+    const event = {
+      actor: { actorType: 'USER' as const, actorUserId: id },
+      subjectType: 'INVOICE' as const,
+      subjectId: id,
+      eventType: 'INVOICE_USD_FX_RECORDED' as const,
+      payload: {
+        asOf: '2026-09-08T18:00:00.000Z',
+        after: {
+          exchangeRateDopPerUsd: '61.5',
+          source: 'ExchangeRate-API',
+          rateUpdatedAt: '2026-09-08T00:00:00.000Z',
+          obtainedAt: '2026-09-08T12:00:00.000Z',
+        },
+      },
+    };
+
+    expect(historyEventSchema.parse(event)).toEqual(event);
+    expect(
+      historyEventSchema.safeParse({
+        ...event,
+        payload: { ...event.payload, source: 'not-at-the-provenance-level' },
+      }).success,
+    ).toBe(false);
+  });
+
   it('accepts INVOICE_PDF_GENERATED and INVOICE_PDF_FAILED without extra fields', () => {
     const generated = {
       actor: { actorType: 'USER' as const, actorUserId: id },

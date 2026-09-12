@@ -394,7 +394,14 @@ export function addDraftLine(
     unitPrice: unitPrice.value,
     taxable: isTaxableLineType(input.type),
     pricePending: false,
-    acquisitionCostDop: input.type === 'EXTERNAL' ? input.acquisitionCostDop : undefined,
+    acquisitionCostDop:
+      input.type === 'GENERIC' || input.type === 'EXTERNAL' ? input.acquisitionCostDop : undefined,
+    costProvenance:
+      input.type === 'GENERIC' || input.type === 'EXTERNAL'
+        ? input.acquisitionCostDop == null
+          ? 'UNKNOWN'
+          : (input.costProvenance ?? 'ACTUAL')
+        : undefined,
   });
   return ok(draft);
 }
@@ -487,13 +494,7 @@ export function setDraftLinePrice(
     }
     quantity = parsedQuantity.value;
     if (line.type === 'QTY' && quantity !== line.quantity) {
-      const adjusted = adjustQtyReservation(
-        state,
-        _actor,
-        draftResult.value.id,
-        line,
-        quantity,
-      );
+      const adjusted = adjustQtyReservation(state, _actor, draftResult.value.id, line, quantity);
       if (!adjusted.ok) {
         return adjusted;
       }
@@ -514,8 +515,12 @@ export function setDraftLinePrice(
   }
   if (acquisitionCostDop === null) {
     delete line.acquisitionCostDop;
+    line.costProvenance = 'UNKNOWN';
   } else if (acquisitionCostDop !== undefined) {
     line.acquisitionCostDop = acquisitionCostDop;
+    line.costProvenance = input.costProvenance ?? 'ACTUAL';
+  } else if (input.costProvenance !== undefined) {
+    line.costProvenance = input.costProvenance;
   }
 
   return ok(draftResult.value);

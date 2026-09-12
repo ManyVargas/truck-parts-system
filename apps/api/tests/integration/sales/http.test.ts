@@ -53,6 +53,7 @@ async function cleanup() {
   vi.restoreAllMocks();
   await resetLoginRateLimit();
   await clearTestHistory();
+  await prisma.invoicePayment.deleteMany();
   await prisma.invoice.deleteMany();
   await prisma.mechanicalService.deleteMany();
   await prisma.invoiceSequence.update({

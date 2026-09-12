@@ -47,7 +47,7 @@ export function KpiCard({ label, value, hint, tone = 'default', icon, trend, to,
         <div className="flex shrink-0 items-center gap-2">
           {icon}
           {to && !actionLabel ? (
-            <span className="text-sm font-medium text-navy-300" aria-hidden="true">
+            <span className="text-sm font-medium text-navy-300 transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden="true">
               →
             </span>
           ) : null}
@@ -70,10 +70,10 @@ export function KpiCard({ label, value, hint, tone = 'default', icon, trend, to,
     return (
       <Link
         to={to}
-        className="block min-w-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-light/50"
+        className="group block min-w-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-light/50"
       >
         <Card
-          className={`h-full transition-colors hover:bg-navy-50/50 ${toneBorder[tone]}`}
+          className={`h-full transition-all duration-150 hover:bg-navy-50/50 hover:shadow-md hover:-translate-y-0.5 ${toneBorder[tone]}`}
           padding="md"
         >
           {content}

@@ -160,6 +160,7 @@ export type InvoiceLine = {
   pricePending?: boolean;
   /** DOP cost copied at line creation so later inventory edits do not rewrite the sale. */
   acquisitionCostDop?: number;
+  costProvenance?: 'ACTUAL' | 'ESTIMATED' | 'UNKNOWN';
 };
 
 export type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'CHECK';

@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import {
   COST_AMOUNT_REQUIRED_MESSAGE,
+  COST_PROVENANCE_REQUIRED_MESSAGE,
   DRAFT_META_REQUIRED_MESSAGE,
   LINE_NOTE_MAX_LENGTH,
   UNKNOWN_COST_AMOUNT_MESSAGE,
@@ -158,6 +159,38 @@ export const setLinePriceSchema = z
     description: z.string().trim().min(1).optional(),
     notes: lineNotesSchema,
     acquisitionCostDop: decimal12x2StringSchema.nullable().optional(),
+    costProvenance: costProvenanceSchema.optional(),
+  })
+  .superRefine((value, context) => {
+    const updatesCost =
+      value.acquisitionCostDop !== undefined || value.costProvenance !== undefined;
+    if (!updatesCost) return;
+
+    if (value.costProvenance === undefined) {
+      context.addIssue({
+        code: 'custom',
+        message: COST_PROVENANCE_REQUIRED_MESSAGE,
+        path: ['costProvenance'],
+      });
+      return;
+    }
+    if (value.costProvenance === 'UNKNOWN') {
+      if (value.acquisitionCostDop !== null) {
+        context.addIssue({
+          code: 'custom',
+          message: UNKNOWN_COST_AMOUNT_MESSAGE,
+          path: ['acquisitionCostDop'],
+        });
+      }
+      return;
+    }
+    if (value.acquisitionCostDop == null) {
+      context.addIssue({
+        code: 'custom',
+        message: COST_AMOUNT_REQUIRED_MESSAGE,
+        path: ['acquisitionCostDop'],
+      });
+    }
   })
   .refine(
     (value) =>
@@ -165,7 +198,8 @@ export const setLinePriceSchema = z
       value.quantity !== undefined ||
       value.description !== undefined ||
       value.notes !== undefined ||
-      value.acquisitionCostDop !== undefined,
+      value.acquisitionCostDop !== undefined ||
+      value.costProvenance !== undefined,
     DRAFT_META_REQUIRED_MESSAGE,
   );
 

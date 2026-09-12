@@ -9,16 +9,27 @@ export const TEST_CSRF_HEADERS = { 'X-Requested-With': 'XMLHttpRequest' };
 export async function assignNamedCustomerForCredit(
   agent: request.Agent,
   draftId: string,
-): Promise<void> {
-  const created = await agent.post('/api/customers').set(TEST_CSRF_HEADERS).send({
-    name: `Cliente crédito ${randomUUID().slice(0, 8)}`,
-  });
-  expect(created.status).toBe(201);
+  customerId?: string,
+): Promise<string> {
+  let assignedCustomerId: string;
+  if (customerId) {
+    assignedCustomerId = customerId;
+  } else {
+    const created = await agent
+      .post('/api/customers')
+      .set(TEST_CSRF_HEADERS)
+      .send({
+        name: `Cliente crédito ${randomUUID().slice(0, 8)}`,
+      });
+    expect(created.status).toBe(201);
+    assignedCustomerId = created.body.id as string;
+  }
   const patched = await agent
     .patch(`/api/sales/${draftId}`)
     .set(TEST_CSRF_HEADERS)
-    .send({ customerId: created.body.id });
+    .send({ customerId: assignedCustomerId });
   expect(patched.status).toBe(200);
+  return assignedCustomerId;
 }
 
 export function cashSaleFullPayment(amount: string) {

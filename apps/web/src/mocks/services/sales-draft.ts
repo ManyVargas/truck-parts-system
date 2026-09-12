@@ -39,6 +39,7 @@ function toLineView(state: AppState, invoice: Invoice, line: InvoiceLine): PosLi
     qtyProductId: line.qtyProductId,
     serviceId: line.serviceId,
     acquisitionCostDop: line.acquisitionCostDop,
+    costProvenance: line.costProvenance ?? (line.acquisitionCostDop == null ? 'UNKNOWN' : 'ACTUAL'),
     installed: item?.physicalRelationship === 'INSTALLED',
     parentName: item?.parentId ? itemById(state.items, item.parentId)?.name : undefined,
     isAssembly,

@@ -330,6 +330,11 @@ export type InvoiceUsdFxRetryHistorySnapshot = {
   after: PublicFxProvenance | null;
 };
 
+export type InvoiceUsdFxRecordedHistorySnapshot = {
+  asOf: string;
+  after: PublicFxProvenance;
+};
+
 export type InvoiceLineHistorySnapshot = {
   id: string;
   type: InvoiceLineType;

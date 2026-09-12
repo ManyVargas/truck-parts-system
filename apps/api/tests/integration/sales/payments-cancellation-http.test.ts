@@ -45,7 +45,11 @@ async function fixture(agent: request.Agent, role: Role) {
   return { agent, user };
 }
 
-async function confirmInvoice(agent: request.Agent, body: Record<string, unknown> = {}) {
+async function confirmInvoice(
+  agent: request.Agent,
+  body: Record<string, unknown> = {},
+  creditCustomerId?: string,
+) {
   const draft = await agent.post(SALES).set(CSRF).send({});
   await agent.post(`${SALES}/${draft.body.id}/lines`).set(CSRF).send({
     type: 'GENERIC',
@@ -54,7 +58,7 @@ async function confirmInvoice(agent: request.Agent, body: Record<string, unknown
     costProvenance: 'UNKNOWN',
   });
   if (!body.payment) {
-    await assignNamedCustomerForCredit(agent, draft.body.id);
+    await assignNamedCustomerForCredit(agent, draft.body.id, creditCustomerId);
   }
   const confirmed = await agent.post(`${SALES}/${draft.body.id}/confirm`).set(CSRF).send(body);
   expect(confirmed.status).toBe(200);
@@ -111,9 +115,12 @@ describe('payments, due date, and cancellation HTTP', () => {
     expect(unpaid.status).toBe(409);
     expect(unpaid.body.error.message).toBe(CASH_CUSTOMER_CREDIT_FORBIDDEN_MESSAGE);
 
-    const partial = await seller.agent.post(`${SALES}/${draft.body.id}/confirm`).set(CSRF).send({
-      payment: { amount: '250.00', method: 'CASH' },
-    });
+    const partial = await seller.agent
+      .post(`${SALES}/${draft.body.id}/confirm`)
+      .set(CSRF)
+      .send({
+        payment: { amount: '250.00', method: 'CASH' },
+      });
     expect(partial.status).toBe(409);
     expect(partial.body.error.message).toBe(CASH_CUSTOMER_CREDIT_FORBIDDEN_MESSAGE);
 
@@ -306,7 +313,7 @@ describe('payments, due date, and cancellation HTTP', () => {
   it('paginates open receivables while keeping the complete customer aggregate', async () => {
     const seller = await fixture(request.agent(createTestApp()), 'SELLER');
     const first = await confirmInvoice(seller.agent);
-    const second = await confirmInvoice(seller.agent);
+    const second = await confirmInvoice(seller.agent, {}, first.customer.id);
 
     const firstPage = await seller.agent.get(`${SALES}/receivables?page=1&pageSize=1`);
     const secondPage = await seller.agent.get(`${SALES}/receivables?page=2&pageSize=1`);

@@ -1,8 +1,8 @@
 # Plan Release 2 — Billing Core: Customers, Invoices, Cost/Profit, PDF
 
 **Release:** 2 — Billing Core  
-**Estado:** en curso (M1–M24 completados; **M25 pendiente**)  
-**Último milestone planificado:** Milestone 25 — Exit gate Release 2  
+**Estado:** **COMPLETADO en local** (M1–M25; exit gate 2026-09-11)  
+**Último milestone:** Milestone 25 — Exit gate Release 2  
 **Registro de implementación:** [`../done_api/release_2.md`](../done_api/release_2.md)  
 **Trabajo adelantado:** el slice financiero de Release 3 (pagos, CxC, cancelación no-inventario) **ya está en el código**. Ver [`../done_api/release_3.md`](../done_api/release_3.md) y el snapshot en [`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md). No volver a implementarlo en un plan R3 desde cero.
 
@@ -273,7 +273,7 @@ Paralelo al inicio: M1 ∥ M3 ∥ M5 ∥ M6. M19 puede seguir a M2 sin esperar e
 | M22 | Web: confirmación HTTP | completado | Swap `confirmInvoice` |
 | M23 | Web: PDF HTTP | completado | Print / regenerate |
 | M24 | Web: rentabilidad HTTP | completado | Swap `ProfitabilityRepository` |
-| M25 | Exit gate Release 2 | pendiente | Verificación end-to-end; sin features nuevas |
+| M25 | Exit gate Release 2 | completado | Verificación end-to-end; sin features nuevas |
 
 ---
 
@@ -815,7 +815,7 @@ Nota 2026-09-10: el corte **M21 original** es el de arriba. Después se adelant�
 
 ## Milestone 25 — Exit gate Release 2
 
-**Objetivo:** Verificar el flujo completo en local. **Sin features nuevas.**
+**Objetivo:** Verificar el flujo completo en local. **Sin features de negocio nuevas.** El árbol de cierre puede incluir endurecimiento R2 (COST-001 PATCH, SelectMenu, login return path).
 
 **Alcance:**
 - Recorrer el exit gate de DEVELOPMENT_PLAN en browser.
@@ -877,4 +877,4 @@ El prototipo web no es dependencia de M1–M18. M19–M24 son swaps. M25 no impl
 
 ## Próximo paso
 
-**Milestone 25:** Exit gate Release 2. Verificar el flujo local; sin features nuevas.
+Release 2 está cerrado en local. Siguiente trabajo de producto: resto abierto de Release 3 (filtros CxC de Feature 12). No reimplementar pagos/cancelación no-inventario. El primer uso en producción sigue bloqueado por el gate operativo de `DEVELOPMENT_PLAN.md`, no por este plan.

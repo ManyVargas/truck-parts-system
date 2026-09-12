@@ -103,7 +103,10 @@ describe('HTTP sales draft contract', () => {
         page: 1,
         pageSize: 10,
       });
-      expect(all.value.items.map((row) => row.number)).toEqual(['FAC-000001', `Borrador ${draftId}`]);
+      expect(all.value.items.map((row) => row.number)).toEqual([
+        'FAC-000001',
+        `Borrador ${draftId}`,
+      ]);
       expect(all.value.items[0]).toMatchObject({
         status: 'COMPLETED',
         href: '/sales/cccccccc-cccc-4ccc-8ccc-cccccccccccc',
@@ -195,7 +198,7 @@ describe('HTTP sales draft contract', () => {
     });
   });
 
-  it('sends GENERIC unknown cost and EXTERNAL actual cost as decimal strings', () => {
+  it('sends unknown, actual, and estimated merchandise costs as decimal strings', () => {
     expect(
       toHttpAddLineBody({
         draftId,
@@ -227,6 +230,19 @@ describe('HTTP sales draft contract', () => {
       unitPrice: '50.00',
       costProvenance: 'ACTUAL',
       acquisitionCostDop: '20.00',
+    });
+    expect(
+      toHttpAddLineBody({
+        draftId,
+        type: 'GENERIC',
+        description: 'Pieza estimada',
+        unitPrice: 75,
+        acquisitionCostDop: 30,
+        costProvenance: 'ESTIMATED',
+      }),
+    ).toMatchObject({
+      costProvenance: 'ESTIMATED',
+      acquisitionCostDop: '30.00',
     });
     expect(
       toHttpAddLineBody({
@@ -293,6 +309,7 @@ describe('HTTP sales draft contract', () => {
     expect(added.ok).toBe(true);
     if (added.ok) {
       expect(added.value.lines[0]?.description).toBe('Filtro');
+      expect(added.value.lines[0]?.costProvenance).toBe('UNKNOWN');
       expect(added.value.totals.gross).toBe(100);
     }
     expect(JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body))).toMatchObject({
@@ -321,7 +338,7 @@ describe('HTTP sales draft contract', () => {
           base: '375.00',
           itbis: '0.00',
           acquisitionCostDop: '40.00',
-          costProvenance: 'ACTUAL',
+          costProvenance: 'ESTIMATED',
           serviceId: null,
         },
       ],
@@ -351,6 +368,7 @@ describe('HTTP sales draft contract', () => {
       description: ' Filtro de aire ',
       notes: ' Para motor ',
       acquisitionCostDop: 40,
+      costProvenance: 'ESTIMATED',
     });
 
     expect(result.ok).toBe(true);
@@ -365,7 +383,11 @@ describe('HTTP sales draft contract', () => {
       description: 'Filtro de aire',
       notes: 'Para motor',
       acquisitionCostDop: '40.00',
+      costProvenance: 'ESTIMATED',
     });
+    if (result.ok) {
+      expect(result.value.lines[0]?.costProvenance).toBe('ESTIMATED');
+    }
   });
 
   it('keeps a successful line mutation successful when auxiliary lookups fail', async () => {
@@ -657,20 +679,18 @@ describe('HTTP sales draft contract', () => {
   it('surfaces a failed PDF download as a conflict without treating it as JSON success', async () => {
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValue(
-          json(
-            {
-              error: {
-                code: 'CONFLICT',
-                message: 'La generación del PDF falló',
-                errorId: 'pdf-err-1',
-              },
+      vi.fn().mockResolvedValue(
+        json(
+          {
+            error: {
+              code: 'CONFLICT',
+              message: 'La generación del PDF falló',
+              errorId: 'pdf-err-1',
             },
-            409,
-          ),
+          },
+          409,
         ),
+      ),
     );
 
     const result = await repository.getInvoicePdf(draftId);

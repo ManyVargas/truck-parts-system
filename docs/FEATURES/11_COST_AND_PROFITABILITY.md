@@ -78,7 +78,7 @@ Seller and Administrator may view acquisition cost. Only Administrator may view 
 - [x] Persist Administrator-recorded DOP gross profit when calculation is unavailable. *(API R2 M14: COST-005, `POST /api/profitability/:invoiceId/manual-gross-profit`)*
 
 ### Tests
-- [x] Known/estimated/unknown cost cases. *(API R2 M13: unit + HTTP)*
+- [x] Known/estimated/unknown cost cases. *(API R2 M13: unit + HTTP. PATCH de línea: un cambio de precio no pisa provenance; UNKNOWN no persiste como cero — `cost-provenance-http.test.ts`)*
 - [x] DOP calculation. *(API R2 M13)*
 - [x] USD division/rate-direction tests. *(API R2 M15)*
 - [x] FX timeout/error still confirms sale. *(API R2 M15)*

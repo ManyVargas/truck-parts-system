@@ -193,6 +193,8 @@ export type PosDraftTotals = {
   taxableBase: number;
 };
 
+export type CostProvenance = 'ACTUAL' | 'ESTIMATED' | 'UNKNOWN';
+
 export type PosLineView = {
   id: string;
   type: LineType;
@@ -209,6 +211,7 @@ export type PosLineView = {
   qtyProductId?: string;
   serviceId?: string;
   acquisitionCostDop?: number;
+  costProvenance: CostProvenance;
   installed?: boolean;
   parentName?: string;
   isAssembly?: boolean;
@@ -251,6 +254,7 @@ export type AddDraftLineInput = {
   quantity?: number;
   unitPrice?: number;
   acquisitionCostDop?: number;
+  costProvenance?: CostProvenance;
 };
 
 export type RemoveDraftLineInput = {
@@ -268,6 +272,7 @@ export type SetDraftLinePriceInput = {
   notes?: string | null;
   /** GENERIC / EXTERNAL only. */
   acquisitionCostDop?: number | null;
+  costProvenance?: CostProvenance;
 };
 
 export type SetDraftLineQuantityInput = {

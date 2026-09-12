@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
 
 import type { LineType } from '../../api/contracts/entities';
-import type { PosDraftView, PosLineView } from '../../api/contracts/sales';
+import type { CostProvenance, PosDraftView, PosLineView } from '../../api/contracts/sales';
 import { UX_TERMS } from '../../shared/copy/glossary';
-import { Button, Field, GuardedModal, Info, Input, isFormDirty } from '../../shared/ui';
+import { Button, Field, GuardedModal, Info, Input, Select, isFormDirty } from '../../shared/ui';
 import { LineNotesField } from './LineNotesField';
 import { normalizeLineNotes } from './line-notes';
 import { posLinePriceFieldId } from './pos-copy';
@@ -31,6 +31,7 @@ export type PosLineManualPatch = {
   quantity?: number;
   unitPrice: number;
   acquisitionCostDop?: number | null;
+  costProvenance?: CostProvenance;
 };
 
 type EditLineModalProps = {
@@ -57,7 +58,8 @@ export function EditLineModal({
   const [quantity, setQuantity] = useState('1');
   const [unitPrice, setUnitPrice] = useState('0');
   const [cost, setCost] = useState('');
-  const fields = { description, notes, quantity, unitPrice, cost };
+  const [costProvenance, setCostProvenance] = useState<CostProvenance>('UNKNOWN');
+  const fields = { description, notes, quantity, unitPrice, cost, costProvenance };
   const [baseline, setBaseline] = useState(fields);
 
   useEffect(() => {
@@ -70,12 +72,14 @@ export function EditLineModal({
       quantity: String(line.quantity),
       unitPrice: String(line.unitPrice),
       cost: line.acquisitionCostDop == null ? '' : String(line.acquisitionCostDop),
+      costProvenance: line.costProvenance,
     };
     setDescription(next.description);
     setNotes(next.notes);
     setQuantity(next.quantity);
     setUnitPrice(next.unitPrice);
     setCost(next.cost);
+    setCostProvenance(next.costProvenance);
     setBaseline(next);
   }, [open, line]);
 
@@ -102,7 +106,14 @@ export function EditLineModal({
       quantity: quantityEditable ? parsedQuantity : undefined,
       unitPrice: parsedPrice,
       acquisitionCostDop: posLineCostEditable(line.type)
-        ? (cost === '' ? null : parsedCost)
+        ? cost === ''
+          ? null
+          : parsedCost
+        : undefined,
+      costProvenance: posLineCostEditable(line.type)
+        ? cost === ''
+          ? 'UNKNOWN'
+          : costProvenance
         : undefined,
     });
   }
@@ -182,16 +193,38 @@ export function EditLineModal({
           )}
 
           {line && posLineCostEditable(line.type) && (
-            <Field htmlFor="edit-line-cost" label="Costo de adquisición en pesos (opcional)">
-              <Input
-                id="edit-line-cost"
-                type="number"
-                min={0}
-                step="0.01"
-                value={cost}
-                onChange={(event) => setCost(event.target.value)}
-              />
-            </Field>
+            <>
+              <Field htmlFor="edit-line-cost-provenance" label="Origen del costo">
+                <Select
+                  id="edit-line-cost-provenance"
+                  value={costProvenance}
+                  onChange={(event) => {
+                    const next = event.target.value as CostProvenance;
+                    setCostProvenance(next);
+                    if (next === 'UNKNOWN') setCost('');
+                  }}
+                >
+                  <option value="UNKNOWN">Desconocido</option>
+                  <option value="ACTUAL">Real</option>
+                  <option value="ESTIMATED">Estimado</option>
+                </Select>
+              </Field>
+              <Field htmlFor="edit-line-cost" label="Costo de adquisición en pesos (opcional)">
+                <Input
+                  id="edit-line-cost"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={cost}
+                  onChange={(event) => {
+                    setCost(event.target.value);
+                    if (event.target.value !== '' && costProvenance === 'UNKNOWN') {
+                      setCostProvenance('ACTUAL');
+                    }
+                  }}
+                />
+              </Field>
+            </>
           )}
 
           {line && (

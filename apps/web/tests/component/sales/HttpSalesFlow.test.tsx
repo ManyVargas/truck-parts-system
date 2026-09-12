@@ -13,6 +13,7 @@ import { CapabilitiesProvider } from '../../../src/shared/config/CapabilitiesPro
 import { ToastProvider, Toaster, money } from '../../../src/shared/ui';
 import type { Role } from '../../../src/api/contracts/entities';
 import '../../support/dom';
+import { chooseSelectOption } from '../../support/select-menu';
 
 const cashCustomer = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -412,20 +413,17 @@ describe('M21 HTTP POS draft UI', () => {
     await user.click(screen.getByRole('button', { name: 'Nuevo borrador' }));
 
     expect(await screen.findByRole('heading', { name: 'Punto de venta' })).toBeVisible();
-    expect(screen.getByLabelText('Cliente')).toHaveDisplayValue(/Cliente contado/);
+    expect(screen.getByLabelText('Cliente')).toHaveTextContent(/Cliente contado/);
     expect(screen.getByRole('checkbox')).toBeDisabled();
 
     await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
-    const typeSelect = await screen.findByLabelText('Tipo de línea');
-    expect(
-      within(typeSelect).getByRole('option', { name: 'Mercancía genérica' }),
-    ).toBeInTheDocument();
-    expect(within(typeSelect).getByRole('option', { name: 'Reventa externa' })).toBeInTheDocument();
-    expect(
-      within(typeSelect).getByRole('option', { name: 'Servicio mecánico' }),
-    ).toBeInTheDocument();
-    expect(within(typeSelect).getByRole('option', { name: 'Entrega' })).toBeInTheDocument();
-    expect(within(typeSelect).queryByRole('option', { name: 'Pieza' })).not.toBeInTheDocument();
+    await user.click(await screen.findByLabelText('Tipo de línea'));
+    expect(screen.getByRole('option', { name: 'Mercancía genérica' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Reventa externa' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Servicio mecánico' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Entrega' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Pieza' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('option', { name: 'Mercancía genérica' }));
 
     await user.type(screen.getByLabelText('Descripción'), 'Filtro de aceite');
     await user.clear(screen.getByLabelText('Precio'));
@@ -444,14 +442,14 @@ describe('M21 HTTP POS draft UI', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
-    await user.selectOptions(screen.getByLabelText('Tipo de línea'), 'SERVICE');
+    await chooseSelectOption(user, 'Tipo de línea', 'SERVICE');
     await user.clear(screen.getByLabelText('Precio'));
     await user.type(screen.getByLabelText('Precio'), '40');
     await user.click(screen.getByRole('button', { name: 'Agregar' }));
     expect(await screen.findByText('Instalación mecánica')).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
-    await user.selectOptions(screen.getByLabelText('Tipo de línea'), 'DELIVERY');
+    await chooseSelectOption(user, 'Tipo de línea', 'DELIVERY');
     const deliveryDescription = screen.getByLabelText('Descripción');
     await user.clear(deliveryDescription);
     await user.type(deliveryDescription, 'Entrega al patio');
@@ -461,7 +459,7 @@ describe('M21 HTTP POS draft UI', () => {
     expect(await screen.findByText('Entrega al patio')).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Agregar línea' }));
-    await user.selectOptions(screen.getByLabelText('Tipo de línea'), 'EXTERNAL');
+    await chooseSelectOption(user, 'Tipo de línea', 'EXTERNAL');
     const externalDescription = screen.getByLabelText('Descripción');
     await user.clear(externalDescription);
     await user.type(externalDescription, 'Bomba comprada');
@@ -482,7 +480,8 @@ describe('M21 HTTP POS draft UI', () => {
       acquisitionCostDop: '20.00',
     });
 
-    await user.selectOptions(screen.getByLabelText('Moneda'), 'USD');
+    await user.click(screen.getByLabelText('Moneda'));
+    await user.click(screen.getByRole('option', { name: 'Dólares (USD)' }));
     expect(
       fetchMock.mock.calls.some(
         ([requestPath, init]) =>
@@ -550,7 +549,8 @@ describe('M22 HTTP confirmation UI', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Nuevo borrador' }));
     expect(await screen.findByRole('heading', { name: 'Punto de venta' })).toBeVisible();
-    await user.selectOptions(screen.getByLabelText('Cliente'), fleetCustomer.id);
+    await user.click(screen.getByLabelText('Cliente'));
+    await user.click(screen.getByRole('option', { name: /Flota Este/ }));
     await addGenericLine(user, 'Filtro de aceite', '118');
     await confirmOpenSale(user);
 
@@ -602,11 +602,12 @@ describe('M22 HTTP confirmation UI', () => {
     await user.click(screen.getByRole('link', { name: 'Ventas y Facturas' }));
     await user.click(await screen.findByRole('button', { name: 'Nuevo borrador' }));
     expect(await screen.findByRole('heading', { name: 'Punto de venta' })).toBeVisible();
-    await user.selectOptions(screen.getByLabelText('Moneda'), 'USD');
+    await user.click(screen.getByLabelText('Moneda'));
+    await user.click(screen.getByRole('option', { name: 'Dólares (USD)' }));
     await addGenericLine(user, 'Servicio USD', '50');
     await confirmOpenSale(user);
     expect(await screen.findByText('Factura FAC-000002 confirmada')).toBeVisible();
-    expect(screen.getByLabelText('Moneda')).toHaveValue('USD');
+    expect(screen.getByLabelText('Moneda')).toHaveTextContent('Dólares (USD)');
   });
 
   it('hides PDF regeneration from the seller when generation failed', async () => {

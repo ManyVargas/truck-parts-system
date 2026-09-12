@@ -22,6 +22,8 @@ export const LINE_NOTE_MAX_LENGTH = 100;
 export const UNKNOWN_COST_AMOUNT_MESSAGE = 'UNKNOWN cost must not include an amount';
 export const COST_AMOUNT_REQUIRED_MESSAGE =
   'Acquisition cost amount is required when provenance is not UNKNOWN';
+export const COST_PROVENANCE_REQUIRED_MESSAGE =
+  'Cost provenance is required when acquisition cost is updated';
 export const EMPTY_DRAFT_CONFIRM_MESSAGE = 'Agregue al menos una línea';
 export const DRAFT_ONLY_CONFIRM_MESSAGE = 'Solo se puede confirmar un borrador';
 export const PAYMENT_COMPLETED_ONLY_MESSAGE =

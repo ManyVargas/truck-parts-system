@@ -4,6 +4,7 @@ import type {
   AddPaymentInput,
   CancelInvoiceInput,
   ConfirmInvoicePayment,
+  CostProvenance,
   CorrectCurrencyInput,
   CreateDraftResult,
   CustomerOutstandingRow,
@@ -51,7 +52,7 @@ type ApiInvoiceLine = {
   base: string;
   itbis: string;
   acquisitionCostDop: string | null;
-  costProvenance: 'ACTUAL' | 'ESTIMATED' | 'UNKNOWN' | null;
+  costProvenance: CostProvenance | null;
   serviceId: string | null;
 };
 
@@ -142,6 +143,7 @@ function toPosLine(line: ApiInvoiceLine): PosLineView {
     serviceId: line.serviceId ?? undefined,
     acquisitionCostDop:
       line.acquisitionCostDop == null ? undefined : moneyNumber(line.acquisitionCostDop),
+    costProvenance: line.costProvenance ?? 'UNKNOWN',
   };
 }
 
@@ -317,12 +319,15 @@ function toInvoiceDetail(invoice: ApiInvoice): InvoiceDetailView {
   };
 }
 
-function merchandiseCost(acquisitionCostDop: number | undefined) {
+function merchandiseCost(
+  acquisitionCostDop: number | undefined,
+  costProvenance: CostProvenance | undefined,
+) {
   if (acquisitionCostDop == null || !Number.isFinite(acquisitionCostDop)) {
     return { costProvenance: 'UNKNOWN' as const };
   }
   return {
-    costProvenance: 'ACTUAL' as const,
+    costProvenance: costProvenance === 'ESTIMATED' ? ('ESTIMATED' as const) : ('ACTUAL' as const),
     acquisitionCostDop: moneyString(acquisitionCostDop),
   };
 }
@@ -342,7 +347,7 @@ export function toHttpAddLineBody(input: AddDraftLineInput): Record<string, unkn
       description: input.description?.trim() ?? '',
       unitPrice: moneyString(input.unitPrice ?? 0),
       ...(input.quantity != null ? { quantity: moneyString(input.quantity) } : {}),
-      ...merchandiseCost(input.acquisitionCostDop),
+      ...merchandiseCost(input.acquisitionCostDop, input.costProvenance),
       ...notes,
     };
   }
@@ -611,6 +616,7 @@ export function setDraftLinePriceWithHttp(
     body.acquisitionCostDop =
       input.acquisitionCostDop == null ? null : moneyString(input.acquisitionCostDop);
   }
+  if (input.costProvenance !== undefined) body.costProvenance = input.costProvenance;
 
   return mutateDraft(() =>
     httpClient<ApiInvoice>(`${SALES_PATH}/${input.draftId}/lines/${input.lineId}`, {

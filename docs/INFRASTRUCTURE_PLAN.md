@@ -97,6 +97,7 @@ Local development should resemble production where correctness depends on behavi
 - nginx listens on **80** (mapped to host `5173`) for local browsers. `X-Forwarded-For` is the connecting address (`$remote_addr`).
 - nginx also listens on **8080**, reachable only on the Docker network. `cloudflared` targets `http://web:8080/`. On that port nginx prefers `CF-Connecting-IP`, then proxies a single replaced `X-Forwarded-For` to the API.
 - Set `TRUST_PROXY=1` on the API **only** in this unpublished-behind-nginx layout so login/recovery rate limits key off that sanitized client address. A host-bound API (`npm run dev`, `TRUST_PROXY` unset/`0`) must ignore `X-Forwarded-For`; otherwise any peer that can reach port 3000 can spoof the rate-limit identity.
+- Forward `EXCHANGE_RATE_API_KEY` from the host `.env` into the `api` service. Compose does not inject the file wholesale; without this mapping, USD confirm and profitability retry stay `PENDING_FX_RATE` even when the developer set the key.
 - The tunnel terminates TLS at Cloudflare; the container hop to nginx remains HTTP. Cookies `Secure` still follow `NODE_ENV=production` (see `ARCHITECTURE_PLAN.md`). Do not treat a quick tunnel as the production cookie/HTTPS baseline.
 
 Local photo storage is for convenience only. Integration tests before production must exercise the chosen S3-compatible provider behavior, including upload limits, signed access, and failure cleanup.

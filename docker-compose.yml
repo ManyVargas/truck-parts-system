@@ -3,8 +3,6 @@ services:
     image: postgres:16-alpine
     container_name: truck_parts_db
     restart: unless-stopped
-    ports:
-      - '${DATABASE_PORT}:5432'
     environment:
       POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
@@ -30,6 +28,8 @@ services:
       DATABASE_URL: ${DATABASE_URL_DOCKER}
       # API is unpublished; nginx is the only client. Do not publish port 3000.
       TRUST_PROXY: '1'
+      # Host .env is not auto-injected. Without this, USD confirm/retry stays PENDING_FX_RATE.
+      EXCHANGE_RATE_API_KEY: ${EXCHANGE_RATE_API_KEY}
     depends_on:
       db:
         condition: service_healthy

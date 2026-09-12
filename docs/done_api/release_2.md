@@ -2,7 +2,7 @@
 
 **Release:** Billing Core  
 **Plan de referencia:** [`../plans_api/plan_release_2.md`](../plans_api/plan_release_2.md)  
-**Estado:** en curso (M1–M24 completados; **M25 pendiente**)
+**Estado:** **cerrado en local** (M1–M25; exit gate 2026-09-11)
 
 El slice financiero de Release 3 se adelantó en el mismo árbol de código; el registro está en [`release_3.md`](release_3.md), no como milestones M26+ de este archivo.
 
@@ -886,15 +886,45 @@ Exit gate (M25). Dashboard. `setFxAvailable`. Corrección de costo INV-006. Reco
 
 ## Milestone 25 — Exit gate Release 2
 
-**Estado:** pendiente  
-**Fecha:**
+**Estado:** completado  
+**Fecha:** 2026-09-11
 
 ### Objetivo cumplido
 
+El Seller puede, en local, seleccionar/crear cliente o `Cliente contado`, crear un Draft, agregar líneas no-inventario, confirmar DOP/USD, recibir `FAC-` único e imprimir/regenerar el PDF interno, sin efectos falsos de inventario. El owner confirmó el recorrido en navegador. La suite automatizada del testing focus R2 quedó verde.
+
 ### Qué se entregó
+
+Cierre documental del exit gate, más endurecimiento local **aún en alcance R2** (no un milestone de producto nuevo):
+
+- [`docs/TESTING.md`](../TESTING.md) inventario actualizado (web 602 / API unit 223; integración API 181 en inventario).
+- Feature 14: retry FX HTTP ya no se describe como stub.
+- [`DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) y este plan: Release 2 COMPLETED en local.
+- COST-001: PATCH de línea draft conserva `costProvenance` si el body no lo envía; UNKNOWN explícito no es cero.
+- UX: `SelectMenu` (listbox en portal), `NavDrawer`, `login-return-path` (logout no reusa la URL previa), preset de rentabilidad `Hoy`.
+- Compose: `EXCHANGE_RATE_API_KEY` hacia el servicio `api`.
 
 ### Decisiones técnicas
 
+- No se bajaron aserciones. Un PATCH de precio no debe clobber COST-001.
+- Checklists 08/10/11 del slice R2 ya estaban cubiertos; no se marcaron ítems de inventario/recovery.
+- Hosting / HTTPS / filtros CxC Feature 12 / dashboard KPIs siguen fuera.
+- SelectMenu no es un feature de negocio; es el control compartido que el POS/catálogos/rentabilidad ya necesitaban tras el rediseño de `<select>`.
+
 ### Validación
 
+| Verificación | Resultado |
+|---|---|
+| Exit gate en navegador (owner) | Confirmado 2026-09-11 |
+| Unitarias API | **223 aprobadas** (35 archivos) |
+| Unitarias web | **349 aprobadas** (42 archivos) |
+| Integración web (mock) | **69 aprobadas** (10 archivos) |
+| Componentes web | **184 aprobadas** (39 archivos) |
+| Typecheck app + tests web | OK en el cierre M25; no reejecutado en la pasada de inventario posterior |
+| Integración API / PostgreSQL | **181** en inventario (22 archivos, incluye `cost-provenance-http`). Reejecución completa bloqueada aquí por `prisma migrate reset` |
+
+Total inventario: **148 archivos, 1006 pruebas**.
+
 ### Fuera de alcance (intencional)
+
+Filtros CxC (R3 restante). Inventario, recovery, DGII. Primer despliegue productivo. Aging.
