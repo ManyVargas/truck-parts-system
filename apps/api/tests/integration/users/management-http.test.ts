@@ -7,8 +7,12 @@ import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { AccessService } from '../../../src/features/access/service.js';
 import { RECOVERY_RATE_LIMIT_MAX_ATTEMPTS } from '../../../src/features/access/constants.js';
 import { hashPassword, verifyPassword } from '../../../src/features/access/password.js';
+import { resetAccessReadRateLimit } from '../../../src/features/access/access-read-rate-limit.js';
 import { resetLoginRateLimit } from '../../../src/features/access/login-rate-limit.js';
+import { resetProfileMutationRateLimit } from '../../../src/features/access/profile-mutation-rate-limit.js';
 import { resetRecoveryRateLimit } from '../../../src/features/access/recovery-rate-limit.js';
+import { resetUsersMutationRateLimit } from '../../../src/features/users/users-mutation-rate-limit.js';
+import { resetUsersReadRateLimit } from '../../../src/features/users/users-read-rate-limit.js';
 import { SessionRepository } from '../../../src/features/access/repository.js';
 import { RecoveryRepository } from '../../../src/features/users/recovery-repository.js';
 import { UserRepository } from '../../../src/features/users/repository.js';
@@ -59,6 +63,10 @@ describe('M8 account management HTTP and transactions', () => {
     await prisma.user.deleteMany();
     await resetLoginRateLimit();
     await resetRecoveryRateLimit();
+    await resetAccessReadRateLimit();
+    await resetProfileMutationRateLimit();
+    await resetUsersMutationRateLimit();
+    await resetUsersReadRateLimit();
   });
   afterAll(disconnectPrisma);
 
