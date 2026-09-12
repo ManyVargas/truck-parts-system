@@ -20,7 +20,15 @@ import {
   userIdSchema,
 } from './validation.js';
 
-export const INITIAL_PASSWORD = 'solocamiones';
+function requireInitialPassword(): string {
+  const value = process.env.INITIAL_PASSWORD;
+  if (!value) {
+    throw new Error('INITIAL_PASSWORD is required');
+  }
+  return value;
+}
+
+export const INITIAL_PASSWORD = requireInitialPassword();
 export const RECOVERY_REQUEST_TTL_MS = 24 * 60 * 60 * 1000;
 export const RECOVERY_REQUEST_MESSAGE =
   'If the account is eligible, its recovery request will be available to an administrator.';
